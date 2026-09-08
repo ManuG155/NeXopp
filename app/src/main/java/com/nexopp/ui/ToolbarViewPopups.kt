@@ -49,8 +49,11 @@ private val BACKGROUND_STYLES: List<Pair<String, String>> = listOf(
     "plain" to "Liso",
     "lined" to "Rayado",
     "ruled" to "Pautado",
-    "graph" to "Cuadriculado",
+    "graph" to "Cuadrícula básica",
     "dotted" to "Punteado",
+    "millimeter" to "Papel Milimetrado",
+    "isometric" to "Malla Isométrica",
+    "polar" to "Gráfico Polar"
 )
 
 @Composable
