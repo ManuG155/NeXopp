@@ -35,19 +35,19 @@ class PaletteSwitchTest {
     @Test
     fun `the picker offers one switch choice per palette, but only when there is more than one`() {
         val palettes = listOf(RadialPalette(name = "Ink"), RadialPalette(name = "Shapes"))
-        val group = paletteActionGroups(palettes = palettes).first { it.title == "Switch palette" }
+        val group = paletteActionGroups(palettes = palettes).first { it.title == "Cambiar paleta" }
         assertEquals(
             listOf(PaletteAction.SwitchPalette("Ink"), PaletteAction.SwitchPalette("Shapes")),
             group.choices.map { it.action },
         )
         assertEquals(listOf("Ink", "Shapes"), group.choices.map { it.label })
-        assertTrue(paletteActionGroups(palettes = palettes.take(1)).none { it.title == "Switch palette" })
-        assertTrue(paletteActionGroups().none { it.title == "Switch palette" })
+        assertTrue(paletteActionGroups(palettes = palettes.take(1)).none { it.title == "Cambiar paleta" })
+        assertTrue(paletteActionGroups().none { it.title == "Cambiar paleta" })
     }
 
     @Test
     fun `a switch action describes its target`() {
-        assertEquals("Switch to Shapes", PaletteAction.SwitchPalette("Shapes").describeAction())
+        assertEquals("Cambiar a Shapes", PaletteAction.SwitchPalette("Shapes").describeAction())
     }
 
     @Test

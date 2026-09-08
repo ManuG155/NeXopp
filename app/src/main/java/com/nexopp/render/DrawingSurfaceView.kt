@@ -807,6 +807,9 @@ class DrawingSurfaceView @JvmOverloads constructor(
     /** Delete the page currently in view. No-op when only one page remains. */
     fun removePage() = pages.removePage()
 
+    /** Move page from index to target index. */
+    fun movePage(from: Int, to: Int) = pages.movePage(from, to)
+
     // --- page-overview selection -----------------------------------------------------------------
     // In the multi-column grid a Hand-tool finger tap picks pages out; the picked set is what
     // [deleteSelectedPages] removes in one undoable edit. Purely view state — nothing is written to

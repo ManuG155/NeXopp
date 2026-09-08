@@ -10,21 +10,21 @@ class PaletteActionCatalogTest {
     @Test
     fun `offers every tool as both select and toggle`() {
         val groups = paletteActionGroups().associateBy { it.title }
-        val select = groups.getValue("Select tool").choices.map { it.action }
-        val toggle = groups.getValue("Toggle tool").choices.map { it.action }
+        val select = groups.getValue("Seleccionar herramienta").choices.map { it.action }
+        val toggle = groups.getValue("Alternar herramienta").choices.map { it.action }
         assertEquals(EditorTool.entries.map { PaletteAction.SelectTool(it) }, select)
         assertEquals(EditorTool.entries.map { PaletteAction.ToggleTool(it) }, toggle)
     }
 
     @Test
     fun `offers every page operation`() {
-        val page = paletteActionGroups().first { it.title == "Page" }.choices.map { it.action }
+        val page = paletteActionGroups().first { it.title == "Página" }.choices.map { it.action }
         assertEquals(PalettePageOp.entries.map { PaletteAction.Page(it) }, page)
     }
 
     @Test
     fun `offers the edit actions`() {
-        val edit = paletteActionGroups().first { it.title == "Edit" }.choices.map { it.action }
+        val edit = paletteActionGroups().first { it.title == "Edición" }.choices.map { it.action }
         assertEquals(listOf(PaletteAction.Undo, PaletteAction.Redo, PaletteAction.ToggleFullPage), edit)
     }
 
@@ -37,9 +37,9 @@ class PaletteActionCatalogTest {
 
     @Test
     fun `value-carrying actions describe their value`() {
-        assertEquals("Colour #FF0000", PaletteAction.SetColor(0xFFFF0000.toInt()).describeAction())
-        assertEquals("Width 2.5 pt", PaletteAction.SetWidth(2.5f).describeAction())
-        assertEquals("Select pen", PaletteAction.SelectTool(EditorTool.PEN).describeAction())
+        assertEquals("Color #FF0000", PaletteAction.SetColor(0xFFFF0000.toInt()).describeAction())
+        assertEquals("Grosor 2.5 pt", PaletteAction.SetWidth(2.5f).describeAction())
+        assertEquals("Seleccionar pluma", PaletteAction.SelectTool(EditorTool.PEN).describeAction())
     }
 
     @Test

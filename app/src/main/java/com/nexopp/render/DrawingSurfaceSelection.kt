@@ -114,6 +114,18 @@ private fun DrawingSurfaceView.pasteOnto(pageIndex: Int, elements: List<Element>
     render()
 }
 
+/** Insert a list of elements onto [pageIndex]'s top layer as one undoable edit. */
+fun DrawingSurfaceView.insertElements(elements: List<Element>, pageIndex: Int = visiblePageIndex()) {
+    if (elements.isEmpty()) return
+    val before = doc
+    val (pages, _) = SelectionOps.addToTopLayer(doc.pages, pageIndex, elements)
+    doc = doc.copy(pages = pages)
+    history.record(before)
+    notifyHistory()
+    relayout()
+    render()
+}
+
 // --- PDF text selection -------------------------------------------------------------------------
 
 /** Down with the text-select tool: anchor the selection at the word nearest the touch. */

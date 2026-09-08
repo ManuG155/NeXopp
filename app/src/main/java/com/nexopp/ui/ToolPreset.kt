@@ -36,7 +36,7 @@ data class ToolPreset(
         fun slugId(name: String): String =
             name.lowercase().map { if (it.isLetterOrDigit()) it else '-' }
                 .joinToString("").trim('-').replace(Regex("-+"), "-")
-                .ifEmpty { "preajuste" }
+                .ifEmpty { "preset" }
     }
 }
 

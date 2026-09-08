@@ -133,10 +133,39 @@ class DrawingGuideTest {
     @Test
     fun `placing a guide yields the right kind, and NONE yields nothing`() {
         assertNull(GuideKind.NONE.place(100.0, 100.0))
+        assertTrue(GuideKind.RULER.place(100.0, 100.0) is DrawingGuide.Ruler)
         assertTrue(GuideKind.SETSQUARE.place(100.0, 100.0) is DrawingGuide.Setsquare)
+        assertTrue(GuideKind.SETSQUARE_45.place(100.0, 100.0) is DrawingGuide.Setsquare45)
+        assertTrue(GuideKind.PROTRACTOR.place(100.0, 100.0) is DrawingGuide.Protractor)
         val compass = GuideKind.COMPASS.place(100.0, 100.0)
         assertNotNull(compass)
         assertEquals(100.0, compass!!.x, eps)
         assertEquals(100.0, compass.y, eps)
+    }
+
+    @Test
+    fun `ruler pulls nearby points onto top or bottom edge`() {
+        val r = DrawingGuide.Ruler(x = 0.0, y = 0.0, length = 200.0, height = 40.0, angle = 0.0)
+        val (pxTop, pyTop) = r.project(50.0, 4.0)
+        assertEquals(50.0, pxTop, eps)
+        assertEquals(0.0, pyTop, eps)
+
+        val (pxBot, pyBot) = r.project(50.0, 38.0)
+        assertEquals(50.0, pxBot, eps)
+        assertEquals(40.0, pyBot, eps)
+    }
+
+    @Test
+    fun `protractor pulls nearby points onto arc and baseline`() {
+        val p = DrawingGuide.Protractor(x = 100.0, y = 100.0, radius = 50.0, angle = 0.0)
+        // Point near top of arc (x=100, y=50)
+        val (ax, ay) = p.project(100.0, 52.0)
+        assertEquals(100.0, ax, eps)
+        assertEquals(50.0, ay, eps)
+
+        // Point near baseline (x=120, y=100)
+        val (bx, by) = p.project(120.0, 102.0)
+        assertEquals(120.0, bx, eps)
+        assertEquals(100.0, by, eps)
     }
 }

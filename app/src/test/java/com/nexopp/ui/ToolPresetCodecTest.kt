@@ -65,8 +65,8 @@ class ToolPresetCodecTest {
     @Test
     fun `a preset slot names the preset, or says it is gone`() {
         val action = PaletteAction.ApplyPreset("marker")
-        assertEquals("Preset Marker", action.describeAction(presets))
-        assertEquals("Preset (deleted)", action.describeAction(emptyList()))
+        assertEquals("Preajuste Marker", action.describeAction(presets))
+        assertEquals("Preajuste (eliminado)", action.describeAction(emptyList()))
     }
 
     @Test
@@ -79,26 +79,26 @@ class ToolPresetCodecTest {
 
     @Test
     fun `a preset-slot action names whatever preset sits at that position`() {
-        assertEquals("Preset 1 (Fine black)", PaletteAction.ApplyPresetSlot(0).describeAction(presets))
-        assertEquals("Preset 2 (Marker)", PaletteAction.ApplyPresetSlot(1).describeAction(presets))
-        assertEquals("Preset 9 (empty)", PaletteAction.ApplyPresetSlot(8).describeAction(presets))
+        assertEquals("Preajuste 1 (Fine black)", PaletteAction.ApplyPresetSlot(0).describeAction(presets))
+        assertEquals("Preajuste 2 (Marker)", PaletteAction.ApplyPresetSlot(1).describeAction(presets))
+        assertEquals("Preajuste 9 (vacío)", PaletteAction.ApplyPresetSlot(8).describeAction(presets))
         assertEquals("★1", PaletteAction.ApplyPresetSlot(0).face().glyph)
     }
 
     @Test
     fun `preset positions become picker choices`() {
-        val group = paletteActionGroups(presets).first { it.title == "Preset slot" }
+        val group = paletteActionGroups(presets).first { it.title == "Espacio de preajuste" }
         assertEquals(presets.indices.map { PaletteAction.ApplyPresetSlot(it) }, group.choices.map { it.action })
-        assertEquals(listOf("Preset 1: Fine black", "Preset 2: Marker"), group.choices.map { it.label })
-        assertTrue(paletteActionGroups().none { it.title == "Preset slot" })
+        assertEquals(listOf("Preajuste 1: Fine black", "Preajuste 2: Marker"), group.choices.map { it.label })
+        assertTrue(paletteActionGroups().none { it.title == "Espacio de preajuste" })
     }
 
     @Test
     fun `saved presets become picker choices`() {
-        val group = paletteActionGroups(presets).first { it.title == "Preset" }
+        val group = paletteActionGroups(presets).first { it.title == "Preajuste" }
         assertEquals(presets.map { PaletteAction.ApplyPreset(it.id) }, group.choices.map { it.action })
         assertEquals(listOf("1. Fine black", "2. Marker"), group.choices.map { it.label })
-        assertTrue(paletteActionGroups().none { it.title == "Preset" })
+        assertTrue(paletteActionGroups().none { it.title == "Preajuste" })
     }
 
     @Test

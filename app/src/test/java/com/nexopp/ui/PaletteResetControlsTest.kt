@@ -25,12 +25,12 @@ class PaletteResetControlsTest {
     fun `summary counts filled slots out of the total`() {
         val total = RadialRing.INNER.slotCount + RadialRing.OUTER.slotCount
         val one = RadialPalette().with(RadialSlot(RadialRing.INNER, 0), PaletteAction.Undo)
-        assertEquals("1 of $total slots assigned.", paletteFilledSummary(one))
+        assertEquals("1 de $total ranuras asignadas.", paletteFilledSummary(one))
     }
 
     @Test
     fun `summary calls out an entirely empty palette`() {
-        assertTrue(paletteFilledSummary(RadialPalette()).startsWith("No slots assigned"))
+        assertTrue(paletteFilledSummary(RadialPalette()).startsWith("Ninguna ranura asignada"))
     }
 
     @Test

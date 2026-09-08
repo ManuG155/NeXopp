@@ -15,21 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.NoteAdd
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.SaveAs
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VerticalSplit
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -56,6 +43,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import com.nexopp.render.insertElements
+import com.nexopp.stem.FunctionPlotterDialog
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -86,6 +75,8 @@ fun UnifiedTopBar(
     onExit: () -> Unit
 ) {
     val surface = pane.surface
+    var showPageManager by remember { mutableStateOf(false) }
+    var showFunctionPlotter by remember { mutableStateOf(false) }
     
     val styleCallbacks = ToolbarStyleCallbacks(
         color = ui.color,
@@ -103,30 +94,68 @@ fun UnifiedTopBar(
     )
 
     val layerCallbacks = toolbarLayerCallbacks(surface, pane)
-    val pageCallbacks = toolbarPagesCallbacks(pane, settings, onSettingsChange, surface)
 
-    Surface(tonalElevation = 1.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(tonalElevation = 2.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
+            // Fila 1: Barra Principal Unificada (48dp)
             Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Izquierda: Volver, Deshacer, Rehacer y Paginador interactivo
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit) { 
+                    IconButton(onClick = onExit, modifier = Modifier.size(36.dp)) { 
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la Biblioteca") 
                     }
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo) { 
+                    Spacer(Modifier.width(2.dp))
+                    IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo, modifier = Modifier.size(36.dp)) { 
                         Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer") 
                     }
-                    IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo) { 
+                    IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo, modifier = Modifier.size(36.dp)) { 
                         Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer") 
                     }
+                    Spacer(Modifier.width(6.dp))
+                    // Píldora de Página Interactiva (abre el gestor visual de páginas)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.clickable { showPageManager = true }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Filled.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Pág. ${pane.currentPage + 1}/${pane.pageCount}",
+                                style = TextStyle(fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
+
+                // Centro: Selector Segmentado de Herramientas Principales
+                PrimaryToolSegment(
+                    currentTool = ui.tool,
+                    onSelectTool = { 
+                        ui.tool = it
+                        surface?.applyTool(it) 
+                    },
+                    toolGroupSelections = settings.toolGroupSelections,
+                    onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) }
+                )
+
+                // Derecha: Capas, Fondo/Cuadrículas, Búsqueda y Menú
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    BackgroundPopupButton(pane.backgroundStyle, onBackgroundStyle = { surface?.setPageBackgroundStyle(it) })
+                    LayersPopupButton(layerCallbacks)
                     SearchControls(pane)
-                    TabOverviewButton(tabs)
                     OverflowMenu(
                         onOpen = onOpen,
                         onNewTab = onNewTab,
@@ -141,45 +170,56 @@ fun UnifiedTopBar(
                 }
             }
             
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             
-            ToolsRow(
+            // Fila 2: Barra Contextual Dinámica y Reactiva según la herramienta activa (42dp)
+            DynamicContextualBar(
                 tool = ui.tool,
-                onTool = { ui.tool = it; surface?.applyTool(it) },
-                toolGroupSelections = settings.toolGroupSelections,
-                onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) },
-                styleCallbacks = styleCallbacks,
-                presets = settings.presets,
-                onPresets = { onSettingsChange(settings.copy(presets = it)) },
-                onActivatePreset = { applyToolPreset(it, ui, surface, settings, onSettingsChange) },
-                onCapturePreset = { name -> ToolPreset.capture(ui, settings, name) },
-                recognizeShapes = settings.recognizeShapes,
-                onRecognizeShapes = { surface?.recognizeShapes = it; onSettingsChange(settings.copy(recognizeShapes = it)) },
-                guideKind = settings.guideKind,
-                onGuideKind = { surface?.placeGuide(it); onSettingsChange(settings.copy(guideKind = it)) },
-                layerCallbacks = layerCallbacks,
-                zoom = pane.zoom,
-                onZoomIn = { surface?.zoomIn() },
-                onZoomOut = { surface?.zoomOut() },
-                onZoomReset = { surface?.resetZoom() },
-                pageCallbacks = pageCallbacks,
-                backgroundStyle = pane.backgroundStyle,
-                onBackgroundStyle = { surface?.setPageBackgroundStyle(it) },
-                audio = audio,
-                railOrder = settings.railOrder,
-                railHidden = settings.railHidden
-            )
-
-            ContextualOptionsBar(
-                tool = ui.tool, 
+                surface = surface,
                 styleCallbacks = styleCallbacks,
                 recognizeShapes = settings.recognizeShapes,
                 onRecognizeShapes = { 
                     surface?.recognizeShapes = it
                     onSettingsChange(settings.copy(recognizeShapes = it))
+                },
+                guideKind = settings.guideKind,
+                onGuideKind = { 
+                    surface?.placeGuide(it)
+                    onSettingsChange(settings.copy(guideKind = it)) 
+                },
+                zoom = pane.zoom,
+                onZoomIn = { surface?.zoomIn() },
+                onZoomOut = { surface?.zoomOut() },
+                onZoomReset = { surface?.resetZoom() },
+                onInsertLatex = {
+                    ui.texPlacement = Placement(pane.currentPage, 100.0, 100.0)
+                },
+                onPlotFunction = {
+                    showFunctionPlotter = true
                 }
             )
         }
+    }
+
+    if (showPageManager) {
+        PageManagerDialog(
+            visible = true,
+            surface = surface,
+            currentPage = pane.currentPage,
+            onDismiss = { showPageManager = false },
+            onGoToPage = { surface?.goToPage(it) }
+        )
+    }
+
+    if (showFunctionPlotter) {
+        FunctionPlotterDialog(
+            originX = 250.0,
+            originY = 250.0,
+            onDismiss = { showFunctionPlotter = false },
+            onInsertPlot = { elements ->
+                surface?.insertElements(elements)
+            }
+        )
     }
 }
 

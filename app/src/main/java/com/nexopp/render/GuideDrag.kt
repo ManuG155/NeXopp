@@ -100,7 +100,10 @@ internal class GuideDrag(
         val py = box.toPtY(event.getY(pointerIndex), viewport.scrollY)
         pose = when {
             held == DrawingSurfaceDefaults.GUIDE_DRAG_BODY -> g.moved(px - grabDx - g.x, py - grabDy - g.y)
+            g is DrawingGuide.Ruler -> g.aimedAt(px, py, snapRotation())
             g is DrawingGuide.Setsquare -> g.aimedAt(px, py, snapRotation())
+            g is DrawingGuide.Setsquare45 -> g.aimedAt(px, py, snapRotation())
+            g is DrawingGuide.Protractor -> g.aimedAt(px, py, snapRotation())
             g is DrawingGuide.Compass -> g.openedTo(px, py)
             else -> g
         }
@@ -125,7 +128,10 @@ internal class GuideDrag(
      * @return (x, y) of the tip in page points.
      */
     fun tipOf(g: DrawingGuide): Pair<Double, Double> = when (g) {
+        is DrawingGuide.Ruler -> g.corners()[1]
         is DrawingGuide.Setsquare -> g.corners()[1]
+        is DrawingGuide.Setsquare45 -> g.corners()[1]
+        is DrawingGuide.Protractor -> g.baselineEndpoints().second
         is DrawingGuide.Compass -> (g.x + g.radius) to g.y
     }
 
@@ -136,7 +142,10 @@ internal class GuideDrag(
      */
     private fun bodyHit(g: DrawingGuide, px: Double, py: Double, hubReach: Double): Boolean =
         when (g) {
+            is DrawingGuide.Ruler -> g.contains(px, py)
             is DrawingGuide.Setsquare -> g.contains(px, py)
+            is DrawingGuide.Setsquare45 -> g.contains(px, py)
+            is DrawingGuide.Protractor -> g.contains(px, py)
             is DrawingGuide.Compass -> hypot(px - g.x, py - g.y) <= hubReach
         }
 

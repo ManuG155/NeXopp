@@ -334,14 +334,68 @@ internal fun DrawingSurfaceView.drawSelectionBox(canvas: Canvas, sel: ActiveSele
     }
 }
 
-/** Draw the guide overlay in view px: the setsquare's outline, or the compass's circle and hub. */
+/** Draw the guide overlay in view px: Ruler, Setsquares, Protractor, or Compass. */
 internal fun DrawingSurfaceView.drawGuide(canvas: Canvas) {
     val g = guide ?: return
     val box = layout.boxes.getOrNull(guideDrag.page) ?: return
     val s = box.scale
     fun vx(x: Double) = box.toViewX(x, scrollX)
     fun vy(y: Double) = box.toViewY(y, scrollY)
+
     when (g) {
+        is DrawingGuide.Ruler -> {
+            val c = g.corners()
+            chrome.guidePath.reset()
+            chrome.guidePath.moveTo(vx(c[0].first), vy(c[0].second))
+            chrome.guidePath.lineTo(vx(c[1].first), vy(c[1].second))
+            chrome.guidePath.lineTo(vx(c[2].first), vy(c[2].second))
+            chrome.guidePath.lineTo(vx(c[3].first), vy(c[3].second))
+            chrome.guidePath.close()
+            canvas.drawPath(chrome.guidePath, chrome.guideFill)
+            canvas.drawPath(chrome.guidePath, chrome.guideStroke)
+
+            // Millimeter / Centimeter graduation marks along top edge
+            val ux = kotlin.math.cos(g.angle)
+            val uy = kotlin.math.sin(g.angle)
+            val normalX = -uy
+            val normalY = ux
+            val ptPerMm = DrawingGuide.Ruler.PT_PER_MM
+            val maxMm = (g.length / ptPerMm).toInt()
+
+            for (mm in 0..maxMm) {
+                val distPt = mm * ptPerMm
+                val topX = g.x + ux * distPt
+                val topY = g.y + uy * distPt
+
+                val tickLenPt = when {
+                    mm % 10 == 0 -> 14.0
+                    mm % 5 == 0 -> 9.0
+                    else -> 5.0
+                }
+
+                val tickEndX = topX + normalX * tickLenPt
+                val tickEndY = topY + normalY * tickLenPt
+
+                canvas.drawLine(
+                    vx(topX), vy(topY),
+                    vx(tickEndX), vy(tickEndY),
+                    chrome.guideTicks
+                )
+
+                if (mm % 10 == 0 && mm > 0 && mm < maxMm) {
+                    val cm = mm / 10
+                    val numX = topX + normalX * 22.0
+                    val numY = topY + normalY * 22.0
+                    canvas.drawText("$cm", vx(numX), vy(numY) + 4f, chrome.guideText)
+                }
+            }
+
+            // Degree indicator in center of ruler
+            val midX = g.x + ux * (g.length / 2) + normalX * (g.height / 2)
+            val midY = g.y + uy * (g.length / 2) + normalY * (g.height / 2)
+            val deg = Math.toDegrees(g.angle).let { (it % 360 + 360) % 360 }
+            canvas.drawText("${deg.toInt()}°", vx(midX), vy(midY) + 4f, chrome.guideText)
+        }
         is DrawingGuide.Setsquare -> {
             val c = g.corners()
             chrome.guidePath.reset()
@@ -351,10 +405,96 @@ internal fun DrawingSurfaceView.drawGuide(canvas: Canvas) {
             chrome.guidePath.close()
             canvas.drawPath(chrome.guidePath, chrome.guideFill)
             canvas.drawPath(chrome.guidePath, chrome.guideStroke)
+
+            // Right angle symbol
+            val ux = kotlin.math.cos(g.angle)
+            val uy = kotlin.math.sin(g.angle)
+            val sq = 12.0
+            val p1x = g.x + ux * sq; val p1y = g.y + uy * sq
+            val p2x = p1x - uy * sq; val p2y = p1y + ux * sq
+            val p3x = g.x - uy * sq; val p3y = g.y + ux * sq
+            canvas.drawLine(vx(p1x), vy(p1y), vx(p2x), vy(p2y), chrome.guideTicks)
+            canvas.drawLine(vx(p2x), vy(p2y), vx(p3x), vy(p3y), chrome.guideTicks)
+
+            // Label
+            val deg = Math.toDegrees(g.angle).let { (it % 360 + 360) % 360 }
+            canvas.drawText("Cartabón 30°/60° (${deg.toInt()}°)", vx(g.x + ux * 40 - uy * 20), vy(g.y + uy * 40 + ux * 20), chrome.guideText)
+        }
+        is DrawingGuide.Setsquare45 -> {
+            val c = g.corners()
+            chrome.guidePath.reset()
+            chrome.guidePath.moveTo(vx(c[0].first), vy(c[0].second))
+            chrome.guidePath.lineTo(vx(c[1].first), vy(c[1].second))
+            chrome.guidePath.lineTo(vx(c[2].first), vy(c[2].second))
+            chrome.guidePath.close()
+            canvas.drawPath(chrome.guidePath, chrome.guideFill)
+            canvas.drawPath(chrome.guidePath, chrome.guideStroke)
+
+            // Right angle symbol
+            val ux = kotlin.math.cos(g.angle)
+            val uy = kotlin.math.sin(g.angle)
+            val sq = 12.0
+            val p1x = g.x + ux * sq; val p1y = g.y + uy * sq
+            val p2x = p1x - uy * sq; val p2y = p1y + ux * sq
+            val p3x = g.x - uy * sq; val p3y = g.y + ux * sq
+            canvas.drawLine(vx(p1x), vy(p1y), vx(p2x), vy(p2y), chrome.guideTicks)
+            canvas.drawLine(vx(p2x), vy(p2y), vx(p3x), vy(p3y), chrome.guideTicks)
+
+            // Label
+            val deg = Math.toDegrees(g.angle).let { (it % 360 + 360) % 360 }
+            canvas.drawText("Escuadra 45° (${deg.toInt()}°)", vx(g.x + ux * 35 - uy * 25), vy(g.y + uy * 35 + ux * 25), chrome.guideText)
+        }
+        is DrawingGuide.Protractor -> {
+            val (b1, b2) = g.baselineEndpoints()
+            // Baseline
+            canvas.drawLine(vx(b1.first), vy(b1.second), vx(b2.first), vy(b2.second), chrome.guideStroke)
+
+            // Upper Semicircle arc
+            val rectLeft = vx(g.x - g.radius)
+            val rectTop = vy(g.y - g.radius)
+            val rectRight = vx(g.x + g.radius)
+            val rectBottom = vy(g.y + g.radius)
+            val startDeg = Math.toDegrees(g.angle).toFloat()
+
+            canvas.drawArc(
+                rectLeft, rectTop, rectRight, rectBottom,
+                startDeg + 180f, 180f, true, chrome.guideFill
+            )
+            canvas.drawArc(
+                rectLeft, rectTop, rectRight, rectBottom,
+                startDeg + 180f, 180f, false, chrome.guideStroke
+            )
+
+            // Center origin crosshair
+            canvas.drawCircle(vx(g.x), vy(g.y), 4f, chrome.guideHandle)
+
+            // Radial degree tick marks
+            for (d in 0..180 step 5) {
+                val rad = g.angle + Math.toRadians((180 - d).toDouble())
+                val cosA = kotlin.math.cos(rad)
+                val sinA = kotlin.math.sin(rad)
+                val outerX = g.x + cosA * g.radius
+                val outerY = g.y + sinA * g.radius
+
+                val tickLen = if (d % 10 == 0) (if (d % 45 == 0) 16.0 else 12.0) else 7.0
+                val innerX = g.x + cosA * (g.radius - tickLen)
+                val innerY = g.y + sinA * (g.radius - tickLen)
+
+                canvas.drawLine(vx(innerX), vy(innerY), vx(outerX), vy(outerY), chrome.guideTicks)
+
+                if (d % 30 == 0 || d == 45 || d == 90 || d == 135) {
+                    val labelX = g.x + cosA * (g.radius - 24.0)
+                    val labelY = g.y + sinA * (g.radius - 24.0)
+                    canvas.drawText("$d°", vx(labelX), vy(labelY) + 4f, chrome.guideText)
+                }
+            }
         }
         is DrawingGuide.Compass -> {
             canvas.drawCircle(vx(g.x), vy(g.y), (g.radius * s).toFloat(), chrome.guideStroke)
+            canvas.drawCircle(vx(g.x), vy(g.y), (g.radius * s).toFloat(), chrome.guideFill)
             canvas.drawCircle(vx(g.x), vy(g.y), HANDLE_DRAW_PX, chrome.guideHandle)
+            val rMm = (g.radius / DrawingGuide.Ruler.PT_PER_MM).toInt()
+            canvas.drawText("r = ${rMm} mm", vx(g.x), vy(g.y - g.radius / 2), chrome.guideText)
         }
     }
     val tip = guideDrag.tipOf(g)

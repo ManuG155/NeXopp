@@ -86,6 +86,20 @@ internal class CanvasChrome {
         style = Paint.Style.FILL
         color = GUIDE_COLOR
     }
+    /** STEM Guide metric tick marks: 1.5 px amber stroke. */
+    val guideTicks = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f
+        color = GUIDE_COLOR
+    }
+    /** STEM Guide text labels and measurements (cm, degrees). */
+    val guideText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        textSize = 12f
+        color = GUIDE_COLOR
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
 
     /** Page-overview reorder: lifted page wash (translucent white). */
     val pageLift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
