@@ -105,7 +105,9 @@ fun EditorScreen(
     activePane: Int = 0,
     onActivePane: (Int) -> Unit = {},
     busy: String? = null,
-    onExit: () -> Unit = {}
+    onExit: () -> Unit = {},
+    onShareExport: (com.nexopp.io.ExportManager.ExportFormat, List<Int>, Float) -> Unit = { _, _, _ -> },
+    onSaveExport: (com.nexopp.io.ExportManager.ExportFormat, String, List<Int>, Float) -> Unit = { _, _, _, _ -> }
 ) {
     val ui = rememberEditorUiState(settings)
     val pane = ui.pane(activePane)
@@ -131,7 +133,9 @@ fun EditorScreen(
                     onSettings = { ui.showSettings = true },
                     splitView = splitView,
                     onToggleSplitView = onToggleSplitView,
-                    onExit = onExit
+                    onExit = onExit,
+                    onShareExport = onShareExport,
+                    onSaveExport = onSaveExport
                 )
             }
 

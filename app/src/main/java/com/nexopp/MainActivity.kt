@@ -163,6 +163,15 @@ class MainActivity : ComponentActivity() {
             uri?.let { exportPdf(it) }
         }
 
+    private var pendingExportFormat = com.nexopp.io.ExportManager.ExportFormat.PDF
+    private var pendingExportIndices = emptyList<Int>()
+    private var pendingExportScale = 2.0f
+
+    private val exportFileLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+            uri?.let { saveExportToUri(it, pendingExportFormat, pendingExportIndices, pendingExportScale) }
+        }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val view = surface
         if (event.action == KeyEvent.ACTION_UP && view != null && view.splineInProgress()) {
@@ -223,6 +232,15 @@ class MainActivity : ComponentActivity() {
                             importPdfLauncher.launch(arrayOf(PDF_MIME))
                         },
                         onExportPdf = { exportPdfLauncher.launch("document.pdf") },
+                        onShareExport = { format, indices, scale ->
+                            shareExport(format, indices, scale)
+                        },
+                        onSaveExport = { format, filename, indices, scale ->
+                            pendingExportFormat = format
+                            pendingExportIndices = indices
+                            pendingExportScale = scale
+                            exportFileLauncher.launch(filename)
+                        },
                         onPickImage = { placement ->
                             pendingImagePlacement = placement
                             pickImageLauncher.launch(arrayOf("image/*"))

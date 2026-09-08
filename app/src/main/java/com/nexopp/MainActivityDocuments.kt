@@ -151,6 +151,49 @@ internal fun MainActivity.exportPdf(uri: Uri) = runCatching {
     staging.writeTo(uri) { output: java.io.OutputStream -> surface?.exportPdf(output) }
 }.onFailure { toast("Error al exportar PDF: ${it.message}") }
 
+internal fun MainActivity.saveExportToUri(
+    uri: Uri,
+    format: com.nexopp.io.ExportManager.ExportFormat,
+    pageIndices: List<Int>,
+    scale: Float
+) {
+    val view = surface ?: return
+    val doc = view.toDocument()
+    val exportMgr = com.nexopp.io.ExportManager(this, view.pdfSourceFile()?.let(PdfPageCache::shared))
+    inBackground("Exportando documento…", {
+        contentResolver.openOutputStream(uri, "wt")?.use { out ->
+            exportMgr.exportToStream(doc, out, format, pageIndices, scale)
+        }
+    }) { result ->
+        result.onSuccess { toast("Exportación completada") }
+            .onFailure { toast("Error al exportar: ${it.message}") }
+    }
+}
+
+internal fun MainActivity.shareExport(
+    format: com.nexopp.io.ExportManager.ExportFormat,
+    pageIndices: List<Int>,
+    scale: Float
+) {
+    val view = surface ?: return
+    val doc = view.toDocument()
+    val title = pendingSaveName.ifBlank { "apuntes" }
+    val exportMgr = com.nexopp.io.ExportManager(this, view.pdfSourceFile()?.let(PdfPageCache::shared))
+    inBackground("Preparando archivo para compartir…", {
+        exportMgr.createShareIntent(doc, title, format, pageIndices, scale)
+    }) { result ->
+        result.onSuccess { intent ->
+            if (intent != null) {
+                startActivity(Intent.createChooser(intent, "Compartir apuntes con…"))
+            } else {
+                toast("No se pudo generar el archivo para compartir")
+            }
+        }.onFailure {
+            toast("Error al preparar exportación: ${it.message}")
+        }
+    }
+}
+
 internal fun MainActivity.insertPickedImage(uri: Uri) = runCatching {
     val placement = pendingImagePlacement ?: return@runCatching
     pendingImagePlacement = null

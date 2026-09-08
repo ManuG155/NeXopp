@@ -43,6 +43,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import com.nexopp.render.insertElements
 import com.nexopp.stem.FunctionPlotterDialog
 import androidx.compose.ui.unit.sp
@@ -72,11 +73,14 @@ fun UnifiedTopBar(
     onSettings: () -> Unit,
     splitView: Boolean,
     onToggleSplitView: () -> Unit,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    onShareExport: (com.nexopp.io.ExportManager.ExportFormat, List<Int>, Float) -> Unit = { _, _, _ -> },
+    onSaveExport: (com.nexopp.io.ExportManager.ExportFormat, String, List<Int>, Float) -> Unit = { _, _, _, _ -> }
 ) {
     val surface = pane.surface
     var showPageManager by remember { mutableStateOf(false) }
     var showFunctionPlotter by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     
     val styleCallbacks = ToolbarStyleCallbacks(
         color = ui.color,
@@ -129,12 +133,11 @@ fun UnifiedTopBar(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Icon(Icons.Filled.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Filled.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                "Pág. ${pane.currentPage + 1}/${pane.pageCount}",
-                                style = TextStyle(fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
-                                color = MaterialTheme.colorScheme.onSurface
+                                "${pane.currentPage + 1} / ${pane.pageCount.coerceAtLeast(1)}",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
                         }
                     }
@@ -151,18 +154,21 @@ fun UnifiedTopBar(
                     onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) }
                 )
 
-                // Derecha: Capas, Fondo/Cuadrículas, Búsqueda y Menú
+                // Derecha: Capas, Fondo/Cuadrículas, Búsqueda, Exportar/Compartir y Menú
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BackgroundPopupButton(pane.backgroundStyle, onBackgroundStyle = { surface?.setPageBackgroundStyle(it) })
                     LayersPopupButton(layerCallbacks)
                     SearchControls(pane)
+                    IconButton(onClick = { showExportDialog = true }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Filled.Share, contentDescription = "Exportar y Compartir")
+                    }
                     OverflowMenu(
                         onOpen = onOpen,
                         onNewTab = onNewTab,
                         onSave = onSave,
                         onSaveAs = onSaveAs,
                         onImportPdf = onImportPdf,
-                        onExportPdf = onExportPdf,
+                        onExportPdf = { showExportDialog = true },
                         onSettings = onSettings,
                         splitView = splitView,
                         onToggleSplitView = onToggleSplitView
@@ -218,6 +224,23 @@ fun UnifiedTopBar(
             onDismiss = { showFunctionPlotter = false },
             onInsertPlot = { elements ->
                 surface?.insertElements(elements)
+            }
+        )
+    }
+
+    if (showExportDialog) {
+        ExportDialog(
+            currentPageNo = pane.currentPage,
+            totalPageCount = surface?.toDocument()?.pages?.size ?: pane.pageCount.coerceAtLeast(1),
+            defaultTitle = tabs.titles.getOrNull(tabs.activeIndex)?.ifBlank { "apuntes" } ?: "apuntes",
+            onDismiss = { showExportDialog = false },
+            onShare = { format, indices, scale ->
+                showExportDialog = false
+                onShareExport(format, indices, scale)
+            },
+            onSaveToStorage = { format, filename, indices, scale ->
+                showExportDialog = false
+                onSaveExport(format, filename, indices, scale)
             }
         )
     }

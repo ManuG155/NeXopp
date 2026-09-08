@@ -31,11 +31,16 @@ class PdfExporter(
 
     private val painter = PdfVectorPainter()
 
-    fun export(doc: Document, out: OutputStream) {
+    fun export(doc: Document, out: OutputStream, pageIndices: List<Int>? = null) {
         val source = pdfSource?.source?.let { runCatching { PDDocument.load(it) }.getOrNull() }
         val outDoc = PDDocument()
         try {
-            doc.pages.forEach { page -> writePage(outDoc, source, page) }
+            val pagesToExport = if (pageIndices != null) {
+                pageIndices.mapNotNull { doc.pages.getOrNull(it) }
+            } else {
+                doc.pages
+            }
+            pagesToExport.forEach { page -> writePage(outDoc, source, page) }
             outDoc.save(out)
         } finally {
             outDoc.close()

@@ -33,12 +33,21 @@ object PressureCurve {
 
 /** The user-facing pressure "feel" presets, each an exponent for [PressureCurve.factor]. */
 enum class PressureSensitivity(val gamma: Float, val label: String) {
+    /** Very light touch reaches full width quickly (soft nib / gentle writing). */
+    ULTRA_SOFT(0.35f, "Ultra-suave (Poco esfuerzo)"),
+
     /** Reaches full width with a light touch. */
-    SOFT(0.55f, "Soft"),
+    SOFT(0.55f, "Suave"),
+
+    /** Natural ink fluid curve. */
+    NATURAL(0.80f, "Natural (Tinta fluida)"),
 
     /** The historical linear response. */
-    LINEAR(1.0f, "Linear"),
+    LINEAR(1.0f, "Lineal"),
 
     /** Needs a firmer press before the line thickens. */
-    FIRM(1.8f, "Firm"),
+    FIRM(1.5f, "Firme (Control de trazo)"),
+
+    /** Hard press required (hard nib / high-pressure writing). */
+    HARD(2.2f, "Muy Firme (Alta presión)"),
 }
