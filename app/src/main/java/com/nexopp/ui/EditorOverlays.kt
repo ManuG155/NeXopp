@@ -76,10 +76,10 @@ fun BoxScope.EditorOverlays(
         )
     }
     ui.texPlacement?.let { placement ->
-        TextInputDialog(
-            title = "LaTeX",
+        LatexInputDialog(
+            title = "Ecuación LaTeX",
             initial = "",
-            confirmLabel = "Colocar",
+            confirmLabel = "Insertar",
             onConfirm = { latex -> surface?.insertTex(placement, latex, ui.color); ui.texPlacement = null },
             onDismiss = { ui.texPlacement = null },
         )

@@ -20,10 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChangeHistory
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -151,6 +153,8 @@ internal fun ToolGroupButton(
 fun ContextualOptionsBar(
     tool: EditorTool,
     styleCallbacks: ToolbarStyleCallbacks,
+    recognizeShapes: Boolean,
+    onRecognizeShapes: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val needsStyle = tool in listOf(
@@ -211,10 +215,19 @@ fun ContextualOptionsBar(
                 Spacer(Modifier.width(12.dp))
             }
             
-            // Botón para color personalizado
             IconButton(onClick = { showCustomColor = true }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Filled.Palette, contentDescription = "Más colores", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+
+            Spacer(Modifier.weight(1f))
+            
+            // Auto-Formas rápido
+            FilterChip(
+                selected = recognizeShapes,
+                onClick = { onRecognizeShapes(!recognizeShapes) },
+                label = { Text("Auto-Formas") },
+                leadingIcon = { Icon(Icons.Filled.ChangeHistory, contentDescription = null) }
+            )
         }
     }
 

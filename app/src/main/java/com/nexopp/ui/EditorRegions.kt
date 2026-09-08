@@ -107,7 +107,6 @@ fun UnifiedTopBar(
 
     Surface(tonalElevation = 1.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
-            // Fila 1: Botón de volver, deshacer/rehacer y controles del sistema
             Row(
                 modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -144,7 +143,6 @@ fun UnifiedTopBar(
             
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             
-            // Fila 2: Herramientas centradas
             ToolsRow(
                 tool = ui.tool,
                 onTool = { ui.tool = it; surface?.applyTool(it) },
@@ -172,8 +170,15 @@ fun UnifiedTopBar(
                 railHidden = settings.railHidden
             )
 
-            // Fila 3: Opciones contextuales dinámicas
-            ContextualOptionsBar(tool = ui.tool, styleCallbacks = styleCallbacks)
+            ContextualOptionsBar(
+                tool = ui.tool, 
+                styleCallbacks = styleCallbacks,
+                recognizeShapes = settings.recognizeShapes,
+                onRecognizeShapes = { 
+                    surface?.recognizeShapes = it
+                    onSettingsChange(settings.copy(recognizeShapes = it))
+                }
+            )
         }
     }
 }
