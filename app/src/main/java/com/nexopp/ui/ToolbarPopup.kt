@@ -4,13 +4,11 @@ package com.nexopp.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-internal val ToolbarButtonSize = 48.dp
+internal val ToolbarButtonSize = 44.dp
 
 @Composable
 internal fun MenuHeading(text: String) {
@@ -54,7 +52,7 @@ internal fun ToolbarPopupButton(
         Box(
             modifier = Modifier
                 .size(ToolbarButtonSize)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(12.dp))
                 .then(if (active) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
                 .combinedClickable(
                     onClick = { open = true },

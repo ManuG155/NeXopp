@@ -1,4 +1,4 @@
-// --- EditorScreen.kt ---
+// Ruta: app/src/main/java/com/nexopp/ui/EditorScreen.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Box
@@ -204,11 +204,6 @@ private fun EditorBody(
     paneChrome: @Composable (EditorUiState, PaneState, AppSettings, (AppSettings) -> Unit, AudioUiState) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val toolbar: @Composable () -> Unit = {
-        if (!ui.fullPage) {
-            paneChrome(ui, pane, settings, onSettingsChange, audio)
-        }
-    }
     val paneAt: @Composable (Int, Modifier) -> Unit = { index, paneModifier ->
         EditorPaneView(
             index = index,
@@ -222,31 +217,21 @@ private fun EditorBody(
             modifier = paneModifier,
         )
     }
-    val canvas: @Composable (Modifier) -> Unit = { canvasModifier ->
+
+    Column(modifier = modifier) {
+        if (!ui.fullPage) {
+            paneChrome(ui, pane, settings, onSettingsChange, audio)
+        }
         if (splitView) {
             SplitLayout(
                 fraction = ui.splitFraction,
                 onFraction = { ui.splitFraction = it },
-                modifier = canvasModifier,
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 first = { paneAt(0, it) },
                 second = { paneAt(1, it) },
             )
         } else {
-            paneAt(0, canvasModifier)
-        }
-    }
-    when (settings.toolbarPosition) {
-        ToolbarPosition.LEFT -> Row(modifier = modifier) {
-            toolbar(); canvas(Modifier.fillMaxHeight().weight(1f))
-        }
-        ToolbarPosition.RIGHT -> Row(modifier = modifier) {
-            canvas(Modifier.fillMaxHeight().weight(1f)); toolbar()
-        }
-        ToolbarPosition.TOP -> Column(modifier = modifier) {
-            toolbar(); canvas(Modifier.fillMaxWidth().weight(1f))
-        }
-        ToolbarPosition.BOTTOM -> Column(modifier = modifier) {
-            canvas(Modifier.fillMaxWidth().weight(1f)); toolbar()
+            paneAt(0, Modifier.fillMaxWidth().weight(1f))
         }
     }
 }

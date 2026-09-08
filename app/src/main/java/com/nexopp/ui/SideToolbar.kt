@@ -6,16 +6,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
@@ -37,7 +34,6 @@ import com.nexopp.render.GuideKind
 
 @Composable
 fun SideToolbar(
-    horizontal: Boolean = false,
     tool: EditorTool,
     onTool: (EditorTool) -> Unit,
     toolGroupSelections: Map<String, EditorTool>,
@@ -64,57 +60,40 @@ fun SideToolbar(
     railHidden: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
-    ToolbarShell(horizontal = horizontal, modifier = modifier) {
-        for (item in visibleRailItems(railOrder, railHidden)) {
-            val group = toolGroupForRailItem(item.id)
-            if (group != null) {
-                ToolGroupButton(
-                    group = group,
-                    selected = group.selected(toolGroupSelections),
-                    active = tool in group.tools,
-                    onTool = onTool,
-                    onSelect = { picked ->
-                        onToolGroupSelections(group.withSelection(toolGroupSelections, picked))
-                        onTool(picked)
-                    },
-                )
-            } else when (item.id) {
-                "color" -> ColorSizePopupButton(styleCallbacks)
-                "style" -> StylePopupButton(styleCallbacks.lineStyle, styleCallbacks.onLineStyle, styleCallbacks.fill, styleCallbacks.onFill)
-                "presets" -> PresetsPopupButton(presets, onPresets, onActivatePreset, onCapturePreset)
-                "shapes" -> ShapeRecognitionButton(recognizeShapes, onRecognizeShapes)
-                "guides" -> GuidePopupButton(guideKind, onGuideKind)
-                "layers" -> LayersPopupButton(layerCallbacks)
-                "zoom" -> ZoomPopupButton(zoom, onZoomIn, onZoomOut, onZoomReset)
-                "background" -> BackgroundPopupButton(backgroundStyle, onBackgroundStyle)
-                "pages" -> PagesPopupButton(pageCallbacks)
-                "audio" -> AudioPopupButton(audio)
+    Surface(modifier = modifier.fillMaxWidth(), tonalElevation = 1.dp, shadowElevation = 2.dp) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (item in visibleRailItems(railOrder, railHidden)) {
+                val group = toolGroupForRailItem(item.id)
+                if (group != null) {
+                    ToolGroupButton(
+                        group = group,
+                        selected = group.selected(toolGroupSelections),
+                        active = tool in group.tools,
+                        onTool = onTool,
+                        onSelect = { picked ->
+                            onToolGroupSelections(group.withSelection(toolGroupSelections, picked))
+                            onTool(picked)
+                        },
+                    )
+                } else when (item.id) {
+                    "color" -> ColorSizePopupButton(styleCallbacks)
+                    "style" -> StylePopupButton(styleCallbacks.lineStyle, styleCallbacks.onLineStyle, styleCallbacks.fill, styleCallbacks.onFill)
+                    "presets" -> PresetsPopupButton(presets, onPresets, onActivatePreset, onCapturePreset)
+                    "shapes" -> ShapeRecognitionButton(recognizeShapes, onRecognizeShapes)
+                    "guides" -> GuidePopupButton(guideKind, onGuideKind)
+                    "layers" -> LayersPopupButton(layerCallbacks)
+                    "zoom" -> ZoomPopupButton(zoom, onZoomIn, onZoomOut, onZoomReset)
+                    "background" -> BackgroundPopupButton(backgroundStyle, onBackgroundStyle)
+                    "pages" -> PagesPopupButton(pageCallbacks)
+                    "audio" -> AudioPopupButton(audio)
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun ToolbarShell(horizontal: Boolean, modifier: Modifier, buttons: @Composable () -> Unit) {
-    if (horizontal) {
-        Surface(modifier = modifier.fillMaxWidth(), tonalElevation = 3.dp) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) { buttons() }
-        }
-    } else {
-        Surface(modifier = modifier.fillMaxHeight(), tonalElevation = 3.dp) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 8.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) { buttons() }
         }
     }
 }
@@ -134,7 +113,7 @@ private fun ToolGroupButton(
         Box(
             modifier = Modifier
                 .size(ToolbarButtonSize)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(12.dp))
                 .then(if (active) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
                 .combinedClickable(
                     onClick = { onTool(selected) },

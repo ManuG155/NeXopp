@@ -3,7 +3,6 @@ package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChangeHistory
 import androidx.compose.material.icons.filled.Check
@@ -13,7 +12,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -90,5 +88,45 @@ internal fun GuidePopupButton(kind: GuideKind, onKind: (GuideKind) -> Unit) {
                 onClick = { onKind(option); dismiss() },
             )
         }
+    }
+}
+
+data class AudioUiState(
+    val recording: Boolean = false,
+    val playing: Boolean = false,
+    val folderChosen: Boolean = false,
+    val onToggleRecord: () -> Unit = {},
+    val onStopPlayback: () -> Unit = {},
+    val onChooseFolder: () -> Unit = {}
+)
+
+@Composable
+internal fun AudioPopupButton(audio: AudioUiState) {
+    ToolbarPopupButton(
+        icon = if (audio.recording || audio.playing) Icons.Filled.Stop else Icons.Filled.Mic,
+        contentDescription = "Audio",
+        active = audio.recording || audio.playing
+    ) { dismiss ->
+        MenuHeading("Audio")
+        if (audio.recording || audio.playing) {
+            DropdownMenuItem(
+                text = { Text(if (audio.recording) "Detener grabación" else "Detener reproducción") },
+                leadingIcon = { Icon(Icons.Filled.Stop, contentDescription = null) },
+                onClick = {
+                    if (audio.recording) audio.onToggleRecord() else audio.onStopPlayback()
+                    dismiss()
+                }
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text("Iniciar grabación") },
+                leadingIcon = { Icon(Icons.Filled.Mic, contentDescription = null) },
+                onClick = { audio.onToggleRecord(); dismiss() }
+            )
+        }
+        DropdownMenuItem(
+            text = { Text(if (audio.folderChosen) "Cambiar carpeta de audio" else "Elegir carpeta de audio") },
+            onClick = { audio.onChooseFolder(); dismiss() }
+        )
     }
 }

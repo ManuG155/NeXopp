@@ -9,26 +9,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun ToolbarSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
-    OptionGroup(
-        title = "Posición de barra de herramientas",
-        subtitle = "Borde donde se ancla la barra de herramientas.",
-        options = ToolbarPosition.values().toList(),
-        selected = settings.toolbarPosition,
-        label = { it.label },
-        onSelect = { onChange(settings.copy(toolbarPosition = it)) },
-    )
-
-    Spacer(Modifier.height(12.dp))
-    Text("Botones de la barra", style = MaterialTheme.typography.titleSmall)
+    Text("Botones de la barra superior", style = MaterialTheme.typography.titleSmall)
     Text(
-        "Apaga un botón para ocultarlo, o mantén pulsado un elemento y arrástralo arriba o abajo para reordenarlo. La barra los dibuja de arriba abajo (o de izquierda a derecha cuando está en horizontal).",
+        "Apaga un botón para ocultarlo, o mantén pulsado un elemento y arrástralo arriba o abajo para reordenarlo. La barra los dibuja de izquierda a derecha.",
         style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(8.dp))

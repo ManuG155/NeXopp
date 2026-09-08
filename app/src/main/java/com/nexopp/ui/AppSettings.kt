@@ -1,4 +1,4 @@
-// --- AppSettings.kt ---
+// Ruta: app/src/main/java/com/nexopp/ui/AppSettings.kt
 package com.nexopp.ui
 
 import android.content.Context
@@ -12,15 +12,6 @@ import com.nexopp.render.PageStacker
 import com.nexopp.render.PanSensitivity
 import com.nexopp.render.PressureSensitivity
 import com.nexopp.render.StrokePrecision
-
-enum class ToolbarPosition(val label: String) {
-    TOP("Arriba"),
-    BOTTOM("Abajo"),
-    LEFT("Izquierda"),
-    RIGHT("Derecha"),
-    ;
-    val isHorizontal: Boolean get() = this == TOP || this == BOTTOM
-}
 
 enum class PageCounterVertical(val label: String) {
     TOP("Arriba"),
@@ -61,7 +52,6 @@ data class AppSettings(
     val momentum: Float = Momentum.NORMAL,
     val momentumCurve: MomentumCurve = MomentumCurve.QUADRATIC,
     val panSensitivity: Float = PanSensitivity.NORMAL,
-    val toolbarPosition: ToolbarPosition = ToolbarPosition.LEFT,
     val recentColors: List<Int> = emptyList(),
     val lastColor: Int = DEFAULT_LAST_COLOR,
     val lastWidth: Float = DEFAULT_PEN_WIDTHS[1],
@@ -142,7 +132,6 @@ class SettingsStore(context: Context) {
             momentum = Momentum.coerce(prefs.getFloat(KEY_MOMENTUM, d.momentum)),
             momentumCurve = enumOr(prefs.getString(KEY_MOMENTUM_CURVE, null), d.momentumCurve),
             panSensitivity = PanSensitivity.coerce(prefs.getFloat(KEY_PAN_SENSITIVITY, d.panSensitivity)),
-            toolbarPosition = enumOr(prefs.getString(KEY_TOOLBAR_POSITION, null), d.toolbarPosition),
             recentColors = decodeColors(prefs.getString(KEY_RECENT_COLORS, null)),
             lastColor = prefs.getInt(KEY_LAST_COLOR, d.lastColor),
             lastWidth = prefs.getFloat(KEY_LAST_WIDTH, d.lastWidth),
@@ -191,7 +180,6 @@ class SettingsStore(context: Context) {
         e.putFloat(KEY_MOMENTUM, s.momentum)
         e.putString(KEY_MOMENTUM_CURVE, s.momentumCurve.name)
         e.putFloat(KEY_PAN_SENSITIVITY, s.panSensitivity)
-        e.putString(KEY_TOOLBAR_POSITION, s.toolbarPosition.name)
         e.putString(KEY_RECENT_COLORS, s.recentColors.joinToString(",") { it.toString() })
         e.putInt(KEY_LAST_COLOR, s.lastColor)
         e.putFloat(KEY_LAST_WIDTH, s.lastWidth)
@@ -234,7 +222,6 @@ class SettingsStore(context: Context) {
         const val KEY_MOMENTUM = "momentum_factor"
         const val KEY_MOMENTUM_CURVE = "momentum_curve"
         const val KEY_PAN_SENSITIVITY = "pan_sensitivity"
-        const val KEY_TOOLBAR_POSITION = "toolbar_position"
         const val KEY_RECENT_COLORS = "recent_colors"
         const val KEY_LAST_COLOR = "last_color"
         const val KEY_LAST_WIDTH = "last_width"

@@ -8,26 +8,14 @@ data class ToolGroup(
 )
 
 val TOOL_GROUPS: List<ToolGroup> = listOf(
+    ToolGroup("nav", "Navegación", listOf(EditorTool.HAND)),
     ToolGroup("draw", "Dibujar", listOf(EditorTool.PEN, EditorTool.HIGHLIGHTER)),
     ToolGroup("eraser", "Borrador", listOf(EditorTool.ERASER, EditorTool.ERASER_WHOLE)),
-    ToolGroup(
-        "line", "Línea",
-        listOf(
-            EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW, EditorTool.SPLINE,
-            EditorTool.RECTANGLE, EditorTool.ELLIPSE, EditorTool.COORDINATE_AXIS,
-        ),
-    ),
-    ToolGroup("pan", "Desplazar", listOf(EditorTool.HAND)),
-    ToolGroup(
-        "select", "Seleccionar",
-        listOf(
-            EditorTool.SELECT, EditorTool.LASSO_SELECT, EditorTool.TEXT_SELECT,
-            EditorTool.BG_SELECT,
-        ),
-    ),
+    ToolGroup("select", "Seleccionar", listOf(EditorTool.SELECT, EditorTool.LASSO_SELECT, EditorTool.TEXT_SELECT, EditorTool.BG_SELECT)),
+    ToolGroup("shapes", "Formas", listOf(EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW, EditorTool.RECTANGLE, EditorTool.ELLIPSE, EditorTool.SPLINE, EditorTool.COORDINATE_AXIS)),
     ToolGroup("insert", "Insertar", listOf(EditorTool.TEXT, EditorTool.TEXIMAGE, EditorTool.IMAGE)),
-    ToolGroup("vspace", "Espacio vertical", listOf(EditorTool.VERTICAL_SPACE)),
-    ToolGroup("play", "Reproducir objeto", listOf(EditorTool.PLAY_OBJECT)),
+    ToolGroup("vspace", "Espacio", listOf(EditorTool.VERTICAL_SPACE)),
+    ToolGroup("play", "Audio", listOf(EditorTool.PLAY_OBJECT))
 )
 
 fun groupOf(tool: EditorTool): ToolGroup? = TOOL_GROUPS.firstOrNull { tool in it.tools }

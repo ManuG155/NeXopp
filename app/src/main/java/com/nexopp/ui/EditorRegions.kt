@@ -1,4 +1,4 @@
-// --- EditorRegions.kt ---
+// Ruta: app/src/main/java/com/nexopp/ui/EditorRegions.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -195,7 +195,6 @@ fun EditorToolbar(
 ) {
     val surface = pane.surface
     SideToolbar(
-        horizontal = settings.toolbarPosition.isHorizontal,
         tool = ui.tool,
         onTool = { ui.tool = it; surface?.applyTool(it) },
         audio = audio,

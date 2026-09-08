@@ -1,4 +1,4 @@
-// --- EditorOverlays.kt ---
+// Ruta: app/src/main/java/com/nexopp/ui/EditorOverlays.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.background
@@ -32,6 +32,7 @@ import com.nexopp.render.duplicateSelection
 import com.nexopp.render.finishSpline
 import com.nexopp.render.pasteClipboard
 import com.nexopp.render.restyleSelection
+import com.nexopp.render.undoLastSplineNode
 
 @Composable
 fun BoxScope.EditorOverlays(
