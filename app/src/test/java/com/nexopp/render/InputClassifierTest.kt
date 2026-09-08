@@ -85,4 +85,42 @@ class InputClassifierTest {
         // A mouse (UNKNOWN) should draw, and is never treated as a palm.
         assertEquals(GestureIntent.DRAW, classify(PointerKind.UNKNOWN, ActiveTool.PEN, settings = InputSettings(fingerDraws = false)))
     }
+
+    // --- secondary barrel button & strict palm rejection ---------------------------------------
+
+    @Test fun secondaryBarrelButtonOverridesTool() {
+        val s = InputSettings(secondaryBarrelAction = BarrelAction.SELECT)
+        val res = InputClassifier.classify(
+            kind = PointerKind.STYLUS,
+            barrelPressed = false,
+            activeTool = ActiveTool.PEN,
+            settings = s,
+            secondaryBarrelPressed = true,
+        )
+        assertEquals(GestureIntent.SELECT, res)
+    }
+
+    @Test fun strictPalmRejectionFiltersPalmContactWhenFingerDraws() {
+        val s = InputSettings(fingerDraws = true, strictPalmRejection = true)
+        val res = InputClassifier.classify(
+            kind = PointerKind.FINGER,
+            barrelPressed = false,
+            activeTool = ActiveTool.PEN,
+            settings = s,
+            isPalmContact = true,
+        )
+        assertEquals(GestureIntent.IGNORE, res)
+    }
+
+    @Test fun strictPalmRejectionPansWhenFingerDrawsDisabled() {
+        val s = InputSettings(fingerDraws = false, strictPalmRejection = true)
+        val res = InputClassifier.classify(
+            kind = PointerKind.FINGER,
+            barrelPressed = false,
+            activeTool = ActiveTool.PEN,
+            settings = s,
+            isPalmContact = true,
+        )
+        assertEquals(GestureIntent.PAN, res)
+    }
 }

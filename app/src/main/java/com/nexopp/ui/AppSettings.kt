@@ -33,7 +33,9 @@ enum class ThemeMode(val label: String) {
 
 data class AppSettings(
     val fingerDraws: Boolean = true,
+    val strictPalmRejection: Boolean = true,
     val barrelAction: BarrelAction = BarrelAction.ERASE,
+    val secondaryBarrelAction: BarrelAction = BarrelAction.SELECT,
     val barrelDoubleAction: BarrelDoubleAction = BarrelDoubleAction.UNDO,
     val paletteInvocation: PaletteInvocation = PaletteInvocation.NONE,
     val showHover: Boolean = true,
@@ -112,7 +114,9 @@ class SettingsStore(context: Context) {
         val d = AppSettings()
         return AppSettings(
             fingerDraws = prefs.getBoolean(KEY_FINGER_DRAWS, d.fingerDraws),
+            strictPalmRejection = prefs.getBoolean(KEY_STRICT_PALM, d.strictPalmRejection),
             barrelAction = enumOr(prefs.getString(KEY_BARREL, null), d.barrelAction),
+            secondaryBarrelAction = enumOr(prefs.getString(KEY_SECONDARY_BARREL, null), d.secondaryBarrelAction),
             barrelDoubleAction = enumOr(prefs.getString(KEY_BARREL_DOUBLE, null), d.barrelDoubleAction),
             paletteInvocation = enumOr(prefs.getString(KEY_PALETTE_INVOCATION, null), d.paletteInvocation),
             showHover = prefs.getBoolean(KEY_HOVER, d.showHover),
@@ -161,7 +165,9 @@ class SettingsStore(context: Context) {
     fun save(s: AppSettings) {
         val e = prefs.edit()
             .putBoolean(KEY_FINGER_DRAWS, s.fingerDraws)
+            .putBoolean(KEY_STRICT_PALM, s.strictPalmRejection)
             .putString(KEY_BARREL, s.barrelAction.name)
+            .putString(KEY_SECONDARY_BARREL, s.secondaryBarrelAction.name)
             .putString(KEY_BARREL_DOUBLE, s.barrelDoubleAction.name)
             .putString(KEY_PALETTE_INVOCATION, s.paletteInvocation.name)
             .putBoolean(KEY_HOVER, s.showHover)
@@ -204,7 +210,9 @@ class SettingsStore(context: Context) {
 
     private companion object {
         const val KEY_FINGER_DRAWS = "finger_draws"
+        const val KEY_STRICT_PALM = "strict_palm_rejection"
         const val KEY_BARREL = "barrel_action"
+        const val KEY_SECONDARY_BARREL = "secondary_barrel_action"
         const val KEY_BARREL_DOUBLE = "barrel_double_action"
         const val KEY_PALETTE_INVOCATION = "palette_invocation"
         const val KEY_HOVER = "show_hover"

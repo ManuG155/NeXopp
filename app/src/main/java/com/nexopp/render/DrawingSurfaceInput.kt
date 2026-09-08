@@ -99,9 +99,13 @@ internal fun DrawingSurfaceView.handleHover(event: MotionEvent): Boolean? {
     }
     when (event.actionMasked) {
         MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
+            lastStylusHoverTimeMs = System.currentTimeMillis()
             hovering = true; hoverX = event.x; hoverY = event.y; hoverKind = kind; render()
         }
-        MotionEvent.ACTION_HOVER_EXIT -> { hovering = false; render() }
+        MotionEvent.ACTION_HOVER_EXIT -> {
+            lastStylusHoverTimeMs = System.currentTimeMillis()
+            hovering = false; render()
+        }
     }
     return true
 }
@@ -109,13 +113,31 @@ internal fun DrawingSurfaceView.handleHover(event: MotionEvent): Boolean? {
 /** Begin a gesture for the pointer at [pointerIndex], its intent decided by [InputClassifier]. */
 internal fun DrawingSurfaceView.beginPointer(event: MotionEvent, pointerIndex: Int) {
     val kind = pointerKindOf(event, pointerIndex)
+    if (kind == PointerKind.STYLUS || kind == PointerKind.ERASER_TIP) {
+        lastStylusActiveTimeMs = System.currentTimeMillis()
+    }
     // A finger laid on the guide manipulates it, whatever the active tool — the pen keeps
     // drawing against it meanwhile, exactly as you'd hold a real setsquare down and rule along it.
     if (kind == PointerKind.FINGER && guideDrag.begin(event, pointerIndex)) return
     // Play-object is a pure query — it never edits the document, so it short-circuits the whole
     // gesture machinery rather than earning a GestureIntent of its own.
     if (audioPlayMode) { audioTap(event, pointerIndex); return }
-    val intent = InputClassifier.classify(kind, barrelPressed(event), activeTool(), inputSettings)
+
+    val isPalm = kind == PointerKind.FINGER && (
+        (inputSettings.strictPalmRejection && System.currentTimeMillis() - lastStylusHoverTimeMs < 600L) ||
+        (inputSettings.strictPalmRejection && System.currentTimeMillis() - lastStylusActiveTimeMs < 800L) ||
+        event.getSize(pointerIndex) > 0.42f ||
+        (event.getTouchMajor(pointerIndex) / resources.displayMetrics.density) > 48f
+    )
+
+    val intent = InputClassifier.classify(
+        kind = kind,
+        barrelPressed = barrelPressed(event),
+        activeTool = activeTool(),
+        settings = inputSettings,
+        secondaryBarrelPressed = secondaryBarrelPressed(event),
+        isPalmContact = isPalm
+    )
     stylusOwner = (kind == PointerKind.STYLUS || kind == PointerKind.ERASER_TIP) &&
         (intent == GestureIntent.DRAW || intent == GestureIntent.ERASE)
     when (intent) {
@@ -142,12 +164,20 @@ internal fun DrawingSurfaceView.beginPointer(event: MotionEvent, pointerIndex: I
 internal fun DrawingSurfaceView.onPointerDown(event: MotionEvent) {
     val idx = event.actionIndex
     val kind = pointerKindOf(event, idx)
+    val isPalm = kind == PointerKind.FINGER && (
+        stylusOwner ||
+        (inputSettings.strictPalmRejection && System.currentTimeMillis() - lastStylusHoverTimeMs < 600L) ||
+        (inputSettings.strictPalmRejection && System.currentTimeMillis() - lastStylusActiveTimeMs < 800L) ||
+        event.getSize(idx) > 0.42f ||
+        (event.getTouchMajor(idx) / resources.displayMetrics.density) > 48f
+    )
     when {
         kind == PointerKind.STYLUS || kind == PointerKind.ERASER_TIP -> {
+            lastStylusActiveTimeMs = System.currentTimeMillis()
             abandonInProgress()
             beginPointer(event, idx)
         }
-        stylusOwner -> Unit // palm / finger resting while the pen writes: ignore
+        stylusOwner || isPalm -> Unit // palm / finger resting while the pen writes: ignore
         else -> beginScroll(event) // ordinary two-finger pan
     }
 }
@@ -216,6 +246,9 @@ internal fun DrawingSurfaceView.pointerKindOf(event: MotionEvent, pointerIndex: 
 
 internal fun DrawingSurfaceView.barrelPressed(event: MotionEvent): Boolean =
     (event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+
+internal fun DrawingSurfaceView.secondaryBarrelPressed(event: MotionEvent): Boolean =
+    (event.buttonState and (MotionEvent.BUTTON_STYLUS_SECONDARY or MotionEvent.BUTTON_SECONDARY)) != 0
 
 /** The on-screen tool collapsed to the classifier's [ActiveTool]. */
 internal fun DrawingSurfaceView.activeTool(): ActiveTool = when {

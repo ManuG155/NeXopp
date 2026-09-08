@@ -136,8 +136,12 @@ enum class GestureIntent {
 data class InputSettings(
     /** When false, finger pointers only pan/zoom — they actuate no tool at all (stylus-only mode). */
     val fingerDraws: Boolean = true,
+    /** When true, strict palm rejection aggressively filters accidental palm touches near stylus. */
+    val strictPalmRejection: Boolean = true,
     /** What the stylus primary barrel-button invokes while held. */
     val barrelAction: BarrelAction = BarrelAction.ERASE,
+    /** What the stylus secondary barrel-button invokes while held (if supported by hardware). */
+    val secondaryBarrelAction: BarrelAction = BarrelAction.SELECT,
     /** What a rapid double-click of that same button invokes. */
     val barrelDoubleAction: BarrelDoubleAction = BarrelDoubleAction.UNDO,
     /** Which *touch* gesture summons the radial palette (see [PaletteInvocation]). */
@@ -183,14 +187,29 @@ object InputClassifier {
         barrelPressed: Boolean,
         activeTool: ActiveTool,
         settings: InputSettings,
+        secondaryBarrelPressed: Boolean = false,
+        isPalmContact: Boolean = false,
     ): GestureIntent {
+        if (isPalmContact && settings.strictPalmRejection) {
+            return if (!settings.fingerDraws) GestureIntent.PAN else GestureIntent.IGNORE
+        }
+
         if (kind == PointerKind.ERASER_TIP) return GestureIntent.ERASE
 
-        if (kind == PointerKind.STYLUS && barrelPressed) {
-            when (settings.barrelAction) {
-                BarrelAction.ERASE -> return GestureIntent.ERASE
-                BarrelAction.SELECT -> return GestureIntent.SELECT
-                BarrelAction.NONE -> Unit // fall through to the on-screen tool
+        if (kind == PointerKind.STYLUS) {
+            if (barrelPressed) {
+                when (settings.barrelAction) {
+                    BarrelAction.ERASE -> return GestureIntent.ERASE
+                    BarrelAction.SELECT -> return GestureIntent.SELECT
+                    BarrelAction.NONE -> Unit // fall through to the on-screen tool
+                }
+            }
+            if (secondaryBarrelPressed) {
+                when (settings.secondaryBarrelAction) {
+                    BarrelAction.ERASE -> return GestureIntent.ERASE
+                    BarrelAction.SELECT -> return GestureIntent.SELECT
+                    BarrelAction.NONE -> Unit // fall through to the on-screen tool
+                }
             }
         }
 
@@ -201,3 +220,4 @@ object InputClassifier {
         return activeTool.defaultIntent()
     }
 }
+

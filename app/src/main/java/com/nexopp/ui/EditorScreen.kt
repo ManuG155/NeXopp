@@ -61,7 +61,9 @@ fun DrawingSurfaceView.applyTool(tool: EditorTool) {
 fun DrawingSurfaceView.applySettings(s: AppSettings) {
     inputSettings = InputSettings(
         fingerDraws = s.fingerDraws,
+        strictPalmRejection = s.strictPalmRejection,
         barrelAction = s.barrelAction,
+        secondaryBarrelAction = s.secondaryBarrelAction,
         barrelDoubleAction = s.barrelDoubleAction,
         paletteInvocation = s.paletteInvocation,
     )

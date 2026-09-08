@@ -21,8 +21,14 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
         onCheckedChange = { onChange(settings.copy(fingerDraws = it)) },
     )
     SwitchRow(
-        title = "Previsualización",
-        subtitle = "Muestra un anillo donde el stylus tocará la pantalla.",
+        title = "Rechazo estricto de palma",
+        subtitle = "Filtra contactos involuntarios de la mano y la muñeca al apoyar y escribir con el stylus.",
+        checked = settings.strictPalmRejection,
+        onCheckedChange = { onChange(settings.copy(strictPalmRejection = it)) },
+    )
+    SwitchRow(
+        title = "Previsualización del cursor (Hover)",
+        subtitle = "Muestra un indicador interactivo donde el stylus tocará la pantalla al acercarlo.",
         checked = settings.showHover,
         onCheckedChange = { onChange(settings.copy(showHover = it)) },
     )
@@ -41,12 +47,34 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Botón del stylus",
+        title = "Botón principal del stylus",
         subtitle = "Acción mientras se mantiene pulsado el botón del stylus, sin importar la herramienta activa.",
         options = BarrelAction.values().toList(),
         selected = settings.barrelAction,
-        label = { it.name.lowercase().replaceFirstChar(Char::uppercase) },
+        label = {
+            when (it) {
+                BarrelAction.NONE -> "Ninguna (mantener herramienta)"
+                BarrelAction.ERASE -> "Borrador"
+                BarrelAction.SELECT -> "Selección lazo"
+            }
+        },
         onSelect = { onChange(settings.copy(barrelAction = it)) },
+    )
+
+    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+    OptionGroup(
+        title = "Botón secundario del stylus",
+        subtitle = "Acción para el segundo botón lateral o botón borrador del stylus (si el hardware lo soporta).",
+        options = BarrelAction.values().toList(),
+        selected = settings.secondaryBarrelAction,
+        label = {
+            when (it) {
+                BarrelAction.NONE -> "Ninguna"
+                BarrelAction.ERASE -> "Borrador"
+                BarrelAction.SELECT -> "Selección lazo"
+            }
+        },
+        onSelect = { onChange(settings.copy(secondaryBarrelAction = it)) },
     )
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))

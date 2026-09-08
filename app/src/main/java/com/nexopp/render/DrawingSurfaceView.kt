@@ -143,6 +143,8 @@ class DrawingSurfaceView @JvmOverloads constructor(
     internal var hovering = false
     internal var hoverX = 0f
     internal var hoverY = 0f
+    internal var lastStylusHoverTimeMs = 0L
+    internal var lastStylusActiveTimeMs = 0L
     /** Tool type of the hovering pointer — an inverted pen's eraser tip previews the rubber, not the nib. */
     internal var hoverKind = PointerKind.UNKNOWN
     // Last eraser contact point (view px), so the tip outline follows the rub — finger touches included.
