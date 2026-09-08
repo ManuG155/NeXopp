@@ -5,14 +5,17 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -29,12 +32,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VerticalSplit
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,44 +66,116 @@ import com.nexopp.render.Placement
 import com.nexopp.render.SearchStatus
 import com.nexopp.ui.theme.rememberCanvasChromeColors
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditorTopBar(
+fun UnifiedTopBar(
     ui: EditorUiState,
     pane: PaneState,
     tabs: TabsUiState,
+    settings: AppSettings,
+    onSettingsChange: (AppSettings) -> Unit,
+    audio: AudioUiState,
     onOpen: () -> Unit,
     onNewTab: () -> Unit,
     onSave: () -> Unit,
+    onSaveAs: () -> Unit,
+    onImportPdf: () -> Unit,
     onExportPdf: () -> Unit,
+    onSettings: () -> Unit,
     splitView: Boolean,
     onToggleSplitView: () -> Unit,
+    onExit: () -> Unit
 ) {
-    TopAppBar(
-        title = {},
-        modifier = Modifier.height(40.dp),
-        actions = {
-            SearchControls(pane)
-            IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo) {
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer")
-            }
-            IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo) {
-                Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer")
-            }
-            TabOverviewButton(tabs)
-            OverflowMenu(
-                onOpen = onOpen,
-                onNewTab = onNewTab,
-                onSave = onSave,
-                onSaveAs = { ui.showSaveAs = true },
-                onImportPdf = { ui.showImportPdf = true },
-                onExportPdf = onExportPdf,
-                onSettings = { ui.showSettings = true },
-                splitView = splitView,
-                onToggleSplitView = onToggleSplitView,
-            )
-        },
+    val surface = pane.surface
+    
+    val styleCallbacks = ToolbarStyleCallbacks(
+        color = ui.color,
+        onColor = { ui.color = it; surface?.colorArgb = it; onSettingsChange(settings.withColorUsed(it)) },
+        palette = rememberColorPaletteState(settings, onSettingsChange),
+        onRedefineCustom = { newColor -> redefineCustomColor(newColor, ui, surface, settings, onSettingsChange) },
+        width = ui.width,
+        onWidth = { ui.width = it; surface?.baseWidthPt = it; onSettingsChange(settings.copy(lastWidth = it)) },
+        widthSlots = settings.penWidths,
+        onRedefineSlot = { i, newPt -> redefineWidthSlot(i, newPt, ui, surface, settings, onSettingsChange) },
+        lineStyle = ui.lineStyle,
+        onLineStyle = { ui.lineStyle = it; surface?.currentLineStyle = it },
+        fill = settings.currentFill,
+        onFill = { applyFill(it, surface, settings, onSettingsChange) },
     )
+
+    val layerCallbacks = toolbarLayerCallbacks(surface, pane)
+    val pageCallbacks = toolbarPagesCallbacks(pane, settings, onSettingsChange, surface)
+
+    Surface(tonalElevation = 1.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+        Column {
+            // Fila 1: Botón de volver, deshacer/rehacer y controles del sistema
+            Row(
+                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onExit) { 
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la Biblioteca") 
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo) { 
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer") 
+                    }
+                    IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo) { 
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer") 
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SearchControls(pane)
+                    TabOverviewButton(tabs)
+                    OverflowMenu(
+                        onOpen = onOpen,
+                        onNewTab = onNewTab,
+                        onSave = onSave,
+                        onSaveAs = onSaveAs,
+                        onImportPdf = onImportPdf,
+                        onExportPdf = onExportPdf,
+                        onSettings = onSettings,
+                        splitView = splitView,
+                        onToggleSplitView = onToggleSplitView
+                    )
+                }
+            }
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            
+            // Fila 2: Herramientas centradas
+            ToolsRow(
+                tool = ui.tool,
+                onTool = { ui.tool = it; surface?.applyTool(it) },
+                toolGroupSelections = settings.toolGroupSelections,
+                onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) },
+                styleCallbacks = styleCallbacks,
+                presets = settings.presets,
+                onPresets = { onSettingsChange(settings.copy(presets = it)) },
+                onActivatePreset = { applyToolPreset(it, ui, surface, settings, onSettingsChange) },
+                onCapturePreset = { name -> ToolPreset.capture(ui, settings, name) },
+                recognizeShapes = settings.recognizeShapes,
+                onRecognizeShapes = { surface?.recognizeShapes = it; onSettingsChange(settings.copy(recognizeShapes = it)) },
+                guideKind = settings.guideKind,
+                onGuideKind = { surface?.placeGuide(it); onSettingsChange(settings.copy(guideKind = it)) },
+                layerCallbacks = layerCallbacks,
+                zoom = pane.zoom,
+                onZoomIn = { surface?.zoomIn() },
+                onZoomOut = { surface?.zoomOut() },
+                onZoomReset = { surface?.resetZoom() },
+                pageCallbacks = pageCallbacks,
+                backgroundStyle = pane.backgroundStyle,
+                onBackgroundStyle = { surface?.setPageBackgroundStyle(it) },
+                audio = audio,
+                railOrder = settings.railOrder,
+                railHidden = settings.railHidden
+            )
+
+            // Fila 3: Opciones contextuales dinámicas
+            ContextualOptionsBar(tool = ui.tool, styleCallbacks = styleCallbacks)
+        }
+    }
 }
 
 @Composable
@@ -185,63 +260,7 @@ private fun CompactSearchField(value: String, onValueChange: (String) -> Unit) {
     )
 }
 
-@Composable
-fun EditorToolbar(
-    ui: EditorUiState,
-    pane: PaneState,
-    settings: AppSettings,
-    onSettingsChange: (AppSettings) -> Unit,
-    audio: AudioUiState,
-) {
-    val surface = pane.surface
-    SideToolbar(
-        tool = ui.tool,
-        onTool = { ui.tool = it; surface?.applyTool(it) },
-        audio = audio,
-        railOrder = settings.railOrder,
-        railHidden = settings.railHidden,
-        toolGroupSelections = settings.toolGroupSelections,
-        onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) },
-        styleCallbacks = ToolbarStyleCallbacks(
-            color = ui.color,
-            onColor = { ui.color = it; surface?.colorArgb = it; onSettingsChange(settings.withColorUsed(it)) },
-            palette = rememberColorPaletteState(settings, onSettingsChange),
-            onRedefineCustom = { newColor -> redefineCustomColor(newColor, ui, surface, settings, onSettingsChange) },
-            width = ui.width,
-            onWidth = { ui.width = it; surface?.baseWidthPt = it; onSettingsChange(settings.copy(lastWidth = it)) },
-            widthSlots = settings.penWidths,
-            onRedefineSlot = { i, newPt -> redefineWidthSlot(i, newPt, ui, surface, settings, onSettingsChange) },
-            lineStyle = ui.lineStyle,
-            onLineStyle = { ui.lineStyle = it; surface?.currentLineStyle = it },
-            fill = settings.currentFill,
-            onFill = { applyFill(it, surface, settings, onSettingsChange) },
-        ),
-        presets = settings.presets,
-        onPresets = { onSettingsChange(settings.copy(presets = it)) },
-        onActivatePreset = { applyToolPreset(it, ui, surface, settings, onSettingsChange) },
-        onCapturePreset = { name -> ToolPreset.capture(ui, settings, name) },
-        recognizeShapes = settings.recognizeShapes,
-        onRecognizeShapes = {
-            surface?.recognizeShapes = it
-            onSettingsChange(settings.copy(recognizeShapes = it))
-        },
-        guideKind = settings.guideKind,
-        onGuideKind = {
-            surface?.placeGuide(it)
-            onSettingsChange(settings.copy(guideKind = it))
-        },
-        layerCallbacks = toolbarLayerCallbacks(surface, pane),
-        zoom = pane.zoom,
-        onZoomIn = { surface?.zoomIn() },
-        onZoomOut = { surface?.zoomOut() },
-        onZoomReset = { surface?.resetZoom() },
-        pageCallbacks = toolbarPagesCallbacks(pane, settings, onSettingsChange, surface),
-        backgroundStyle = pane.backgroundStyle,
-        onBackgroundStyle = { surface?.setPageBackgroundStyle(it) },
-    )
-}
-
-private fun redefineCustomColor(
+internal fun redefineCustomColor(
     newColor: Int,
     ui: EditorUiState,
     surface: DrawingSurfaceView?,
@@ -257,7 +276,7 @@ private fun redefineCustomColor(
     }
 }
 
-private fun redefineWidthSlot(
+internal fun redefineWidthSlot(
     i: Int,
     newPt: Float,
     ui: EditorUiState,
@@ -274,7 +293,7 @@ private fun redefineWidthSlot(
     if (active) { ui.width = newPt; surface?.baseWidthPt = newPt }
 }
 
-private fun applyFill(
+internal fun applyFill(
     fill: Int?,
     surface: DrawingSurfaceView?,
     settings: AppSettings,
@@ -287,7 +306,7 @@ private fun applyFill(
 }
 
 @Composable
-private fun toolbarLayerCallbacks(surface: DrawingSurfaceView?, pane: PaneState): ToolbarLayerCallbacks =
+internal fun toolbarLayerCallbacks(surface: DrawingSurfaceView?, pane: PaneState): ToolbarLayerCallbacks =
     ToolbarLayerCallbacks(
         layers = pane.layers,
         hasSelection = pane.hasSelection,
@@ -302,7 +321,7 @@ private fun toolbarLayerCallbacks(surface: DrawingSurfaceView?, pane: PaneState)
     )
 
 @Composable
-private fun toolbarPagesCallbacks(
+internal fun toolbarPagesCallbacks(
     pane: PaneState,
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit,

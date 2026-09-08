@@ -3,17 +3,11 @@ package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import com.nexopp.format.SaveFormat
 import com.nexopp.format.model.Tool
 import com.nexopp.render.DrawingSurfaceView
@@ -92,7 +86,6 @@ fun DrawingSurfaceView.applySettings(s: AppSettings) {
     presetColors = s.presets.associate { it.id to it.colorArgb }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
     onOpen: () -> Unit,
@@ -112,29 +105,7 @@ fun EditorScreen(
     activePane: Int = 0,
     onActivePane: (Int) -> Unit = {},
     busy: String? = null,
-    onExit: () -> Unit = {},
-    topBar: @Composable (EditorUiState, PaneState, TabsUiState) -> Unit = { ui, pane, tabs ->
-        EditorTopBar(
-            ui = ui,
-            pane = pane,
-            tabs = tabs,
-            onOpen = onOpen,
-            onNewTab = { tabs.onNew() },
-            onSave = onSave,
-            onExportPdf = onExportPdf,
-            splitView = splitView,
-            onToggleSplitView = onToggleSplitView,
-        )
-    },
-    paneChrome: @Composable (EditorUiState, PaneState, AppSettings, (AppSettings) -> Unit, AudioUiState) -> Unit = { ui, pane, settings, onSettingsChange, audio ->
-        EditorToolbar(
-            ui = ui,
-            pane = pane,
-            settings = settings,
-            onSettingsChange = onSettingsChange,
-            audio = audio,
-        )
-    },
+    onExit: () -> Unit = {}
 ) {
     val ui = rememberEditorUiState(settings)
     val pane = ui.pane(activePane)
@@ -142,26 +113,39 @@ fun EditorScreen(
     EditorBackHandler(ui = ui, pane = pane, busy = busy != null, onExit = onExit)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                if (!ui.fullPage) {
-                    topBar(ui, pane, tabs[activePane.coerceIn(tabs.indices)])
-                }
-            },
-        ) { padding ->
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (!ui.fullPage) {
+                UnifiedTopBar(
+                    ui = ui,
+                    pane = pane,
+                    tabs = tabs[activePane.coerceIn(tabs.indices)],
+                    settings = settings,
+                    onSettingsChange = onSettingsChange,
+                    audio = audio,
+                    onOpen = onOpen,
+                    onNewTab = { tabs[activePane.coerceIn(tabs.indices)].onNew() },
+                    onSave = onSave,
+                    onSaveAs = { ui.showSaveAs = true },
+                    onImportPdf = { ui.showImportPdf = true },
+                    onExportPdf = onExportPdf,
+                    onSettings = { ui.showSettings = true },
+                    splitView = splitView,
+                    onToggleSplitView = onToggleSplitView,
+                    onExit = onExit
+                )
+            }
+
             EditorBody(
                 ui = ui,
                 pane = pane,
                 settings = settings,
                 onSettingsChange = onSettingsChange,
-                audio = audio,
                 tabs = tabs,
                 splitView = splitView,
                 onActivePane = onActivePane,
                 onSurfaceCreated = onSurfaceCreated,
                 onPickImage = onPickImage,
-                paneChrome = paneChrome,
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier.fillMaxWidth().weight(1f)
             )
         }
 
@@ -195,13 +179,11 @@ private fun EditorBody(
     pane: PaneState,
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit,
-    audio: AudioUiState,
     tabs: List<TabsUiState>,
     splitView: Boolean,
     onActivePane: (Int) -> Unit,
     onSurfaceCreated: (Int, DrawingSurfaceView) -> Unit,
     onPickImage: (Placement) -> Unit,
-    paneChrome: @Composable (EditorUiState, PaneState, AppSettings, (AppSettings) -> Unit, AudioUiState) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val paneAt: @Composable (Int, Modifier) -> Unit = { index, paneModifier ->
@@ -218,20 +200,17 @@ private fun EditorBody(
         )
     }
 
-    Column(modifier = modifier) {
-        if (!ui.fullPage) {
-            paneChrome(ui, pane, settings, onSettingsChange, audio)
-        }
+    Box(modifier = modifier) {
         if (splitView) {
             SplitLayout(
                 fraction = ui.splitFraction,
                 onFraction = { ui.splitFraction = it },
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 first = { paneAt(0, it) },
                 second = { paneAt(1, it) },
             )
         } else {
-            paneAt(0, Modifier.fillMaxWidth().weight(1f))
+            paneAt(0, Modifier.fillMaxSize())
         }
     }
 }
