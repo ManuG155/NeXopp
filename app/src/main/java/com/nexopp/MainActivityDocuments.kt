@@ -174,6 +174,7 @@ internal fun MainActivity.saveDocument(uri: Uri) {
 
 internal fun MainActivity.afterSaved(view: DrawingSurfaceView, uri: Uri) {
     io.persist(uri)
+    tabs.active?.id?.let(crashRecoveryManager::discard)
     tabs.updateActive { it.copy(title = displayName(uri), uri = uri.toString()) }
     pendingSaveName = displayName(uri)
     snapshotActiveTab()

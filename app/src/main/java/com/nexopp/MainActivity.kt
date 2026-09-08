@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.nexopp.audio.AudioSession
 import com.nexopp.format.SaveFormat
+import com.nexopp.io.AutosaveManager
+import com.nexopp.io.CrashRecoveryManager
 import com.nexopp.io.DocumentIo
 import com.nexopp.io.IncomingDocument
 import com.nexopp.io.UriStaging
@@ -90,6 +92,30 @@ class MainActivity : ComponentActivity() {
     internal val io: DocumentIo by lazy {
         val fonts = PdfFonts(assets)
         DocumentIo(contentResolver, cacheDir, filesDir, TextPdfGenerator(fonts::load))
+    }
+
+    internal val autosaveManager by lazy {
+        AutosaveManager(io).apply {
+            onSaved = { savedFile ->
+                val doc = surface?.toDocument()
+                if (doc != null) {
+                    val nbs = libraryStore.loadNotebooks()
+                    val nb = nbs.find { it.fileName == savedFile.name }
+                    if (nb != null) {
+                        libraryStore.updateNotebook(
+                            nb.copy(
+                                lastModified = System.currentTimeMillis(),
+                                pageCount = doc.pages.size
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    internal val crashRecoveryManager by lazy {
+        CrashRecoveryManager(File(filesDir, "recovery"), io)
     }
 
     internal val staging: UriStaging by lazy { UriStaging(contentResolver, File(cacheDir, "staging")) }
@@ -186,6 +212,8 @@ class MainActivity : ComponentActivity() {
                         onSave = { saveActiveTab() },
                         busy = busy.value,
                         onExit = { 
+                            autosaveManager.flushNow()
+                            panes.forEach { snapshotActiveTab(it); it.persist() }
                             currentScreen.value = AppScreen.LIBRARY 
                         },
                         onSaveAs = { name, format -> beginSaveAs(name, format) },
@@ -202,7 +230,28 @@ class MainActivity : ComponentActivity() {
                         onSurfaceCreated = { index, view ->
                             val p = panes[index]
                             p.surface = view
-                            view.onDocumentEdited = { doc -> mirrors.propagate(p, doc) }
+                            view.onDocumentEdited = { doc ->
+                                mirrors.propagate(p, doc)
+                                val tab = p.tabs.active
+                                if (tab != null) {
+                                    crashRecoveryManager.checkpoint(tab.id, doc, view.pdfSourceFile(), view.imageSources())
+                                    val targetUri = tab.uri?.let(Uri::parse)
+                                    if (targetUri != null && targetUri.scheme == "file") {
+                                        val file = targetUri.path?.let(::File)
+                                        if (file != null) {
+                                            autosaveManager.scheduleAutosave(
+                                                AutosaveManager.SaveTask(
+                                                    document = doc,
+                                                    targetFile = file,
+                                                    pdfSource = view.pdfSourceFile(),
+                                                    format = p.saveFormat,
+                                                    images = view.imageSources()
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             attachAudio(view)
                             restoreTabs(p) { openIncoming() }
                         },
@@ -231,7 +280,17 @@ class MainActivity : ComponentActivity() {
             openLibraryDocument(notebook, uri)
         } else {
             snapshotActiveTab()
-            val newTab = OpenTab(TabStore.newId(), notebook.name, blankDocument(), uri.toString())
+            val initialDoc = com.nexopp.format.model.Document(
+                pages = listOf(
+                    com.nexopp.format.model.Page(
+                        width = com.nexopp.render.DrawingSurfaceDefaults.A4_WIDTH_PT,
+                        height = com.nexopp.render.DrawingSurfaceDefaults.A4_HEIGHT_PT,
+                        background = com.nexopp.format.model.Background.Solid(0xFFFFFFFF.toInt(), notebook.initialTemplate),
+                        layers = listOf(com.nexopp.format.model.Layer(emptyList()))
+                    )
+                )
+            )
+            val newTab = OpenTab(TabStore.newId(), notebook.name, initialDoc, uri.toString())
             tabs.open(newTab)
             pendingSaveName = notebook.name
             tabsTick.value++
@@ -301,8 +360,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        autosaveManager.flushNow()
         panes.forEach { snapshotActiveTab(it); it.persist() }
         panes.forEach { it.awaitPersist(PERSIST_WAIT_MS) }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        autosaveManager.flushNow()
     }
 
     override fun onDestroy() {

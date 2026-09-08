@@ -129,6 +129,10 @@ internal fun MainActivity.reorderTab(from: Int, to: Int, p: EditorPane = pane) {
 
 internal fun MainActivity.closeTab(index: Int, p: EditorPane = pane) {
     snapshotActiveTab(p)
+    val tabToClose = p.tabs.tabs.getOrNull(index)
+    if (tabToClose != null) {
+        crashRecoveryManager.discard(tabToClose.id)
+    }
     val showing = p.tabs.active?.id
     p.tabs.close(index) ?: return
     if (p.tabs.isEmpty) p.tabs.open(blankTab())
