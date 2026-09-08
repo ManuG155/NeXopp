@@ -1,4 +1,4 @@
-// --- MainActivity.kt ---
+// Ruta: app/src/main/java/com/nexopp/MainActivity.kt
 package com.nexopp
 
 import android.content.Context
@@ -20,6 +20,8 @@ import com.nexopp.format.SaveFormat
 import com.nexopp.io.DocumentIo
 import com.nexopp.io.IncomingDocument
 import com.nexopp.io.UriStaging
+import com.nexopp.library.LibraryScreen
+import com.nexopp.library.LibraryStore
 import com.nexopp.panes.EditorPane
 import com.nexopp.panes.MirrorSync
 import com.nexopp.render.BitmapBudget
@@ -42,6 +44,10 @@ import com.nexopp.ui.theme.isDark
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+
+    internal enum class AppScreen { LIBRARY, EDITOR }
+    internal var currentScreen = mutableStateOf(AppScreen.LIBRARY)
+    internal val libraryStore by lazy { LibraryStore(this) }
 
     internal val panes: List<EditorPane> by lazy {
         TABS_DIRS.map { EditorPane(TabStore(File(filesDir, it))) }
@@ -145,41 +151,58 @@ class MainActivity : ComponentActivity() {
         audioFolder = store.load().audioFolderUri.takeIf { it.isNotBlank() }?.let(Uri::parse)
         audio.onStateChanged = { runOnUiThread { audioTick.value++ } }
         takeIncoming(intent)
+        
         setContent {
             var settings by remember { mutableStateOf(store.load().also { applyStorageLimits(it) }) }
             XoppTheme(darkTheme = settings.themeMode.isDark(), dynamicColor = settings.dynamicColor) {
-                EditorScreen(
-                    onOpen = { openLauncher.launch(arrayOf("*/*")) },
-                    onSave = { saveActiveTab() },
-                    busy = busy.value,
-                    onExit = { finish() },
-                    onSaveAs = { name, format -> beginSaveAs(name, format) },
-                    currentSaveFormat = { saveFormat },
-                    onImportPdf = { mode ->
-                        pendingImportMode = mode
-                        importPdfLauncher.launch(arrayOf(PDF_MIME))
-                    },
-                    onExportPdf = { exportPdfLauncher.launch("document.pdf") },
-                    onPickImage = { placement ->
-                        pendingImagePlacement = placement
-                        pickImageLauncher.launch(arrayOf("image/*"))
-                    },
-                    onSurfaceCreated = { index, view ->
-                        val p = panes[index]
-                        p.surface = view
-                        view.onDocumentEdited = { doc -> mirrors.propagate(p, doc) }
-                        attachAudio(view)
-                        restoreTabs(p) { openIncoming() }
-                    },
-                    settings = settings,
-                    onSettingsChange = { settings = it; store.save(it); applyStorageLimits(it) },
-                    audio = audioUiState(),
-                    tabs = panes.map(::tabsUiState),
-                    splitView = splitView.value,
-                    onToggleSplitView = ::toggleSplitView,
-                    activePane = activePane.value,
-                    onActivePane = { activePane.value = it },
-                )
+                
+                if (currentScreen.value == AppScreen.LIBRARY) {
+                    LibraryScreen(
+                        store = libraryStore,
+                        onOpenNotebook = { 
+                            // Más adelante aquí abriremos cuadernos guardados. 
+                            // Por ahora, saltamos directamente al lienzo.
+                            currentScreen.value = AppScreen.EDITOR
+                        },
+                        onSettings = { /* Implementaremos el menú de ajustes de la biblioteca pronto */ }
+                    )
+                } else {
+                    EditorScreen(
+                        onOpen = { openLauncher.launch(arrayOf("*/*")) },
+                        onSave = { saveActiveTab() },
+                        busy = busy.value,
+                        onExit = { 
+                            // En lugar de salir de la app, volvemos a la biblioteca
+                            currentScreen.value = AppScreen.LIBRARY 
+                        },
+                        onSaveAs = { name, format -> beginSaveAs(name, format) },
+                        currentSaveFormat = { saveFormat },
+                        onImportPdf = { mode ->
+                            pendingImportMode = mode
+                            importPdfLauncher.launch(arrayOf(PDF_MIME))
+                        },
+                        onExportPdf = { exportPdfLauncher.launch("document.pdf") },
+                        onPickImage = { placement ->
+                            pendingImagePlacement = placement
+                            pickImageLauncher.launch(arrayOf("image/*"))
+                        },
+                        onSurfaceCreated = { index, view ->
+                            val p = panes[index]
+                            p.surface = view
+                            view.onDocumentEdited = { doc -> mirrors.propagate(p, doc) }
+                            attachAudio(view)
+                            restoreTabs(p) { openIncoming() }
+                        },
+                        settings = settings,
+                        onSettingsChange = { settings = it; store.save(it); applyStorageLimits(it) },
+                        audio = audioUiState(),
+                        tabs = panes.map(::tabsUiState),
+                        splitView = splitView.value,
+                        onToggleSplitView = ::toggleSplitView,
+                        activePane = activePane.value,
+                        onActivePane = { activePane.value = it },
+                    )
+                }
             }
         }
     }
@@ -206,6 +229,7 @@ class MainActivity : ComponentActivity() {
     private fun openIncoming() {
         val uri = pendingIntentUri ?: return
         pendingIntentUri = null
+        currentScreen.value = AppScreen.EDITOR
         openDocument(uri)
     }
 
