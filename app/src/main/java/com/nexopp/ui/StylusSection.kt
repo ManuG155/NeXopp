@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/StylusSection.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.padding
@@ -11,39 +12,37 @@ import com.nexopp.render.PaletteInvocation
 import com.nexopp.render.PressureSensitivity
 import com.nexopp.render.StrokePrecision
 
-/** Stylus behaviours: palm rejection, hover preview, barrel-button action and pressure "feel". */
 @Composable
 fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     SwitchRow(
-        title = "Finger draws",
-        subtitle = "Off: fingers only pan/zoom and never use any tool — stylus only.",
+        title = "Dibujar con el dedo",
+        subtitle = "Desactivado: los dedos solo desplazan/acercan y no usan herramientas — solo el stylus.",
         checked = settings.fingerDraws,
         onCheckedChange = { onChange(settings.copy(fingerDraws = it)) },
     )
     SwitchRow(
-        title = "Hover preview",
-        subtitle = "Show a ring where a hovering stylus will land.",
+        title = "Previsualización",
+        subtitle = "Muestra un anillo donde el stylus tocará la pantalla.",
         checked = settings.showHover,
         onCheckedChange = { onChange(settings.copy(showHover = it)) },
     )
     SwitchRow(
-        title = "Palette haptics",
-        subtitle = "Tick as a radial-palette flick crosses slots, and confirm when it commits.",
+        title = "Respuesta háptica de paleta",
+        subtitle = "Vibración al pasar por las ranuras de la paleta radial y al confirmar.",
         checked = settings.paletteHaptics,
         onCheckedChange = { onChange(settings.copy(paletteHaptics = it)) },
     )
     SwitchRow(
-        title = "Close palette on select",
-        subtitle = "Dismiss the radial palette as soon as a slot is picked, instead of leaving " +
-            "it open until you tap outside it.",
+        title = "Cerrar paleta al seleccionar",
+        subtitle = "Cierra la paleta radial al elegir una ranura en lugar de dejarla abierta hasta que toques fuera.",
         checked = settings.paletteCloseOnSelect,
         onCheckedChange = { onChange(settings.copy(paletteCloseOnSelect = it)) },
     )
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Barrel button",
-        subtitle = "Action while the stylus side-button is held, whatever the tool.",
+        title = "Botón del stylus",
+        subtitle = "Acción mientras se mantiene pulsado el botón del stylus, sin importar la herramienta activa.",
         options = BarrelAction.values().toList(),
         selected = settings.barrelAction,
         label = { it.name.lowercase().replaceFirstChar(Char::uppercase) },
@@ -52,8 +51,8 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Barrel double-click",
-        subtitle = "Action for a rapid double-click of the side-button, with the tip off the glass.",
+        title = "Doble clic en botón del stylus",
+        subtitle = "Acción al hacer doble clic rápido en el botón, con la punta levantada de la pantalla.",
         options = BarrelDoubleAction.values().toList(),
         selected = settings.barrelDoubleAction,
         label = { it.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase) },
@@ -62,9 +61,8 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Open the palette by touch",
-        subtitle = "Touch gesture that summons the radial palette, for a stylus with no side " +
-            "button. The side button itself is set above, under Barrel double-click.",
+        title = "Abrir paleta al tocar",
+        subtitle = "Gesto táctil que abre la paleta radial, para un stylus sin botón lateral.",
         options = PaletteInvocation.values().toList(),
         selected = settings.paletteInvocation,
         label = { it.label },
@@ -73,8 +71,8 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Pressure sensitivity",
-        subtitle = "How firmly you press to thicken the line.",
+        title = "Sensibilidad a la presión",
+        subtitle = "Fuerza necesaria para engrosar el trazo.",
         options = PressureSensitivity.values().toList(),
         selected = settings.sensitivity,
         label = { it.label },
@@ -83,9 +81,8 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     OptionGroup(
-        title = "Stroke precision",
-        subtitle = "How much pen detail a stroke keeps. Higher draws rounder curves on a big, " +
-            "high-density screen; lower keeps files smaller.",
+        title = "Precisión del trazo",
+        subtitle = "Detalle que guarda el trazo. Mayor fidelidad dibuja curvas más suaves, pero aumenta el tamaño del archivo.",
         options = StrokePrecision.values().toList(),
         selected = settings.strokePrecision,
         label = { it.label },
@@ -94,9 +91,8 @@ fun StylusSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     SwitchRow(
-        title = "Shape recognition",
-        subtitle = "Snap a finished freehand stroke to the shape it resembles — line, arrow, " +
-            "circle, rectangle, triangle or polyline. Anything unrecognised stays as drawn.",
+        title = "Reconocimiento de formas",
+        subtitle = "Ajustar un trazo libre a la forma que se parece — línea, flecha, círculo, rectángulo. Lo no reconocido queda como se dibujó.",
         checked = settings.recognizeShapes,
         onCheckedChange = { onChange(settings.copy(recognizeShapes = it)) },
     )

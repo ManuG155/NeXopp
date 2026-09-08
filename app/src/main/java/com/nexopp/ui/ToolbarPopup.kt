@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarPopup.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -24,15 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-/**
- * The touch-target square every rail slot occupies, tool buttons and popup buttons alike. Icons are
- * 24.dp, so the extra room is what keeps the rail from reading as a squished run of glyphs.
- */
 internal val ToolbarButtonSize = 48.dp
 
-/**
- * A small non-clickable section heading inside a dropdown menu.
- */
 @Composable
 internal fun MenuHeading(text: String) {
     Text(
@@ -43,17 +37,6 @@ internal fun MenuHeading(text: String) {
     )
 }
 
-/**
- * A standard toolbar popup button with an icon face. Opens a [DropdownMenu] on click.
- *
- * @param icon The icon to show on the button face.
- * @param contentDescription Content description for the icon.
- * @param heading Optional heading text shown at the top of the menu.
- * @param active Whether the button is in an active state (tints the icon primary and shows background).
- * @param tint Optional explicit tint for the icon; defaults to [LocalContentColor.current].
- * @param onLongClick Optional long-click handler.
- * @param content The menu content, called with a `dismiss` lambda to close the menu.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ToolbarPopupButton(
@@ -88,14 +71,6 @@ internal fun ToolbarPopupButton(
     }
 }
 
-/**
- * A toolbar popup button with a custom composable face (e.g. TextButton for Zoom, TipDot for Size).
- *
- * @param face The custom composable to use as the button face, called with an `open` lambda it must
- *   wire to its own click handler — that lambda is the only thing that opens the menu.
- * @param heading Optional heading text shown at the top of the menu.
- * @param content The menu content, called with a `dismiss` lambda to close the menu.
- */
 @Composable
 internal fun ToolbarPopupButton(
     face: @Composable (open: () -> Unit) -> Unit,

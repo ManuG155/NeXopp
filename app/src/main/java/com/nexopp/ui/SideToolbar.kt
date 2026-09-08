@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/SideToolbar.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -34,15 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.nexopp.render.GuideKind
 
-/**
- * The vertical control rail down the left edge: Tool, Colour & size, Style, Zoom, and a page navigator —
- * each a button opening a small [DropdownMenu] anchored to its own button (which opens to the right
- * of the rail). [EditorScreen] pushes the picked value onto the
- * [com.nexopp.render.DrawingSurfaceView].
- *
- * The rail is only the shell and the dispatch: each slot's pop-up lives in its own
- * `Toolbar*Popup.kt` sibling file.
- */
 @Composable
 fun SideToolbar(
     horizontal: Boolean = false,
@@ -102,7 +94,6 @@ fun SideToolbar(
     }
 }
 
-/** The rail's surface: a scrolling column down the edge, or a scrolling row across the top. */
 @Composable
 private fun ToolbarShell(horizontal: Boolean, modifier: Modifier, buttons: @Composable () -> Unit) {
     if (horizontal) {
@@ -128,13 +119,6 @@ private fun ToolbarShell(horizontal: Boolean, modifier: Modifier, buttons: @Comp
     }
 }
 
-/**
- * One tool slot on the rail. The face is the group's currently [selected] tool: a **tap** activates
- * it, a **long-press** opens a picker over the group's other members, and picking one both re-faces
- * the slot (persisted via [onSelect]) and activates it. A single-member group has nothing to pick,
- * so it skips the menu entirely. [active] tints the slot when the editor's live tool is in this
- * group, which is what makes the rail read as a row of radio buttons.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ToolGroupButton(
@@ -158,7 +142,7 @@ private fun ToolGroupButton(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(selected.icon, contentDescription = "Tool: ${selected.label}", tint = tint)
+            Icon(selected.icon, contentDescription = "Herramienta: ${selected.label}", tint = tint)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             MenuHeading(group.label)
@@ -167,7 +151,7 @@ private fun ToolGroupButton(
                     text = { Text(member.label) },
                     leadingIcon = { Icon(member.icon, contentDescription = null) },
                     trailingIcon = {
-                        if (member == selected) Icon(Icons.Filled.Check, contentDescription = "selected")
+                        if (member == selected) Icon(Icons.Filled.Check, contentDescription = "seleccionado")
                     },
                     onClick = { onSelect(member); open = false; onTool(member) },
                 )

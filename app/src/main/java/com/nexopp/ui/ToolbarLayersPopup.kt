@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarLayersPopup.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Box
@@ -34,11 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nexopp.render.LayerInfo
 
-/**
- * The layer manager: a top-down list of the visible page's layers, each row toggling visibility,
- * selecting the active layer (where new ink lands), reordering (up/down z-order), merging into the
- * layer below, renaming, and deleting; plus "Add layer" and — when something is selected — "Move selection here".
- */
 @Composable
 internal fun LayersPopupButton(callbacks: ToolbarLayerCallbacks) {
     var open by remember { mutableStateOf(false) }
@@ -46,9 +42,9 @@ internal fun LayersPopupButton(callbacks: ToolbarLayerCallbacks) {
     var renameLabel by remember { mutableStateOf("") }
     ToolbarPopupButton(
         icon = Icons.Filled.Layers,
-        contentDescription = "Layers",
+        contentDescription = "Capas",
     ) { dismiss ->
-        MenuHeading("Layers (top first)")
+        MenuHeading("Capas (superior primero)")
         for (info in callbacks.layers.asReversed()) {
             LayerRow(
                 info = info,
@@ -67,15 +63,15 @@ internal fun LayersPopupButton(callbacks: ToolbarLayerCallbacks) {
             )
         }
         DropdownMenuItem(
-            text = { Text("Add layer") },
+            text = { Text("Añadir capa") },
             leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
             onClick = { callbacks.onAddLayer(); dismiss() },
         )
     }
     if (renaming >= 0) {
         RenameDialog(
-            title = "Rename layer",
-            label = "Layer name",
+            title = "Renombrar capa",
+            label = "Nombre de la capa",
             initialValue = renameLabel,
             onConfirm = { name -> callbacks.onRenameLayer(renaming, name); renaming = -1 },
             onDismiss = { renaming = -1 },
@@ -83,7 +79,6 @@ internal fun LayersPopupButton(callbacks: ToolbarLayerCallbacks) {
     }
 }
 
-/** One layer row: an active-dot + name (tap to activate), then visibility / merge / move-selection / rename, then reorder controls. */
 @Composable
 private fun LayerRow(
     info: LayerInfo,
@@ -107,7 +102,7 @@ private fun LayerRow(
         TextButton(onClick = onActivate) {
             Icon(
                 if (info.active) Icons.Filled.Circle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = if (info.active) "Active layer" else "Make active",
+                contentDescription = if (info.active) "Capa activa" else "Hacer activa",
                 tint = if (info.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(14.dp),
             )
@@ -118,19 +113,19 @@ private fun LayerRow(
         IconButton(onClick = onToggleHidden, modifier = Modifier.size(32.dp)) {
             Icon(
                 if (info.visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                contentDescription = if (info.visible) "Hide layer" else "Show layer",
+                contentDescription = if (info.visible) "Ocultar capa" else "Mostrar capa",
             )
         }
         IconButton(onClick = onMergeDown, enabled = canMergeDown, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Filled.Merge, contentDescription = "Merge layer down")
+            Icon(Icons.Filled.Merge, contentDescription = "Combinar hacia abajo")
         }
         if (hasSelection) {
             IconButton(onClick = onMoveSelectionHere, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.HighlightAlt, contentDescription = "Move selection here")
+                Icon(Icons.Filled.HighlightAlt, contentDescription = "Mover selección aquí")
             }
         }
         IconButton(onClick = onRename, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Filled.Edit, contentDescription = "Rename layer")
+            Icon(Icons.Filled.Edit, contentDescription = "Renombrar capa")
         }
         ReorderControls(
             canMoveUp = canMoveUp,

@@ -1,3 +1,4 @@
+// --- EditorTool.kt ---
 package com.nexopp.ui
 
 import androidx.compose.material.icons.Icons
@@ -25,12 +26,6 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.nexopp.format.model.Tool
 
-/**
- * The editor's interaction modes. PEN/HIGHLIGHTER/ERASER map to the document [Tool]; HAND is a
- * view-only pan mode; SELECT rubber-band-selects objects to move/delete them; TEXT/IMAGE/TEXIMAGE
- * are authoring modes where a canvas tap places (or edits) that element
- * (see [com.nexopp.render.PlaceKind]).
- */
 enum class EditorTool {
     PEN, HIGHLIGHTER, ERASER, ERASER_WHOLE, HAND, SELECT, LASSO_SELECT, TEXT_SELECT, BG_SELECT,
     TEXT, IMAGE, TEXIMAGE,
@@ -38,7 +33,6 @@ enum class EditorTool {
     PLAY_OBJECT,
 }
 
-/** The geometric shape tools — drawn as ordinary pen strokes (see [ShapeKind]). */
 val SHAPE_TOOLS: List<EditorTool> = listOf(
     EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW, EditorTool.COORDINATE_AXIS,
     EditorTool.RECTANGLE, EditorTool.ELLIPSE, EditorTool.SPLINE,
@@ -47,39 +41,32 @@ val SHAPE_TOOLS: List<EditorTool> = listOf(
 private data class ToolInfo(val tool: EditorTool, val label: String, val icon: ImageVector)
 
 private val TOOLS: List<ToolInfo> = listOf(
-    ToolInfo(EditorTool.PEN, "Pen", Icons.Filled.Create),
-    ToolInfo(EditorTool.HIGHLIGHTER, "Highlighter", Icons.Filled.Brush),
-    ToolInfo(EditorTool.ERASER, "Eraser (partial)", Icons.Filled.Delete),
-    ToolInfo(EditorTool.ERASER_WHOLE, "Eraser (whole stroke)", Icons.Filled.DeleteSweep),
-    ToolInfo(EditorTool.LINE, "Line", Icons.Filled.HorizontalRule),
-    ToolInfo(EditorTool.ARROW, "Arrow", Icons.Filled.ArrowRightAlt),
-    ToolInfo(EditorTool.DOUBLE_ARROW, "Double arrow", Icons.Filled.SwapHoriz),
-    ToolInfo(EditorTool.COORDINATE_AXIS, "Coordinate axis", Icons.Filled.ShowChart),
-    ToolInfo(EditorTool.RECTANGLE, "Rectangle", Icons.Filled.Rectangle),
-    ToolInfo(EditorTool.ELLIPSE, "Ellipse", Icons.Filled.RadioButtonUnchecked),
-    ToolInfo(EditorTool.SPLINE, "Spline", Icons.Filled.Gesture),
-    ToolInfo(EditorTool.HAND, "Hand (pan)", Icons.Filled.PanTool),
-    ToolInfo(EditorTool.SELECT, "Select rectangle", Icons.Filled.HighlightAlt),
-    ToolInfo(EditorTool.LASSO_SELECT, "Select lasso", Icons.Filled.Polyline),
-    ToolInfo(EditorTool.TEXT_SELECT, "Select text (PDF)", Icons.Filled.SelectAll),
-    ToolInfo(EditorTool.BG_SELECT, "Select background (flatten)", Icons.Filled.Crop),
-    ToolInfo(EditorTool.TEXT, "Text", Icons.Filled.TextFields),
-    ToolInfo(EditorTool.IMAGE, "Image", Icons.Filled.Image),
+    ToolInfo(EditorTool.PEN, "Pluma", Icons.Filled.Create),
+    ToolInfo(EditorTool.HIGHLIGHTER, "Subrayador", Icons.Filled.Brush),
+    ToolInfo(EditorTool.ERASER, "Borrador (parcial)", Icons.Filled.Delete),
+    ToolInfo(EditorTool.ERASER_WHOLE, "Borrador (trazo completo)", Icons.Filled.DeleteSweep),
+    ToolInfo(EditorTool.LINE, "Línea", Icons.Filled.HorizontalRule),
+    ToolInfo(EditorTool.ARROW, "Flecha", Icons.Filled.ArrowRightAlt),
+    ToolInfo(EditorTool.DOUBLE_ARROW, "Flecha doble", Icons.Filled.SwapHoriz),
+    ToolInfo(EditorTool.COORDINATE_AXIS, "Ejes de coordenadas", Icons.Filled.ShowChart),
+    ToolInfo(EditorTool.RECTANGLE, "Rectángulo", Icons.Filled.Rectangle),
+    ToolInfo(EditorTool.ELLIPSE, "Elipse", Icons.Filled.RadioButtonUnchecked),
+    ToolInfo(EditorTool.SPLINE, "Curva (Spline)", Icons.Filled.Gesture),
+    ToolInfo(EditorTool.HAND, "Mano (desplazar)", Icons.Filled.PanTool),
+    ToolInfo(EditorTool.SELECT, "Selección rectangular", Icons.Filled.HighlightAlt),
+    ToolInfo(EditorTool.LASSO_SELECT, "Selección de lazo", Icons.Filled.Polyline),
+    ToolInfo(EditorTool.TEXT_SELECT, "Seleccionar texto (PDF)", Icons.Filled.SelectAll),
+    ToolInfo(EditorTool.BG_SELECT, "Seleccionar fondo (acoplar)", Icons.Filled.Crop),
+    ToolInfo(EditorTool.TEXT, "Texto", Icons.Filled.TextFields),
+    ToolInfo(EditorTool.IMAGE, "Imagen", Icons.Filled.Image),
     ToolInfo(EditorTool.TEXIMAGE, "LaTeX", Icons.Filled.Functions),
-    ToolInfo(EditorTool.VERTICAL_SPACE, "Vertical space", Icons.Filled.SwapVert),
-    ToolInfo(EditorTool.PLAY_OBJECT, "Play object", Icons.Filled.PlayCircleOutline),
+    ToolInfo(EditorTool.VERTICAL_SPACE, "Espacio vertical", Icons.Filled.SwapVert),
+    ToolInfo(EditorTool.PLAY_OBJECT, "Reproducir objeto", Icons.Filled.PlayCircleOutline),
 )
 
-/** Human-readable label for a tool (the same text the rail's tool menu shows). */
 val EditorTool.label: String get() = TOOLS.first { it.tool == this }.label
 
-/** The rail icon for a tool. */
 val EditorTool.icon: ImageVector get() = TOOLS.first { it.tool == this }.icon
 
-/**
- * The tools that make sense to *start* a document in, offered by the "Default tool" setting. The
- * place-modes (TEXT/IMAGE/TEXIMAGE) and SELECT aren't here: opening straight into them would strand
- * the user in a mode with nothing to act on, so a default is one of the four drawing/pan tools.
- */
 val DEFAULT_TOOL_CHOICES: List<EditorTool> =
     listOf(EditorTool.PEN, EditorTool.HIGHLIGHTER, EditorTool.ERASER, EditorTool.HAND)

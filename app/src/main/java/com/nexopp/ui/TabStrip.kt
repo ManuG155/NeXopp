@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/TabStrip.kt
 package com.nexopp.ui
 
 import android.graphics.Bitmap
@@ -46,63 +47,26 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/**
- * Everything the [TabStrip] needs, bundled so [EditorScreen]'s parameter list stays readable.
- *
- * The tabs themselves live in `com.nexopp.tabs` and are driven by the host activity — this is
- * only the flattened view of them the chrome draws.
- */
 data class TabsUiState(
-    /** Tab titles in strip order (the file name, or "Untitled"). */
     val titles: List<String> = emptyList(),
-    /**
-     * Per-tab dot colour (packed ARGB), or null for no dot — set only on tabs that are one of
-     * several views of the *same* document, so duplicates are told apart from same-named files.
-     * Same colour = same document. See `com.nexopp.tabs.DocColors`.
-     */
     val dotColors: List<Int?> = emptyList(),
     val activeIndex: Int = 0,
     val onSelect: (Int) -> Unit = {},
     val onClose: (Int) -> Unit = {},
     val onNew: () -> Unit = {},
-    /** Long-press action: hand this tab to the other pane, opening split view if it is closed. */
     val onMove: (Int) -> Unit = {},
-    /** Long-press action: open a second copy of this tab in the other pane, keeping this one. */
     val onMirror: (Int) -> Unit = {},
-    /** Drag action: the tab at the first index now sits at the second one. */
     val onReorder: (Int, Int) -> Unit = { _, _ -> },
-    /**
-     * The tab overview is opening: the live canvas is copied back into the showing tab, so its
-     * preview isn't a stale snapshot taken at the last tab switch.
-     */
     val onOverview: () -> Unit = {},
-    /**
-     * Rasterise the page tab [Int] is showing, [Int] pixels wide, and hand the bitmap to the callback
-     * on the main thread — null if it can't be drawn. Asynchronous because a tab restored from a cold
-     * start still has to be parsed (gzip + XML), which is far too slow to do in a tap.
-     */
     val preview: (Int, Int, (Bitmap?) -> Unit) -> Unit = { _, _, done -> done(null) },
 )
 
-/**
- * The row of open documents above the editor. Selecting a tab swaps the whole document on the
- * canvas; the trailing "+" opens a fresh blank one.
- *
- * Always shown once a document is open — including the single-document case — so "new tab", "close"
- * and "switch" sit in the same place no matter how many documents are loaded. Only an empty session
- * (no tabs at all) draws nothing.
- */
 @Composable
 fun TabStrip(state: TabsUiState, modifier: Modifier = Modifier) {
     if (state.titles.isEmpty()) return
-    // Drag-reorder state lives here, not in the chip: a drag walks the tab past its neighbours, so the
-    // slot the gesture started in stops being the dragged tab after the first swap. [dragIndex] is
-    // where the dragged tab sits *now*, and [dragOffset] is how far past its slot the finger is.
     var dragIndex by remember { mutableStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val scroll = rememberScrollState()
-    // Where the selected chip sits inside the (scrollable) content, so a tab selected from elsewhere —
-    // or one carried past the edge by a reorder drag — is scrolled back into view instead of stranded.
     var activeBounds by remember { mutableStateOf(0f to 0f) }
     var viewportWidth by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(activeBounds, viewportWidth, scroll.maxValue) {
@@ -137,8 +101,6 @@ fun TabStrip(state: TabsUiState, modifier: Modifier = Modifier) {
                 onDrag = { dx, width ->
                     if (dragIndex >= 0) {
                         dragOffset += dx
-                        // One whole chip of travel = one slot; swap and keep the rest of the offset so a
-                        // long drag walks the tab across several neighbours in one gesture.
                         while (dragOffset > width && dragIndex < state.titles.lastIndex) {
                             state.onReorder(dragIndex, dragIndex + 1)
                             dragIndex++
@@ -157,19 +119,11 @@ fun TabStrip(state: TabsUiState, modifier: Modifier = Modifier) {
             )
         }
         IconButton(onClick = state.onNew, modifier = Modifier.size(TAB_TOUCH_TARGET)) {
-            Icon(Icons.Filled.Add, contentDescription = "New document", modifier = Modifier.size(TAB_NEW_ICON))
+            Icon(Icons.Filled.Add, contentDescription = "Nuevo documento", modifier = Modifier.size(TAB_NEW_ICON))
         }
     }
 }
 
-/**
- * One tab: its (elided) title, and a close button offered on every tab, selected or not.
- *
- * A long press opens the pane menu — move this document to the other half of a split, or mirror a
- * second view of it there — so both live where the tab does rather than in the app bar. Dragging it
- * sideways instead reorders it within this strip. A [dotColor]
- * marks a tab that is one of several views of one document.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TabChip(
@@ -262,11 +216,11 @@ private fun TabChipMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
-            text = { Text("Move to other view") },
+            text = { Text("Mover a la otra vista") },
             onClick = { onDismiss(); onMove() },
         )
         DropdownMenuItem(
-            text = { Text("Mirror on other view") },
+            text = { Text("Duplicar en la otra vista") },
             onClick = { onDismiss(); onMirror() },
         )
     }
@@ -285,29 +239,16 @@ private fun TabCloseButton(
     ) {
         Icon(
             Icons.Filled.Close,
-            contentDescription = "Close $title",
+            contentDescription = "Cerrar $title",
             modifier = Modifier.size(TAB_CLOSE_ICON),
             tint = if (selected) colors.onSecondaryContainer else colors.onSurfaceVariant,
         )
     }
 }
 
-/** The mirrored-document dot: big enough to read as a colour, small enough not to crowd the title. */
 private val TAB_DOT_SIZE = 6.dp
-
-/**
- * The strip's tap-target size. Below Material's 48dp minimum on purpose: the strip is deliberately
- * compact so it steals as little canvas as it can, and every target here is a wide chip or an icon
- * with clear space around it rather than a dense cluster.
- */
 private val TAB_TOUCH_TARGET = 36.dp
-
-/** The close/new icon glyphs, scaled to sit inside the compact [TAB_TOUCH_TARGET]. */
 private val TAB_CLOSE_ICON = 16.dp
 private val TAB_NEW_ICON = 18.dp
-
-/** Vertical breathing room above and below each chip. */
 private val TAB_CHIP_VERTICAL_PADDING = 3.dp
-
-/** Strip height: one touch target plus the breathing room above and below each chip. */
 private val TAB_STRIP_HEIGHT = TAB_TOUCH_TARGET + TAB_CHIP_VERTICAL_PADDING * 2

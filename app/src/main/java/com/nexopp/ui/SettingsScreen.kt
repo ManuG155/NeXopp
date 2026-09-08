@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/SettingsScreen.kt
 package com.nexopp.ui
 
 import androidx.activity.compose.BackHandler
@@ -31,35 +32,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * The settings sections. Each is a clickable row on the settings index that opens as its own page,
- * so a single screen never has to carry every preference at once.
- */
 enum class SettingsSection(val title: String, val summary: String) {
-    /** Stylus and finger input settings: pressure curve, barrel buttons, hover, finger drawing. */
-    STYLUS("Stylus", "Finger drawing, hover preview, barrel button, pressure feel."),
-    /** Editor behaviour: default tool, shape recognition, snapping to grid or angles. */
-    EDITOR("Editor", "Default tool and snapping to the grid or to 15° rotations."),
-    /** Toolbar configuration: which rail buttons appear and their order. */
-    TOOLBAR("Toolbar", "Which rail buttons appear, and in what order."),
-    /** Radial palette configuration: what each ring slot does at the pen tip. */
-    PALETTE("Palette", "The radial palette's rings — what each slot does at the pen tip."),
-    /** Navigation: momentum scrolling strength and panning sensitivity. */
-    NAVIGATION("Navigation", "Momentum scrolling and panning sensitivity."),
-    /** Appearance: theme mode and page counter position. */
-    APPEARANCE("Appearance", "Theme, and where the page counter sits on the canvas."),
-    /** Storage: text import limit and PDF cache budget. */
-    STORAGE("Storage", "How big a text file may be imported, and how much cache to keep."),
-    /** About: version, licence, source, and support links. */
-    ABOUT("About", "Version, licence, source code, and how to support the work."),
+    STYLUS("Stylus", "Dibujo con dedo, previsualización, botón del stylus, sensibilidad de presión."),
+    EDITOR("Editor", "Herramienta por defecto y ajuste a cuadrícula o rotaciones de 15°."),
+    TOOLBAR("Barra de herramientas", "Qué botones aparecen y en qué orden."),
+    PALETTE("Paleta", "Los anillos de la paleta radial — qué hace cada ranura al tocar con el stylus."),
+    NAVIGATION("Navegación", "Desplazamiento con inercia y sensibilidad panorámica."),
+    APPEARANCE("Apariencia", "Tema y posición del contador de páginas en el lienzo."),
+    STORAGE("Almacenamiento", "Límite de importación de texto y caché de PDF."),
+    ABOUT("Acerca de", "Versión, licencia, código fuente y formas de apoyar el desarrollo."),
 }
 
-/**
- * Settings, as an index of sections plus one page per section: the index lists the sections and
- * tapping one pushes its own page (with a back arrow returning to the index; back from the index
- * leaves settings entirely). Edits are pushed live to the canvas and persisted via [SettingsStore]
- * (see `MainActivity`). Reached from the top-bar menu.
- */
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
@@ -69,12 +52,10 @@ fun SettingsScreen(
     var section by remember { mutableStateOf<SettingsSection?>(null) }
     val open = section
 
-    // Settings is composed after the editor, so this handler outranks the editor's: the system back
-    // mirrors the title-bar arrow — pop the open section first, then leave settings entirely.
     BackHandler(enabled = true) { if (section != null) section = null else onBack() }
 
     if (open == null) {
-        SettingsPage(title = "Settings", onBack = onBack) {
+        SettingsPage(title = "Ajustes", onBack = onBack) {
             SettingsSection.values().forEach { entry ->
                 SectionRow(entry) { section = entry }
                 HorizontalDivider()
@@ -96,7 +77,6 @@ fun SettingsScreen(
     }
 }
 
-/** The shared chrome for the index and every section page: a titled bar, back arrow, scrolling body. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsPage(title: String, onBack: () -> Unit, body: @Composable () -> Unit) {
@@ -106,7 +86,7 @@ private fun SettingsPage(title: String, onBack: () -> Unit, body: @Composable ()
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 },
             )
@@ -121,7 +101,6 @@ private fun SettingsPage(title: String, onBack: () -> Unit, body: @Composable ()
     }
 }
 
-/** One tappable row on the index: the section's name, what it covers, and a chevron. */
 @Composable
 private fun SectionRow(section: SettingsSection, onClick: () -> Unit) {
     Row(

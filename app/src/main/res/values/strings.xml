@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">NeXopp</string>
-    <string name="open_document">Open .xopp</string>
-    <string name="save_document">Save</string>
-    <string name="tool_pen">Pen</string>
-    <string name="tool_highlighter">Highlighter</string>
-    <string name="tool_eraser">Eraser</string>
+    <string name="open_document">Abrir .xopp</string>
+    <string name="save_document">Guardar</string>
+    <string name="tool_pen">Pluma</string>
+    <string name="tool_highlighter">Subrayador</string>
+    <string name="tool_eraser">Borrador</string>
 </resources>

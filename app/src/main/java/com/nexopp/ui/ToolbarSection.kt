@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarSection.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Spacer
@@ -13,12 +14,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Toolbar layout: where the rail is docked, and which buttons it shows in what order. */
 @Composable
 fun ToolbarSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     OptionGroup(
-        title = "Toolbar position",
-        subtitle = "Which edge the tool rail is docked to.",
+        title = "Posición de barra de herramientas",
+        subtitle = "Borde donde se ancla la barra de herramientas.",
         options = ToolbarPosition.values().toList(),
         selected = settings.toolbarPosition,
         label = { it.label },
@@ -26,10 +26,9 @@ fun ToolbarSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     )
 
     Spacer(Modifier.height(12.dp))
-    Text("Rail buttons", style = MaterialTheme.typography.titleSmall)
+    Text("Botones de la barra", style = MaterialTheme.typography.titleSmall)
     Text(
-        "Switch a button off to hide it, or press and hold a row and drag it up or down to reorder. " +
-            "The rail draws them top-to-bottom (left-to-right when docked horizontally).",
+        "Apaga un botón para ocultarlo, o mantén pulsado un elemento y arrástralo arriba o abajo para reordenarlo. La barra los dibuja de arriba abajo (o de izquierda a derecha cuando está en horizontal).",
         style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(8.dp))

@@ -1,3 +1,4 @@
+// --- EditorActionBars.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.horizontalScroll
@@ -38,11 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * The Select tool's contextual action bar, shown while a selection is active: cut / copy /
- * duplicate / delete, recolour and re-width the selected strokes, and deselect. Horizontally
- * scrollable so it fits narrow screens. (Resize and rotate are on-canvas handles, not buttons.)
- */
 @Composable
 fun SelectionActionBar(
     onCut: () -> Unit,
@@ -68,28 +64,23 @@ fun SelectionActionBar(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onCut) { Icon(Icons.Filled.ContentCut, contentDescription = "Cut") }
-            IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy") }
-            IconButton(onClick = onDuplicate) { Icon(Icons.Filled.LibraryAdd, contentDescription = "Duplicate") }
+            IconButton(onClick = onCut) { Icon(Icons.Filled.ContentCut, contentDescription = "Cortar") }
+            IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar") }
+            IconButton(onClick = onDuplicate) { Icon(Icons.Filled.LibraryAdd, contentDescription = "Duplicar") }
             RecolorMenu(onRecolor, palette)
             ReWidthMenu(widthSlots, onReWidth)
-            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
-            TextButton(onClick = onDeselect) { Text("Done") }
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Eliminar") }
+            TextButton(onClick = onDeselect) { Text("Hecho") }
         }
     }
 }
 
-/**
- * A drop-down that recolours the selection, offering the shared [ColorPaletteRows] — the same
- * swatches, custom slot and recents as the pen's palette. The colour picked is recorded as used
- * (but not as the *pen's* colour: recolouring a selection doesn't change what the pen draws with).
- */
 @Composable
 private fun RecolorMenu(onRecolor: (Int) -> Unit, palette: ColorPaletteState) {
     var open by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Filled.Palette, contentDescription = "Recolour") }
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.Palette, contentDescription = "Cambiar color") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             ColorPaletteRows(
                 selected = null,
@@ -102,12 +93,11 @@ private fun RecolorMenu(onRecolor: (Int) -> Unit, palette: ColorPaletteState) {
     CustomColorEditor(visible = editing, palette = palette, onDismiss = { editing = false })
 }
 
-/** A width drop-down that re-widths the selected strokes, using the same configurable slots as the pen. */
 @Composable
 private fun ReWidthMenu(widthSlots: List<Float>, onReWidth: (Float) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Filled.LineWeight, contentDescription = "Width") }
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.LineWeight, contentDescription = "Grosor") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             widthSlots.forEachIndexed { i, pt ->
                 DropdownMenuItem(
@@ -119,13 +109,6 @@ private fun ReWidthMenu(widthSlots: List<Float>, onReWidth: (Float) -> Unit) {
     }
 }
 
-/**
- * Shown in a marquee mode when nothing is selected: paste the clipboard onto the visible page, and —
- * once a background-select marquee has been dragged — Copy or Cut the region it left behind. Copy
- * re-captures the region (so it can be re-copied after the clipboard has moved on) and Cut also
- * erases the ink it covers. The marquee shape isn't picked here — rectangle and lasso are separate
- * rail tools (see [EditorTool]) — so the bar composes to nothing when there is nothing to act on.
- */
 @Composable
 fun SelectModeBar(
     canPaste: Boolean,
@@ -152,38 +135,30 @@ fun SelectModeBar(
                 TextButton(onClick = onCopyRegion) {
                     Icon(Icons.Filled.ContentCopy, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Copy")
+                    Text("Copiar")
                 }
                 TextButton(onClick = onCutRegion) {
                     Icon(Icons.Filled.ContentCut, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Cut")
+                    Text("Cortar")
                 }
             }
             if (canPaste) {
                 TextButton(onClick = onPaste) {
                     Icon(Icons.Filled.ContentPaste, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Paste")
+                    Text("Pegar")
                 }
             }
             if (hasRegion) {
                 IconButton(onClick = onClearRegion) {
-                    Icon(Icons.Filled.Close, contentDescription = "Clear region")
+                    Icon(Icons.Filled.Close, contentDescription = "Limpiar región")
                 }
             }
         }
     }
 }
 
-/**
- * Shown while a spline is open: finish the curve, drop the last control point, or throw it away.
- * The keyboard bindings (Enter/Escape) and the finishing double-tap still work — this is the
- * on-screen equivalent, since a tablet with no keyboard otherwise has only the double-tap, which is
- * easy to miss and awkward when two control points genuinely belong close together.
- *
- * Finish is disabled below two points, matching the commit rule: a one-node spline draws nothing.
- */
 @Composable
 fun SplineModeBar(
     nodeCount: Int,
@@ -204,23 +179,22 @@ fun SplineModeBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("$nodeCount ${if (nodeCount == 1) "point" else "points"}")
+            Text("$nodeCount ${if (nodeCount == 1) "punto" else "puntos"}")
             IconButton(onClick = onUndoPoint) {
-                Icon(Icons.Filled.Undo, contentDescription = "Undo last point")
+                Icon(Icons.Filled.Undo, contentDescription = "Deshacer último punto")
             }
             IconButton(onClick = onCancel) {
-                Icon(Icons.Filled.Close, contentDescription = "Discard curve")
+                Icon(Icons.Filled.Close, contentDescription = "Descartar curva")
             }
             TextButton(onClick = onFinish, enabled = nodeCount >= 2) {
                 Icon(Icons.Filled.Check, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Finish")
+                Text("Terminar")
             }
         }
     }
 }
 
-/** Shown while PDF text is selected: copy the selection to the system clipboard, or deselect. */
 @Composable
 fun TextSelectionBar(
     onCopy: () -> Unit,
@@ -241,9 +215,9 @@ fun TextSelectionBar(
             TextButton(onClick = onCopy) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Copy")
+                Text("Copiar")
             }
-            TextButton(onClick = onDeselect) { Text("Deselect") }
+            TextButton(onClick = onDeselect) { Text("Deseleccionar") }
         }
     }
 }

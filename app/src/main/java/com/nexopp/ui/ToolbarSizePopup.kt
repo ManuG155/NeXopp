@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarSizePopup.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -39,32 +40,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/** Fixed labels for the three configurable pen-width slots (the widths themselves live in [AppSettings]). */
 val PEN_WIDTH_LABELS: List<String> = listOf("S", "M", "L")
-
-/** Minimum allowed pen width in points for the size slider and slot editor. */
 const val PEN_WIDTH_MIN: Float = 0.5f
-
-/** Maximum allowed pen width in points for the size slider and slot editor. */
 const val PEN_WIDTH_MAX: Float = 15f
-
-/** Increment for the −/+ fine-adjust buttons in the slot-resize dialog, in points. */
 const val PEN_WIDTH_STEP: Float = 0.1f
 
-/** Format a pen width for display: at most two decimals, trailing zeros trimmed (e.g. 1.50 → "1.5"). */
 fun ptLabel(pt: Float): String =
     String.format(java.util.Locale.US, "%.2f", pt).trimEnd('0').trimEnd('.')
 
-
-
-/**
- * The three configurable width slots ([widthSlots]), each shown as a [WidthDot] scaled to its width.
- * A tap selects a slot's width via [onWidth]; a **long-press** asks the caller to redefine that slot
- * via [onEditSlot] (which opens a [WidthSlotSliderDialog]).
- *
- * The same slots size the **eraser** — its radius is derived from the pen width
- * (see [com.nexopp.render.eraserRadiusPt]), so these rows are the whole tip-size story.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun WidthSlotRows(
@@ -75,7 +58,7 @@ internal fun WidthSlotRows(
 ) {
     val maxPt = (widthSlots + width).maxOrNull() ?: width
     Text(
-        "Tap to pick · long-press to resize",
+        "Toca para elegir · mantén para redimensionar",
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -95,17 +78,12 @@ internal fun WidthSlotRows(
             Text("${ptLabel(pt)} pt")
             if (pt == width) {
                 Spacer(Modifier.width(8.dp))
-                Icon(Icons.Filled.Check, contentDescription = "selected")
+                Icon(Icons.Filled.Check, contentDescription = "seleccionado")
             }
         }
     }
 }
 
-/**
- * A dialog (0.5 → 15 pt) that redefines one pen-width slot; opened by long-pressing the slot. Offers
- * three ways to dial in a width: the slider for a broad sweep, the −/+ buttons for fine
- * [PEN_WIDTH_STEP]-pt nudges, and a text field for typing an exact value.
- */
 @Composable
 internal fun WidthSlotSliderDialog(
     label: String,
@@ -114,18 +92,15 @@ internal fun WidthSlotSliderDialog(
     onDismiss: () -> Unit,
 ) {
     var value by remember { mutableStateOf(initial.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX)) }
-    // The text field is edited freely as a string so mid-edit values ("", ".", "1.") don't fight the
-    // user; a valid, in-range parse flows back into [value], and any programmatic change re-syncs it.
     var text by remember { mutableStateOf(ptLabel(value)) }
     fun setValue(pt: Float) {
         value = pt.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX)
         text = ptLabel(value)
     }
-    // Snap −/+ nudges to a clean [PEN_WIDTH_STEP] grid so repeated taps don't accumulate float drift.
     fun nudge(delta: Float) = setValue(((value + delta) / PEN_WIDTH_STEP).roundToInt() * PEN_WIDTH_STEP)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Slot $label width") },
+        title = { Text("Grosor ranura $label") },
         text = {
             Column {
                 Row(
@@ -133,7 +108,7 @@ internal fun WidthSlotSliderDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     IconButton(onClick = { nudge(-PEN_WIDTH_STEP) }) {
-                        Icon(Icons.Filled.Remove, contentDescription = "Thinner")
+                        Icon(Icons.Filled.Remove, contentDescription = "Más fino")
                     }
                     OutlinedTextField(
                         value = text,
@@ -147,7 +122,7 @@ internal fun WidthSlotSliderDialog(
                         modifier = Modifier.width(120.dp),
                     )
                     IconButton(onClick = { nudge(PEN_WIDTH_STEP) }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Thicker")
+                        Icon(Icons.Filled.Add, contentDescription = "Más grueso")
                     }
                 }
                 Slider(
@@ -157,7 +132,7 @@ internal fun WidthSlotSliderDialog(
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("Set") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("Aplicar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }

@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarStylePopup.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.background
@@ -31,23 +32,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.nexopp.format.model.LineStyle
 
-/** Line-style labels for the style pop-up, paired with their [LineStyle]. */
 private val LINE_STYLE_LABELS: List<Pair<LineStyle, String>> = listOf(
-    LineStyle.PLAIN to "Solid",
-    LineStyle.DASHED to "Dashed",
-    LineStyle.DASH_DOT to "Dash-dot",
-    LineStyle.DOTTED to "Dotted",
+    LineStyle.PLAIN to "Sólida",
+    LineStyle.DASHED to "A trazos",
+    LineStyle.DASH_DOT to "Trazo y punto",
+    LineStyle.DOTTED to "Punteada",
 )
 
-/** Alpha used when fill is switched on and no alpha has been chosen yet (50%, as on desktop). */
 const val DEFAULT_FILL_ALPHA: Int = 128
 
-/**
- * The line-style / fill pop-up. Both apply to strokes and shapes drawn next, and round-trip via the
- * `<stroke>` `style`/`fill` attributes. The eraser's mode and size used to live here too; they now
- * belong to the eraser itself — its mode is a long-press choice on the rail's eraser slot, and its
- * size follows the pen's tip sizes (see [com.nexopp.render.eraserRadiusPt]).
- */
 @Composable
 internal fun StylePopupButton(
     lineStyle: LineStyle,
@@ -57,26 +50,21 @@ internal fun StylePopupButton(
 ) {
     ToolbarPopupButton(
         icon = Icons.Filled.Timeline,
-        contentDescription = "Line style & fill",
+        contentDescription = "Estilo de línea y relleno",
     ) { dismiss ->
-        MenuHeading("Line style")
+        MenuHeading("Estilo de línea")
         for ((style, label) in LINE_STYLE_LABELS) {
             DropdownMenuItem(
                 text = { Text(label) },
-                leadingIcon = { if (style == lineStyle) Icon(Icons.Filled.Check, contentDescription = "selected") },
+                leadingIcon = { if (style == lineStyle) Icon(Icons.Filled.Check, contentDescription = "seleccionado") },
                 onClick = { onLineStyle(style); dismiss() },
             )
         }
-        MenuHeading("Fill")
+        MenuHeading("Relleno")
         FillControls(fill, onFill)
     }
 }
 
-/**
- * Shape recognition as a one-tap rail slot: no pop-up, the tap flips it and the slot tints like a
- * tool button while it's on, so a freehand circle can be snapped to a real one (or not) without
- * leaving the page for Settings. Backed by the same persisted `recognizeShapes` setting.
- */
 @Composable
 internal fun ShapeRecognitionButton(enabled: Boolean, onEnabled: (Boolean) -> Unit) {
     val tint =
@@ -94,17 +82,12 @@ internal fun ShapeRecognitionButton(enabled: Boolean, onEnabled: (Boolean) -> Un
     ) {
         Icon(
             Icons.Filled.ChangeHistory,
-            contentDescription = if (enabled) "Shape recognition on" else "Shape recognition off",
+            contentDescription = if (enabled) "Reconocimiento de formas activado" else "Reconocimiento de formas desactivado",
             tint = tint,
         )
     }
 }
 
-/**
- * Fill as a first-class control: a switch that turns fill on/off plus a continuous alpha slider,
- * mirroring desktop Xournal++. The alpha the user last picked is remembered while the switch is
- * off, so toggling fill back on restores it rather than snapping to a preset.
- */
 @Composable
 private fun FillControls(fill: Int?, onFill: (Int?) -> Unit) {
     var lastAlpha by remember { mutableStateOf(fill ?: DEFAULT_FILL_ALPHA) }
@@ -114,7 +97,7 @@ private fun FillControls(fill: Int?, onFill: (Int?) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(if (fill == null) "Off" else "${alphaPercent(alpha)}%")
+        Text(if (fill == null) "Desactivado" else "${alphaPercent(alpha)}%")
         Switch(
             checked = fill != null,
             onCheckedChange = { on -> onFill(if (on) lastAlpha else null) },
@@ -131,5 +114,4 @@ private fun FillControls(fill: Int?, onFill: (Int?) -> Unit) {
     )
 }
 
-/** The alpha 1..255 as a rounded 0..100 percentage, for the fill readout. */
 internal fun alphaPercent(alpha: Int): Int = Math.round(alpha * 100f / 255f)

@@ -1,3 +1,4 @@
+// --- PaletteManagerRow.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.horizontalScroll
@@ -23,15 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * The palette manager: the row of saved palettes above the ring editor, plus the buttons that add,
- * rename, reorder and delete them — the same shape as the presets rail, one chip per palette.
- *
- * Two different "current" palettes live here and are deliberately separate: the **edited** one (the
- * chip that is selected, whose rings the diagram below shows) and the **active** one (the palette
- * the pen actually opens, marked in its chip's label). Every edit goes through the pure helpers in
- * `PaletteList.kt` and back out via [onSet], which is what persists it.
- */
 @Composable
 fun PaletteManagerRow(
     set: PaletteSet,
@@ -58,10 +50,10 @@ fun PaletteManagerRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = { onSet(addPalette(set)); onEdit(set.palettes.size) }) {
-            Icon(Icons.Filled.Add, contentDescription = "Add palette")
+            Icon(Icons.Filled.Add, contentDescription = "Añadir paleta")
         }
         IconButton(onClick = { renaming = true }) {
-            Icon(Icons.Filled.Edit, contentDescription = "Rename palette")
+            Icon(Icons.Filled.Edit, contentDescription = "Renombrar paleta")
         }
         ReorderControls(
             canMoveUp = editing > 0,
@@ -79,11 +71,11 @@ fun PaletteManagerRow(
         onClick = { onSet(activatePalette(set, editing)) },
         enabled = editing != set.activeIndex,
         modifier = Modifier.padding(top = 4.dp),
-    ) { Text("Use this palette on the pen") }
+    ) { Text("Usar esta paleta en el stylus") }
     if (renaming) {
         RenameDialog(
-            title = "Rename palette",
-            label = "Name",
+            title = "Renombrar paleta",
+            label = "Nombre",
             initialValue = set.palettes.getOrNull(editing)?.name.orEmpty(),
             onConfirm = { onSet(renamePalette(set, editing, it)); renaming = false },
             onDismiss = { renaming = false },
@@ -92,9 +84,9 @@ fun PaletteManagerRow(
     if (deleting) {
         val name = set.palettes.getOrNull(editing)?.name.orEmpty()
         ConfirmDialog(
-            title = "Delete \"$name\"?",
-            text = "Its slot assignments are lost. Your other palettes are untouched.",
-            confirmLabel = "Delete",
+            title = "¿Eliminar \"$name\"?",
+            text = "Se perderán sus asignaciones. Las demás paletas no se verán afectadas.",
+            confirmLabel = "Eliminar",
             onConfirm = {
                 onSet(removePalette(set, editing))
                 onEdit((editing - 1).coerceAtLeast(0))
@@ -105,6 +97,5 @@ fun PaletteManagerRow(
     }
 }
 
-/** A chip's label: the palette's name, with a dot marking the one the pen opens. */
 internal fun paletteChipLabel(palette: RadialPalette, isActive: Boolean): String =
     if (isActive) "● ${palette.name}" else palette.name

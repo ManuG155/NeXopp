@@ -1,13 +1,10 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarParameterObjects.kt
 package com.nexopp.ui
 
 import com.nexopp.format.model.LineStyle
 import com.nexopp.render.GuideKind
 import com.nexopp.render.LayerInfo
 
-/**
- * Grouped layer-management callbacks for the toolbar. Replaces the 10 individual layer parameters
- * in [SideToolbar].
- */
 data class ToolbarLayerCallbacks(
     val layers: List<LayerInfo>,
     val hasSelection: Boolean,
@@ -21,10 +18,6 @@ data class ToolbarLayerCallbacks(
     val onMoveSelectionToLayer: (Int) -> Unit,
 )
 
-/**
- * Grouped page-management callbacks for the toolbar. Replaces the 17 individual page parameters
- * in [SideToolbar].
- */
 data class ToolbarPagesCallbacks(
     val pageCount: Int,
     val currentPage: Int,
@@ -45,10 +38,6 @@ data class ToolbarPagesCallbacks(
     val onPastePages: () -> Unit,
 )
 
-/**
- * Grouped style callbacks for the toolbar. Replaces the 12 individual style parameters in
- * [SideToolbar].
- */
 data class ToolbarStyleCallbacks(
     val color: Int,
     val onColor: (Int) -> Unit,

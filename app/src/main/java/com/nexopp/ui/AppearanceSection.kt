@@ -1,3 +1,4 @@
+// --- AppearanceSection.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.padding
@@ -8,13 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Appearance: which Material 3 colour scheme the app's chrome is painted with. */
 @Composable
 fun AppearanceSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     OptionGroup(
-        title = "Theme",
-        subtitle = "Colours the top bar, tool rail and canvas backdrop. " +
-            "System follows the device's light/dark setting.",
+        title = "Tema",
+        subtitle = "Colorea la barra superior, la barra de herramientas y el fondo del lienzo. " +
+            "'Sistema' sigue la configuración claro/oscuro del dispositivo.",
         options = ThemeMode.values().toList(),
         selected = settings.themeMode,
         label = { it.label },
@@ -24,16 +24,16 @@ fun AppearanceSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
     SwitchRow(
-        title = "Use system colours",
-        subtitle = "On Android 12+ takes colours from your wallpaper. Off uses the app's fixed purple.",
+        title = "Usar colores del sistema",
+        subtitle = "En Android 12+ usa los colores del fondo de pantalla. Desactivado usa el morado por defecto de la aplicación.",
         checked = settings.dynamicColor,
         onCheckedChange = { onChange(settings.copy(dynamicColor = it)) },
     )
 
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
-    Text("Page counter position", style = MaterialTheme.typography.bodyLarge)
+    Text("Posición del contador de páginas", style = MaterialTheme.typography.bodyLarge)
     Text(
-        "Which corner of the canvas the always-visible \"page X of Y\" badge sits in.",
+        "En qué esquina del lienzo se muestra el indicador \"página X de Y\".",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),
     )

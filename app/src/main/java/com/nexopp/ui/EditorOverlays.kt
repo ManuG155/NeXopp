@@ -1,3 +1,4 @@
+// --- EditorOverlays.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.background
@@ -31,13 +32,7 @@ import com.nexopp.render.duplicateSelection
 import com.nexopp.render.finishSpline
 import com.nexopp.render.pasteClipboard
 import com.nexopp.render.restyleSelection
-import com.nexopp.render.undoLastSplineNode
 
-/**
- * Everything layered over the canvas: the contextual action bars along the bottom edge, and the
- * authoring/chooser dialogs. Each one is driven by a single flag on [ui] or [pane], so this is where
- * the screen's "what is open right now" logic lives instead of being strewn through the layout.
- */
 @Composable
 fun BoxScope.EditorOverlays(
     ui: EditorUiState,
@@ -58,7 +53,7 @@ fun BoxScope.EditorOverlays(
         val existing = placement.existing
         val defaults = ui.textDefaults
         TextBoxDialog(
-            title = if (existing != null) "Edit text" else "Add text",
+            title = if (existing != null) "Editar texto" else "Añadir texto",
             initialContent = existing?.content ?: "",
             initialFamily = existing?.let { com.nexopp.format.FontDescription.parse(it.font) }?.family ?: defaults.family,
             initialBold = existing?.let { com.nexopp.format.FontDescription.parse(it.font) }?.bold ?: defaults.bold,
@@ -83,7 +78,7 @@ fun BoxScope.EditorOverlays(
         TextInputDialog(
             title = "LaTeX",
             initial = "",
-            confirmLabel = "Place",
+            confirmLabel = "Colocar",
             onConfirm = { latex -> surface?.insertTex(placement, latex, ui.color); ui.texPlacement = null },
             onDismiss = { ui.texPlacement = null },
         )
@@ -104,10 +99,6 @@ fun BoxScope.EditorOverlays(
     }
 }
 
-/**
- * The selection and placement bars: the contextual action bars for select tools and text selections.
- * Extracted from [EditorOverlays] to keep the dispatcher small.
- */
 @Composable
 private fun BoxScope.SelectionOverlays(
     ui: EditorUiState,
@@ -135,14 +126,9 @@ private fun BoxScope.SelectionOverlays(
         SelectModeBar(
             canPaste = pane.hasClipboard,
             onPaste = {
-                // Paste lands a fresh selection, so switch to SELECT first: under BG_SELECT the
-                // gesture layer never reaches the selection controller, and the pasted elements
-                // would draw as selected yet be undraggable (and die on the next touch).
                 if (ui.tool != EditorTool.SELECT && ui.tool != EditorTool.LASSO_SELECT) {
                     ui.tool = EditorTool.SELECT
                     surface?.applyTool(ui.tool)
-                    // Point the rail's Select slot at SELECT too, or it would keep facing the
-                    // tool we just left and misreport what the canvas is actually in.
                     groupOf(EditorTool.SELECT)?.let {
                         onSettingsChange(
                             settings.copy(
@@ -179,10 +165,6 @@ private fun BoxScope.SelectionOverlays(
     }
 }
 
-/**
- * A modal "please wait" note for a document transfer. Reading or writing a file on a mounted remote
- * share (SSHFS, FTP, cloud) can take seconds, so the wait is shown rather than looking like a hang.
- */
 @Composable
 fun TransferOverlay(label: String) {
     Box(

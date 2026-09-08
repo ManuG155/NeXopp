@@ -1,3 +1,4 @@
+// --- EditorScreen.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Box
@@ -24,15 +25,6 @@ import com.nexopp.render.PlaceKind
 import com.nexopp.render.Placement
 import com.nexopp.render.ShapeKind
 
-/**
- * Push an [EditorTool] onto the surface: the three drawing tools set [Tool]; Hand toggles pan mode;
- * the authoring tools (text/image/LaTeX) set the surface's [DrawingSurfaceView.placeKind] so a tap
- * places that element instead of drawing.
- *
- * Two tools are variants of another rather than modes of their own: LASSO_SELECT is SELECT with a
- * freehand marquee, and ERASER_WHOLE is ERASER deleting whole strokes. Picking the tool is what sets
- * the variant, which is why neither has a separate mode menu.
- */
 fun DrawingSurfaceView.applyTool(tool: EditorTool) {
     handMode = tool == EditorTool.HAND
     selectMode = tool == EditorTool.SELECT || tool == EditorTool.LASSO_SELECT
@@ -65,15 +57,13 @@ fun DrawingSurfaceView.applyTool(tool: EditorTool) {
         EditorTool.PEN -> this.tool = Tool.PEN
         EditorTool.HIGHLIGHTER -> this.tool = Tool.HIGHLIGHTER
         EditorTool.ERASER, EditorTool.ERASER_WHOLE -> this.tool = Tool.ERASER
-        // Shapes are drawn as ordinary pen strokes; the shapeKind above turns a drag into geometry.
         EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW, EditorTool.COORDINATE_AXIS,
         EditorTool.RECTANGLE, EditorTool.ELLIPSE, EditorTool.SPLINE,
         -> this.tool = Tool.PEN
-        else -> Unit // Hand / authoring tools keep the last drawing tool for when they're turned off
+        else -> Unit 
     }
 }
 
-/** Push the stylus/input [AppSettings] onto the surface (classifier settings, hover, pressure feel). */
 fun DrawingSurfaceView.applySettings(s: AppSettings) {
     inputSettings = InputSettings(
         fingerDraws = s.fingerDraws,
@@ -90,8 +80,6 @@ fun DrawingSurfaceView.applySettings(s: AppSettings) {
     setColumns(s.pageColumns)
     snapToGrid = s.snapToGrid
     snapRotation = s.snapRotation
-    // Only place a guide the surface isn't already showing — re-placing on every settings change
-    // would yank a guide the user has carefully positioned back to the middle of the screen.
     if (s.guideKind == GuideKind.NONE) {
         if (guide != null) placeGuide(GuideKind.NONE)
     } else if (guide == null) {
@@ -104,16 +92,6 @@ fun DrawingSurfaceView.applySettings(s: AppSettings) {
     presetColors = s.presets.associate { it.id to it.colorArgb }
 }
 
-/**
- * The single editor screen: a Material 3 top bar (undo/redo plus an overflow menu for open/save/
- * settings), a vertical control [SideToolbar] down the left edge, and the stylus canvas filling the
- * rest. The canvas is a classic [DrawingSurfaceView] hosted via [AndroidView] for low-latency stylus
- * rendering (see `docs/architecture.md`).
- *
- * The screen owns no loose state of its own: everything it remembers lives in [EditorUiState] (the
- * chrome) and [PaneState] (each canvas's mirror), and each region below — top bar, toolbar, pane,
- * overlays — is its own composable reading just the parts it needs.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
@@ -124,24 +102,17 @@ fun EditorScreen(
     onImportPdf: (ImportPdfMode) -> Unit,
     onExportPdf: () -> Unit,
     onPickImage: (Placement) -> Unit,
-    /** A pane's canvas has just been built: its index, then the view. */
     onSurfaceCreated: (Int, DrawingSurfaceView) -> Unit,
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit,
     audio: AudioUiState = AudioUiState(),
-    /** One tab session per pane, in pane order (see [com.nexopp.panes.EditorPane]). */
     tabs: List<TabsUiState> = listOf(TabsUiState()),
-    /** Whether both panes are shown side by side. */
     splitView: Boolean = false,
     onToggleSplitView: () -> Unit = {},
-    /** Which pane the chrome drives; touching a pane's canvas makes it the active one. */
     activePane: Int = 0,
     onActivePane: (Int) -> Unit = {},
-    /** A document transfer in flight (label shown), or null. Remote files can take a while. */
     busy: String? = null,
-    /** Back was pressed with nothing left to dismiss: leave the app. */
     onExit: () -> Unit = {},
-    /** The top app bar content; defaults to [EditorTopBar]. */
     topBar: @Composable (EditorUiState, PaneState, TabsUiState) -> Unit = { ui, pane, tabs ->
         EditorTopBar(
             ui = ui,
@@ -155,7 +126,6 @@ fun EditorScreen(
             onToggleSplitView = onToggleSplitView,
         )
     },
-    /** The rail/toolbar content; defaults to [EditorToolbar]. */
     paneChrome: @Composable (EditorUiState, PaneState, AppSettings, (AppSettings) -> Unit, AudioUiState) -> Unit = { ui, pane, settings, onSettingsChange, audio ->
         EditorToolbar(
             ui = ui,
@@ -169,7 +139,6 @@ fun EditorScreen(
     val ui = rememberEditorUiState(settings)
     val pane = ui.pane(activePane)
 
-    // Back peels the editor's transient layers off one at a time before it ever exits.
     EditorBackHandler(ui = ui, pane = pane, busy = busy != null, onExit = onExit)
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -196,12 +165,8 @@ fun EditorScreen(
             )
         }
 
-        // Re-apply settings to the live surface whenever the user changes them in Settings.
         LaunchedEffect(settings) { ui.panes.forEach { it.surface?.applySettings(settings) } }
 
-        // Settings is overlaid on top of the still-composed editor rather than replacing it, so the
-        // AndroidView-hosted DrawingSurfaceView is never detached — the drawing (and undo history)
-        // survives the round trip to Settings and back.
         if (ui.showSettings) {
             SettingsScreen(
                 settings = settings,
@@ -210,8 +175,6 @@ fun EditorScreen(
             )
         }
 
-        // A document is moving to or from storage — possibly a slow network share, so say so and
-        // swallow taps until it lands rather than letting the canvas be edited mid-transfer.
         if (busy != null) TransferOverlay(busy)
 
         EditorOverlays(
@@ -226,11 +189,6 @@ fun EditorScreen(
     }
 }
 
-/**
- * The rail and the drawing area, laid out per [AppSettings.toolbarPosition] — the rail on any of the
- * four edges, the canvas taking the rest. In full-page mode the rail is simply absent and the canvas
- * has the lot.
- */
 @Composable
 private fun EditorBody(
     ui: EditorUiState,
@@ -264,7 +222,6 @@ private fun EditorBody(
             modifier = paneModifier,
         )
     }
-    /** The drawing area: one pane, or both with a draggable bar between them. */
     val canvas: @Composable (Modifier) -> Unit = { canvasModifier ->
         if (splitView) {
             SplitLayout(

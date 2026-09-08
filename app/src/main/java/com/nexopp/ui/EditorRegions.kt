@@ -1,3 +1,4 @@
+// --- EditorRegions.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -62,11 +63,6 @@ import com.nexopp.render.Placement
 import com.nexopp.render.SearchStatus
 import com.nexopp.ui.theme.rememberCanvasChromeColors
 
-/**
- * The editor's top bar: undo/redo for the active pane, the tab overview, then the overflow menu. No
- * title and a compact height — the bar is just the action row, so it eats as little of the drawing
- * area as possible.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorTopBar(
@@ -86,10 +82,10 @@ fun EditorTopBar(
         actions = {
             SearchControls(pane)
             IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo) {
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer")
             }
             IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo) {
-                Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer")
             }
             TabOverviewButton(tabs)
             OverflowMenu(
@@ -118,7 +114,7 @@ private fun SearchControls(pane: PaneState) {
             pane.searchOpen = true
             pane.surface?.setSearchQuery(pane.searchQuery)?.let(::apply)
         }) {
-            Icon(Icons.Filled.Search, contentDescription = "Search")
+            Icon(Icons.Filled.Search, contentDescription = "Buscar")
         }
         return
     }
@@ -132,20 +128,20 @@ private fun SearchControls(pane: PaneState) {
         )
         Text("${pane.searchCurrent}/${pane.searchTotal}")
         CompactIconButton(
-            contentDescription = "Previous match",
+            contentDescription = "Coincidencia anterior",
             enabled = pane.searchTotal > 0,
             onClick = { pane.surface?.previousSearchHit()?.let(::apply) },
-        ) { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match") }
+        ) { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Coincidencia anterior") }
         CompactIconButton(
-            contentDescription = "Next match",
+            contentDescription = "Siguiente coincidencia",
             enabled = pane.searchTotal > 0,
             onClick = { pane.surface?.nextSearchHit()?.let(::apply) },
-        ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Next match") }
-        CompactIconButton(contentDescription = "Close search", onClick = {
+        ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Siguiente coincidencia") }
+        CompactIconButton(contentDescription = "Cerrar búsqueda", onClick = {
             pane.searchOpen = false
             pane.searchQuery = ""
             pane.surface?.clearSearch()?.let(::apply) ?: apply(SearchStatus())
-        }) { Icon(Icons.Filled.Close, contentDescription = "Close search") }
+        }) { Icon(Icons.Filled.Close, contentDescription = "Cerrar búsqueda") }
     }
 }
 
@@ -182,17 +178,13 @@ private fun CompactSearchField(value: String, onValueChange: (String) -> Unit) {
             .padding(horizontal = 8.dp, vertical = 8.dp),
         decorationBox = { inner ->
             Box {
-                if (value.isEmpty()) Text("Search", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (value.isEmpty()) Text("Buscar", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 inner()
             }
         },
     )
 }
 
-/**
- * The control rail, wired to the active pane's surface. Every callback either drives the canvas
- * directly or writes back through [onSettingsChange] so the choice is persisted.
- */
 @Composable
 fun EditorToolbar(
     ui: EditorUiState,
@@ -340,15 +332,6 @@ private fun toolbarPagesCallbacks(
         onPastePages = { surface?.pasteCopiedPages() },
     )
 
-/**
- * One pane: its tab strip over its canvas. All of the surface's callbacks write into *that* pane's
- * [PaneState], never the active one, so a background pane keeps its own page, zoom and undo state up
- * to date while the toolbar drives the other. A touch anywhere in the pane (observed on the initial
- * pass, so the canvas still gets the event) hands it focus.
- */
-/**
- * Applies the initial tool and style settings to the drawing surface.
- */
 private fun DrawingSurfaceView.applyInitialStyle(ui: EditorUiState, settings: AppSettings) {
     applyTool(ui.tool)
     applySettings(settings)
@@ -358,9 +341,6 @@ private fun DrawingSurfaceView.applyInitialStyle(ui: EditorUiState, settings: Ap
     currentFill = settings.currentFill
 }
 
-/**
- * Binds the surface's state callbacks to the pane state holder.
- */
 private fun DrawingSurfaceView.bindTo(state: PaneState) {
     onLayersChanged = {
         state.layers = visibleLayers()
@@ -389,9 +369,6 @@ private fun DrawingSurfaceView.bindTo(state: PaneState) {
     onSearchChanged = { s -> state.searchCurrent = s.current; state.searchTotal = s.total }
 }
 
-/**
- * Binds editor action callbacks that need access to the editor UI and settings.
- */
 private fun DrawingSurfaceView.bindEditorActions(
     ui: EditorUiState,
     index: Int,
@@ -470,7 +447,6 @@ fun EditorPaneView(
                 onScrollTo = { state.surface?.scrollToY(it) },
                 modifier = Modifier.matchParentSize(),
             )
-            // Corner is user-configurable (Appearance settings); the default is bottom-right.
             PageCounter(
                 currentPage = state.currentPage,
                 pageCount = state.pageCount,
@@ -482,7 +458,6 @@ fun EditorPaneView(
     }
 }
 
-/** The top-bar overflow ("hamburger") menu: open, save, and the settings page. */
 @Composable
 private fun OverflowMenu(
     onOpen: () -> Unit,
@@ -497,46 +472,46 @@ private fun OverflowMenu(
 ) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
-        Icon(Icons.Filled.Menu, contentDescription = "Menu")
+        Icon(Icons.Filled.Menu, contentDescription = "Menú")
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
         DropdownMenuItem(
-            text = { Text("Open") },
+            text = { Text("Abrir") },
             leadingIcon = { Icon(Icons.Filled.FileOpen, contentDescription = null) },
             onClick = { open = false; onOpen() },
         )
         DropdownMenuItem(
-            text = { Text("New document") },
+            text = { Text("Nuevo documento") },
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
             onClick = { open = false; onNewTab() },
         )
         DropdownMenuItem(
-            text = { Text("Import PDF") },
+            text = { Text("Importar PDF") },
             leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
             onClick = { open = false; onImportPdf() },
         )
         DropdownMenuItem(
-            text = { Text("Export PDF") },
+            text = { Text("Exportar a PDF") },
             leadingIcon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null) },
             onClick = { open = false; onExportPdf() },
         )
         DropdownMenuItem(
-            text = { Text("Save") },
+            text = { Text("Guardar") },
             leadingIcon = { Icon(Icons.Filled.Save, contentDescription = null) },
             onClick = { open = false; onSave() },
         )
         DropdownMenuItem(
-            text = { Text("Save As…") },
+            text = { Text("Guardar como…") },
             leadingIcon = { Icon(Icons.Filled.SaveAs, contentDescription = null) },
             onClick = { open = false; onSaveAs() },
         )
         DropdownMenuItem(
-            text = { Text(if (splitView) "Close split view" else "Split view") },
+            text = { Text(if (splitView) "Cerrar vista dividida" else "Vista dividida") },
             leadingIcon = { Icon(Icons.Filled.VerticalSplit, contentDescription = null) },
             onClick = { open = false; onToggleSplitView() },
         )
         DropdownMenuItem(
-            text = { Text("Settings") },
+            text = { Text("Ajustes") },
             leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
             onClick = { open = false; onSettings() },
         )

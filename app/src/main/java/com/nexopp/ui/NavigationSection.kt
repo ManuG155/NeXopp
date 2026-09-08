@@ -1,3 +1,4 @@
+// --- NavigationSection.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.padding
@@ -7,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nexopp.render.MomentumCurve
 
-/** Canvas navigation: momentum scrolling (strength and curve) and panning sensitivity. */
 @Composable
 fun NavigationSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     MomentumSlider(
@@ -15,9 +15,9 @@ fun NavigationSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
         onChange = { onChange(settings.copy(momentum = it)) },
     )
     OptionGroup(
-        title = "Momentum curve",
-        subtitle = "How sharply a faster flick coasts farther: Linear is even, " +
-            "Exponential rewards fast swipes the most.",
+        title = "Curva de inercia",
+        subtitle = "Cuánto más lejos llega un deslizamiento rápido: 'Lineal' es constante, " +
+            "'Exponencial' recompensa más los deslizamientos rápidos.",
         options = MomentumCurve.values().toList(),
         selected = settings.momentumCurve,
         label = { it.label },

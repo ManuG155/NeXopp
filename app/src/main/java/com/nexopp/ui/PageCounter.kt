@@ -1,3 +1,4 @@
+// --- PageCounter.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.padding
@@ -9,15 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * A hazard-free "page X of Y" label. Uses coerceAtMost so it never throws when pageCount == 0.
- */
 internal fun pageLabel(currentPage: Int, pageCount: Int): String =
     "${(currentPage + 1).coerceAtMost(pageCount)} / $pageCount"
 
-/**
- * The badge's corner as a Compose [Alignment], from the two configured axes (Appearance settings).
- */
 fun pageCounterAlignment(
     vertical: PageCounterVertical,
     horizontal: PageCounterHorizontal,
@@ -39,12 +34,6 @@ fun pageCounterAlignment(
     }
 }
 
-/**
- * The always-visible "page X of Y" badge.
- *
- * It sits over the canvas rather than in the top bar so it survives full-page mode, where the whole
- * bar is hidden. [currentPage] is 0-based (as [PaneState.currentPage] is); the label adds the 1.
- */
 @Composable
 fun PageCounter(
     currentPage: Int,

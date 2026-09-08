@@ -1,15 +1,10 @@
+// Ruta: app/src/main/java/com/nexopp/ui/RadialPaletteLabel.kt
 package com.nexopp.ui
 
 import kotlin.math.roundToInt
 
-/**
- * How a slot presents itself in the ring: a short glyph the eye can read mid-flick, and — for the
- * colour slots — the swatch to fill the mark with. Kept next to the data model rather than in the
- * renderer so it is testable on the JVM and reusable by the configuration UI.
- */
 data class PaletteFace(val glyph: String, val swatchArgb: Int? = null)
 
-/** The face of [this] action: two characters at most, because the mark is small and glanced at. */
 fun PaletteAction.face(): PaletteFace = when (this) {
     is PaletteAction.SelectTool -> PaletteFace(tool.glyph())
     is PaletteAction.ToggleTool -> PaletteFace(tool.glyph())
@@ -20,7 +15,6 @@ fun PaletteAction.face(): PaletteFace = when (this) {
     PaletteAction.ToggleFullPage -> PaletteFace("⛶")
     is PaletteAction.Page -> PaletteFace(op.glyph())
     is PaletteAction.ApplyPreset -> PaletteFace("★")
-    // The number is the whole point of a slot action: the ring reads "★1", "★2"…
     is PaletteAction.ApplyPresetSlot -> PaletteFace("★${index + 1}")
     is PaletteAction.SwitchPalette -> PaletteFace("◎")
 }
@@ -30,20 +24,20 @@ private fun EditorTool.glyph(): String = when (this) {
     EditorTool.HIGHLIGHTER -> "▨"
     EditorTool.ERASER, EditorTool.ERASER_WHOLE -> "⌫"
     EditorTool.HAND -> "✋"
-    EditorTool.SELECT -> "▭"
+    EditorTool.SELECT -> "⬭"
     EditorTool.LASSO_SELECT -> "◌"
     EditorTool.TEXT_SELECT -> "T◌"
-    EditorTool.BG_SELECT -> "▣"
+    EditorTool.BG_SELECT -> "▤"
     EditorTool.TEXT -> "T"
     EditorTool.IMAGE -> "🖼"
     EditorTool.TEXIMAGE -> "∑"
     EditorTool.LINE -> "／"
     EditorTool.ARROW -> "→"
     EditorTool.DOUBLE_ARROW -> "↔"
-    EditorTool.COORDINATE_AXIS -> "⌐"
+    EditorTool.COORDINATE_AXIS -> "📈"
     EditorTool.RECTANGLE -> "□"
     EditorTool.ELLIPSE -> "○"
-    EditorTool.SPLINE -> "∿"
+    EditorTool.SPLINE -> "∽"
     EditorTool.VERTICAL_SPACE -> "↕"
     EditorTool.PLAY_OBJECT -> "▶"
 }

@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarColorPopup.kt
 package com.nexopp.ui
 
 import androidx.compose.material.icons.Icons
@@ -9,22 +10,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
-/** The pen palette offered in the chrome. Colours are opaque ARGB; highlighter renders them translucent. */
 val PEN_COLORS: List<Int> = listOf(
-    0xFF000000.toInt(), // black
-    0xFFE00000.toInt(), // red
-    0xFF2060E0.toInt(), // blue
-    0xFF1E9E1E.toInt(), // green
-    0xFFF08000.toInt(), // orange
-    0xFFF0D000.toInt(), // yellow
+    0xFF000000.toInt(),
+    0xFFE00000.toInt(),
+    0xFF2060E0.toInt(),
+    0xFF1E9E1E.toInt(),
+    0xFFF08000.toInt(),
+    0xFFF0D000.toInt(),
 )
 
-/**
- * The rail's stroke-appearance slot: colour **and** tip size in one drop-down. The face is the size
- * dot from [WidthDot], scaled to the live width and filled with the live colour, so the button shows
- * both settings at a glance. The menu stacks the shared [ColorPaletteRows] over the width slots from
- * [WidthSlotRows] — the two things you change together, in one place.
- */
 @Composable
 internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
     var editing by remember { mutableStateOf(false) }
@@ -37,14 +31,14 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
             }
         },
     ) { dismiss ->
-        MenuHeading("Colour")
+        MenuHeading("Color")
         ColorPaletteRows(
             selected = callbacks.color,
             palette = callbacks.palette,
             onPick = { c -> callbacks.onColor(c); dismiss() },
             onEditCustom = { editing = true; dismiss() },
         )
-        MenuHeading("Size")
+        MenuHeading("Grosor")
         WidthSlotRows(
             width = callbacks.width,
             widthSlots = callbacks.widthSlots,

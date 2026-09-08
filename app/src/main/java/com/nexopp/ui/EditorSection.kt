@@ -1,25 +1,25 @@
+// --- EditorSection.kt ---
 package com.nexopp.ui
 
 import androidx.compose.runtime.Composable
 
-/** Editor preferences: the tool a document opens in, and how edits snap. */
 @Composable
 fun EditorSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     SwitchRow(
-        title = "Snap to grid",
-        subtitle = "Shape endpoints land on the page background's ruling.",
+        title = "Ajustar a la cuadrícula",
+        subtitle = "Los extremos de las formas se ajustan a las líneas del fondo de página.",
         checked = settings.snapToGrid,
         onCheckedChange = { onChange(settings.copy(snapToGrid = it)) },
     )
     SwitchRow(
-        title = "Snap rotation",
-        subtitle = "Rotating a selection steps in 15° increments.",
+        title = "Ajustar rotación",
+        subtitle = "Rotar una selección lo hace en incrementos de 15°.",
         checked = settings.snapRotation,
         onCheckedChange = { onChange(settings.copy(snapRotation = it)) },
     )
     OptionGroup(
-        title = "Default tool",
-        subtitle = "Which tool is active when a document opens.",
+        title = "Herramienta por defecto",
+        subtitle = "Qué herramienta está activa al abrir un documento.",
         options = DEFAULT_TOOL_CHOICES,
         selected = settings.defaultTool,
         label = { it.label },

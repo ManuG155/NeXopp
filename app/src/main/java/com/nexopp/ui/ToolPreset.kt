@@ -1,16 +1,9 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolPreset.kt
 package com.nexopp.ui
 
 import com.nexopp.format.model.LineStyle
 import com.nexopp.render.DrawingSurfaceView
 
-/**
- * A named snapshot of the whole tool configuration — the tool itself plus every knob the rail can
- * turn on it (colour, width, line style, fill).
- *
- * A preset is *only* a value: capturing one reads the live editor state, applying one writes the
- * same fields back through the same paths [applyPaletteAction] uses. Nothing here talks to storage
- * (that's [AppSettings]) or to the UI, which is what keeps it unit-testable off-device.
- */
 data class ToolPreset(
     val id: String,
     val name: String,
@@ -21,14 +14,9 @@ data class ToolPreset(
     val fillEnabled: Boolean = false,
     val fillAlpha: Int = DEFAULT_FILL_ALPHA,
 ) {
-    /** The fill to hand the canvas: `null` when fill is off, mirroring [AppSettings.currentFill]. */
     val currentFill: Int? get() = if (fillEnabled) fillAlpha else null
 
     companion object {
-        /**
-         * Snapshot the live pen. The tool/colour/width/style come from [ui]; fill lives in
-         * [settings] because it is persisted rather than held per-session.
-         */
         fun capture(
             ui: EditorUiState,
             settings: AppSettings,
@@ -45,15 +33,13 @@ data class ToolPreset(
             fillAlpha = settings.fillAlpha,
         )
 
-        /** A stable kebab-case handle for a preset named [name], falling back to `preset`. */
         fun slugId(name: String): String =
             name.lowercase().map { if (it.isLetterOrDigit()) it else '-' }
                 .joinToString("").trim('-').replace(Regex("-+"), "-")
-                .ifEmpty { "preset" }
+                .ifEmpty { "preajuste" }
     }
 }
 
-/** Restore the session-only half of the preset onto [ui]. */
 fun ToolPreset.applyToState(ui: EditorUiState) {
     ui.tool = tool
     ui.color = colorArgb
@@ -61,17 +47,10 @@ fun ToolPreset.applyToState(ui: EditorUiState) {
     ui.lineStyle = lineStyle
 }
 
-/** The persisted half: the settings that [settings] becomes once this preset is active. */
 fun ToolPreset.applyToSettings(settings: AppSettings): AppSettings =
     settings.withColorUsed(colorArgb)
         .copy(lastWidth = widthPt, fillEnabled = fillEnabled, fillAlpha = fillAlpha)
 
-/**
- * Activate [preset] — the one entry point the rail and a radial-palette slot both call.
- *
- * Every write below is the same one the toolbar makes for that knob (see `EditorRegions`), so a
- * preset can't mean anything the user couldn't have set by hand.
- */
 fun applyToolPreset(
     preset: ToolPreset,
     ui: EditorUiState,

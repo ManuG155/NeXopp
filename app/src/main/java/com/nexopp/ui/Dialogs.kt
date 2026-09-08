@@ -1,3 +1,4 @@
+// --- Dialogs.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * A minimal single/multi-line text-entry dialog used for both text boxes and LaTeX source.
- */
 @Composable
 fun TextInputDialog(
     title: String,
@@ -40,14 +38,10 @@ fun TextInputDialog(
             )
         },
         confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/**
- * A generic rename dialog: a single-line text field with confirm/cancel buttons.
- * Used for renaming palettes, layers, and other named entities.
- */
 @Composable
 fun RenameDialog(
     title: String,
@@ -69,15 +63,11 @@ fun RenameDialog(
                 modifier = Modifier,
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("Rename") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("Renombrar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/**
- * A generic confirmation dialog: a title, body text, and confirm/cancel buttons.
- * Used for delete actions and other destructive operations.
- */
 @Composable
 fun ConfirmDialog(
     title: String,
@@ -91,6 +81,6 @@ fun ConfirmDialog(
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }

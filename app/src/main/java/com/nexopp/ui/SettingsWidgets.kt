@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/SettingsWidgets.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -41,17 +42,11 @@ import androidx.compose.ui.zIndex
 import com.nexopp.render.Momentum
 import com.nexopp.render.PanSensitivity
 
-/**
- * Where a row picked up at [from] and dragged [offset] px lands: one place per whole [rowHeight]
- * crossed, rounded so the row commits to a slot once it is more than half way into it. Returns
- * [from] unchanged when nothing is being dragged or the row height isn't measured yet.
- */
 fun dragTargetIndex(from: Int, offset: Float, rowHeight: Int, count: Int): Int {
     if (from < 0 || rowHeight <= 0) return from
     return (from + Math.round(offset / rowHeight)).coerceIn(0, count - 1)
 }
 
-/** A labelled switch with a title and subtitle. */
 @Composable
 fun SwitchRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
@@ -68,7 +63,6 @@ fun SwitchRow(title: String, subtitle: String, checked: Boolean, onCheckedChange
     }
 }
 
-/** A titled radio group over an enum's values. */
 @Composable
 fun <T> OptionGroup(
     title: String,
@@ -94,7 +88,6 @@ fun <T> OptionGroup(
     }
 }
 
-/** A labelled drop-down menu over an enum's values. */
 @Composable
 fun <T> DropdownRow(
     label: String,
@@ -124,22 +117,15 @@ fun <T> DropdownRow(
     }
 }
 
-/**
- * The momentum-strength control: a continuous slider from [Momentum.OFF] to [Momentum.MAX] whose
- * value is snapped to the [Momentum.STEP] grid. Left continuous (no discrete stops) so the wide
- * 0..10 range doesn't render a thicket of tick marks. 0 reads "Off" (a released pan stops dead);
- * every other value shows its factor.
- */
 @Composable
 fun MomentumSlider(value: Float, onChange: (Float) -> Unit) {
-    Text("Momentum scrolling", style = MaterialTheme.typography.bodyLarge)
+    Text("Desplazamiento con inercia", style = MaterialTheme.typography.bodyLarge)
     Text(
-        "How far a one-finger pan keeps gliding after you flick it — the faster you flick, the much " +
-            "farther it coasts. 0 turns momentum off; 1 is normal. (Two-finger pans never glide.)",
+        "Hasta dónde sigue deslizándose el lienzo tras soltar el dedo al hacer un gesto rápido. 0 lo desactiva; 1 es normal. (El desplazamiento con dos dedos nunca tiene inercia).",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),
     )
-    val label = if (value <= Momentum.OFF) "Off" else "%.1f×".format(value)
+    val label = if (value <= Momentum.OFF) "Desactivado" else "%.1f×".format(value)
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Slider(
             value = value,
@@ -152,21 +138,15 @@ fun MomentumSlider(value: Float, onChange: (Float) -> Unit) {
     }
 }
 
-/**
- * The panning-sensitivity control: a continuous slider from [PanSensitivity.OFF] to
- * [PanSensitivity.MAX], snapped to the [PanSensitivity.STEP] grid. 1 tracks the finger one-to-one
- * (the default); below 1 the canvas pans slower than the finger, above 1 it pans faster. 0 reads
- * "Off" (a pan gesture moves nothing).
- */
 @Composable
 fun PanSensitivitySlider(value: Float, onChange: (Float) -> Unit) {
-    Text("Panning sensitivity", style = MaterialTheme.typography.bodyLarge)
+    Text("Sensibilidad de desplazamiento", style = MaterialTheme.typography.bodyLarge)
     Text(
-        "How far the canvas moves as you pan. 1 matches your finger; lower is slower, higher is faster; 0 turns panning off.",
+        "Cuánto se mueve el lienzo al deslizar. 1 coincide exactamente con tu dedo; más bajo es más lento, más alto es más rápido; 0 desactiva el desplazamiento.",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),
     )
-    val label = if (value <= PanSensitivity.OFF) "Off" else "%.1f×".format(value)
+    val label = if (value <= PanSensitivity.OFF) "Desactivado" else "%.1f×".format(value)
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Slider(
             value = value,
@@ -179,12 +159,6 @@ fun PanSensitivitySlider(value: Float, onChange: (Float) -> Unit) {
     }
 }
 
-/**
- * One rail position in the Toolbar section: a drag handle, its name and a show/hide switch. The row
- * is grabbed by a **long-press anywhere on it** (not just the handle) and dragged up or down. Every
- * row is placed by [dragOffset]: the held one follows the finger, and the rows it is crossing shift
- * a place to preview where it will land.
- */
 @Composable
 fun RailItemRow(
     item: RailItem,
@@ -224,7 +198,7 @@ fun RailItemRow(
         ) {
             Icon(
                 Icons.Filled.DragIndicator,
-                contentDescription = "Drag to reorder ${item.label}",
+                contentDescription = "Arrastrar para reordenar ${item.label}",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.width(12.dp))

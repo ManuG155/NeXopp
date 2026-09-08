@@ -1,3 +1,4 @@
+// --- PaletteActionPicker.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.clickable
@@ -23,15 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * The sheet that fills one radial-palette slot. Opened by tapping a slot in [PaletteSection], it
- * lists every assignable action — the tools, the edit and page operations, the shared colour
- * swatches and a width slider — plus a **Clear** row that empties the slot.
- *
- * It reports the choice through [onPick] (`null` meaning "clear") and leaves the commit to the
- * host, which folds it into `settings.radialPalette` so persistence and the editor push already
- * work with no extra plumbing.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaletteActionPickerSheet(
@@ -50,13 +42,13 @@ fun PaletteActionPickerSheet(
                 Column(Modifier.padding(bottom = 8.dp)) {
                     Text(slot.title(), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        current?.let { "Currently: ${it.describeAction(presets)}" } ?: "Currently empty",
+                        current?.let { "Actualmente: ${it.describeAction(presets)}" } ?: "Actualmente vacía",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
-            item { ChoiceRow("Clear slot", onClick = { onPick(null) }) }
-            item { PickerHeader("Colour") }
+            item { ChoiceRow("Limpiar ranura", onClick = { onPick(null) }) }
+            item { PickerHeader("Color") }
             item {
                 ColorPaletteRows(
                     selected = (current as? PaletteAction.SetColor)?.argb,
@@ -66,7 +58,7 @@ fun PaletteActionPickerSheet(
                     modifier = Modifier.padding(vertical = 4.dp),
                 )
             }
-            item { PickerHeader("Width") }
+            item { PickerHeader("Grosor") }
             item {
                 WidthChoice(
                     initial = (current as? PaletteAction.SetWidth)?.widthPt,
@@ -88,10 +80,9 @@ fun PaletteActionPickerSheet(
     }
 }
 
-/** The sheet's title for a slot: which ring and which position, counted from straight up. */
 private fun RadialSlot.title(): String {
-    val ringName = if (ring == RadialRing.INNER) "Inner" else "Outer"
-    return "$ringName ring · slot ${index + 1} of ${ring.slotCount}"
+    val ringName = if (ring == RadialRing.INNER) "Anillo interior" else "Anillo exterior"
+    return "$ringName · ranura ${index + 1} de ${ring.slotCount}"
 }
 
 @Composable
@@ -105,7 +96,6 @@ private fun PickerHeader(text: String) {
     )
 }
 
-/** One tappable action row; the live assignment is marked so the sheet shows what the slot holds. */
 @Composable
 private fun ChoiceRow(label: String, selected: Boolean = false, onClick: () -> Unit) {
     Text(
@@ -116,7 +106,6 @@ private fun ChoiceRow(label: String, selected: Boolean = false, onClick: () -> U
     )
 }
 
-/** The width action's value: a slider over the toolbar's own bounds, committed by the Set button. */
 @Composable
 private fun WidthChoice(initial: Float?, onPick: (Float) -> Unit) {
     var value by remember { mutableStateOf(initial ?: DEFAULT_PALETTE_WIDTH) }
@@ -126,9 +115,8 @@ private fun WidthChoice(initial: Float?, onPick: (Float) -> Unit) {
             onValueChange = { value = it.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX) },
             valueRange = PEN_WIDTH_MIN..PEN_WIDTH_MAX,
         )
-        TextButton(onClick = { onPick(value) }) { Text("Set width ${ptLabel(value)} pt") }
+        TextButton(onClick = { onPick(value) }) { Text("Fijar grosor en ${ptLabel(value)} pt") }
     }
 }
 
-/** Where the width slider starts when the slot doesn't already hold a width. */
 private const val DEFAULT_PALETTE_WIDTH: Float = 1.5f

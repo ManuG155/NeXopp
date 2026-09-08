@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/PaletteSection.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.Canvas
@@ -30,11 +31,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * The PALETTE settings page: a diagram of the two-ring radial palette with every slot tappable, so
- * a slot can be picked here and then assigned. The diagram is drawn from the same geometry the
- * canvas uses ([editorSlots]), so what the editor shows is what the pen will see.
- */
 @Composable
 fun PaletteSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     var selected by remember { mutableStateOf<RadialSlot?>(null) }
@@ -42,15 +38,13 @@ fun PaletteSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     var editing by remember { mutableStateOf(settings.activePaletteIndex) }
     val colors = rememberColorPaletteState(settings, onChange)
     val set = settings.paletteSet
-    // The chip the user last picked can outlive the palette it named (a delete shifts everything
-    // down), so the index is clamped here rather than trusted.
     val index = editing.coerceIn(0, set.palettes.lastIndex)
     val palette = set.palettes[index]
-    // Slot edits land on the palette being *edited*, which is not always the active one.
     val onPalette: (RadialPalette) -> Unit = { onChange(settings.withPalettes(set.withPaletteAt(index, it))) }
-    Text("Radial palettes", style = MaterialTheme.typography.titleMedium)
+    
+    Text("Paletas radiales", style = MaterialTheme.typography.titleMedium)
     Text(
-        "The menu a barrel double-click opens at the pen tip. Pick a palette, then tap a slot to assign it.",
+        "El menú que se abre al hacer doble clic con el botón del stylus en la pantalla. Elige una paleta y luego toca una ranura para asignarla.",
         style = MaterialTheme.typography.bodySmall,
     )
     PaletteManagerRow(
@@ -67,7 +61,7 @@ fun PaletteSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     )
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
     Column {
-        Text("Selected slot", style = MaterialTheme.typography.bodyLarge)
+        Text("Ranura seleccionada", style = MaterialTheme.typography.bodyLarge)
         Text(selected.describe(palette, settings.presets), style = MaterialTheme.typography.bodySmall)
     }
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
@@ -91,15 +85,13 @@ fun PaletteSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     }
 }
 
-/** How the selected slot reads in prose: which ring, which position, and what it currently holds. */
 internal fun RadialSlot?.describe(palette: RadialPalette, presets: List<ToolPreset> = emptyList()): String {
-    if (this == null) return "None — tap a slot in the diagram above."
-    val ringName = if (ring == RadialRing.INNER) "Inner" else "Outer"
-    val holds = palette[this]?.describeAction(presets) ?: "empty"
-    return "$ringName ring, slot ${index + 1} of ${ring.slotCount} — $holds."
+    if (this == null) return "Ninguna — toca una ranura en el diagrama superior."
+    val ringName = if (ring == RadialRing.INNER) "Anillo interior" else "Anillo exterior"
+    val holds = palette[this]?.describeAction(presets) ?: "vacía"
+    return "$ringName, ranura ${index + 1} de ${ring.slotCount} — $holds."
 }
 
-/** The tappable two-ring diagram. Stateless: it draws [palette] and reports taps through [onSelect]. */
 @Composable
 private fun PaletteDiagram(
     palette: RadialPalette,
@@ -130,10 +122,8 @@ private fun PaletteDiagram(
     }
 }
 
-/** An icon's extent as a fraction of the slot mark's radius — matches the canvas renderer. */
 private const val PALETTE_ICON_SCALE = 1.4f
 
-/** The three guide circles — dead zone, inner ring, outer ring — that frame the slots. */
 private fun DrawScope.drawRings(edge: Float, outline: Color) {
     val scale = paletteEditorScale(edge)
     val center = Offset(edge / 2f, edge / 2f)
@@ -143,7 +133,6 @@ private fun DrawScope.drawRings(edge: Float, outline: Color) {
     }
 }
 
-/** One slot: a filled disc (or its swatch) when assigned, a dashed outline when empty. */
 private fun DrawScope.drawSlotMark(
     mark: PaletteEditorSlot,
     isSelected: Boolean,

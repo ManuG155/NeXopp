@@ -1,3 +1,4 @@
+// --- ColorPicker.kt ---
 package com.nexopp.ui
 
 import android.graphics.Color as AndroidColor
@@ -37,11 +38,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
-/** Format an opaque ARGB int as a `#RRGGBB` hex string (upper-case; alpha dropped). */
 fun argbToHex(argb: Int): String =
     String.format(java.util.Locale.US, "#%06X", argb and 0xFFFFFF)
 
-/** Parse a `#RRGGBB` (leading `#` optional) hex string to an opaque ARGB int, or null if malformed. */
 fun hexToArgb(hex: String): Int? {
     val s = hex.trim().removePrefix("#")
     if (s.length != 6) return null
@@ -49,11 +48,6 @@ fun hexToArgb(hex: String): Int? {
     return rgb or 0xFF000000.toInt()
 }
 
-/**
- * The arbitrary-colour picker opened by long-pressing the palette's custom slot: a saturation/value
- * [SatValSquare] over a hue slider, plus a two-way `#RRGGBB` hex field and a live preview. Colours are
- * always opaque; the parent persists the result via [onConfirm].
- */
 @Composable
 fun CustomColorPickerDialog(
     initial: Int,
@@ -66,7 +60,6 @@ fun CustomColorPickerDialog(
     var value by remember { mutableStateOf(hsv0[2]) }
     var hexText by remember { mutableStateOf(argbToHex(initial)) }
 
-    // Push a new H/S/V onto state and keep the hex field mirroring it (sliders/square are authoritative).
     fun apply(h: Float, s: Float, v: Float) {
         hue = h; sat = s; value = v
         hexText = argbToHex(Color.hsv(h, s, v).toArgb())
@@ -74,11 +67,11 @@ fun CustomColorPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Custom colour") },
+        title = { Text("Color personalizado") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SatValSquare(hue, sat, value) { s, v -> apply(hue, s, v) }
-                Text("Hue")
+                Text("Tono")
                 Slider(value = hue, onValueChange = { apply(it, sat, value) }, valueRange = 0f..360f)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -101,7 +94,7 @@ fun CustomColorPickerDialog(
                                 hue = out[0]; sat = out[1]; value = out[2]
                             }
                         },
-                        label = { Text("Hex") },
+                        label = { Text("Hexadecimal") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -109,17 +102,12 @@ fun CustomColorPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(Color.hsv(hue, sat, value).toArgb()) }) { Text("Set") }
+            TextButton(onClick = { onConfirm(Color.hsv(hue, sat, value).toArgb()) }) { Text("Aplicar") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/**
- * A saturation (X) / value (Y) selection square for the current [hue]: white→hue left-to-right,
- * transparent→black top-to-bottom, with a ring marking [sat]/[value]. Tap or drag reports the picked
- * saturation/value (both 0..1) via [onChange].
- */
 @Composable
 private fun SatValSquare(hue: Float, sat: Float, value: Float, onChange: (Float, Float) -> Unit) {
     Canvas(

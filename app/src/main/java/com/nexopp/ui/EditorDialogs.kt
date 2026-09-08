@@ -1,3 +1,4 @@
+// --- EditorDialogs.kt ---
 package com.nexopp.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -30,15 +31,8 @@ import com.nexopp.format.SaveFormat
 import com.nexopp.render.ImportPdfMode
 import kotlin.math.roundToInt
 
-/** The families offered in the text dialog — names desktop Xournal++ and Android both resolve. */
 private val TEXT_FAMILIES = listOf("Sans", "Serif", "Monospace")
 
-/**
- * "Save As" chooser: name the file and pick the on-disk format. [SaveFormat.ORIGINAL] writes the
- * standard gzip `.xopp` (a PDF background stays linked by location); [SaveFormat.ZIPPED] writes a
- * single self-contained file with the PDF embedded inside (see `docs/architecture.md`). The choice
- * becomes sticky — later plain Saves reuse it — so the picker pre-selects the current format.
- */
 @Composable
 fun SaveAsDialog(
     initialFormat: SaveFormat,
@@ -49,43 +43,36 @@ fun SaveAsDialog(
     var format by remember { mutableStateOf(initialFormat) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Save As") },
+        title = { Text("Guardar como") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("File name") },
+                    label = { Text("Nombre del archivo") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Text("Format", style = MaterialTheme.typography.labelMedium)
+                Text("Formato", style = MaterialTheme.typography.labelMedium)
                 FormatOption(
                     selected = format == SaveFormat.ORIGINAL,
                     title = "Original (gzip)",
-                    subtitle = "Standard Xournal++ file; any PDF background stays linked by location.",
+                    subtitle = "Archivo estándar de Xournal++; cualquier PDF de fondo se mantiene enlazado por su ubicación.",
                     onClick = { format = SaveFormat.ORIGINAL },
                 )
                 FormatOption(
                     selected = format == SaveFormat.ZIPPED,
-                    title = "Zipped (single file)",
-                    subtitle = "One portable file with the PDF embedded inside.",
+                    title = "Comprimido (un solo archivo)",
+                    subtitle = "Un archivo portable con el PDF integrado.",
                     onClick = { format = SaveFormat.ZIPPED },
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(name, format) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(name, format) }) { Text("Guardar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/**
- * "Import PDF" chooser: does the picked PDF become the whole document ([ImportPdfMode.REPLACE], which
- * discards the current pages) or land after the pages already open ([ImportPdfMode.APPEND])? A `.xopp`
- * can reference just one background PDF, so when the document already has one ([merging]) the append
- * merges the two into a single joined PDF — the subtitle says so, since the joined file is what later
- * saves link to (see [ImportPdfMode]).
- */
 @Composable
 fun ImportPdfDialog(
     merging: Boolean,
@@ -95,31 +82,30 @@ fun ImportPdfDialog(
     var mode by remember { mutableStateOf(ImportPdfMode.APPEND) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Import PDF") },
+        title = { Text("Importar PDF") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 FormatOption(
                     selected = mode == ImportPdfMode.REPLACE,
-                    title = "Replace",
-                    subtitle = "The PDF's pages become this document, replacing the current pages.",
+                    title = "Reemplazar",
+                    subtitle = "Las páginas del PDF se convertirán en este documento, reemplazando las actuales.",
                     onClick = { mode = ImportPdfMode.REPLACE },
                 )
                 FormatOption(
                     selected = mode == ImportPdfMode.APPEND,
-                    title = "Append",
+                    title = "Añadir al final",
                     subtitle = if (merging)
-                        "Add the PDF's pages after the pages already open, merging it into this document's background PDF."
-                    else "Add the PDF's pages after the pages already open.",
+                        "Añade las páginas del PDF después de las abiertas, fusionándolas con el PDF de fondo actual."
+                    else "Añade las páginas del PDF después de las que ya están abiertas.",
                     onClick = { mode = ImportPdfMode.APPEND },
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(mode) }) { Text("Choose PDF…") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(mode) }) { Text("Elegir PDF…") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/** One selectable option row in [SaveAsDialog]/[ImportPdfDialog]: a radio plus a title and explanation. */
 @Composable
 fun FormatOption(
     selected: Boolean,
@@ -134,7 +120,6 @@ fun FormatOption(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         RadioButton(selected = selected, onClick = onClick, enabled = enabled)
-        // A disabled option stays visible (so the choice is explained) but reads as unavailable.
         val alpha = if (enabled) 1f else 0.38f
         Column(modifier = Modifier.alpha(alpha)) {
             Text(title)
@@ -143,12 +128,6 @@ fun FormatOption(
     }
 }
 
-/**
- * The styled text-box editor: content plus the styling the `.xopp` `<text>` element can hold —
- * font family, bold/italic, point size, and colour. Confirms with all five so the caller can
- * compose the font description and place/replace the box. (Underline is intentionally absent —
- * the format can't store it; see the scope rule in `CLAUDE.md`.)
- */
 @Composable
 fun TextBoxDialog(
     title: String,
@@ -170,7 +149,6 @@ fun TextBoxDialog(
     var colorArgb by remember { mutableStateOf(initialColor) }
     var editingColor by remember { mutableStateOf(false) }
 
-    // Outside the AlertDialog below: the HSV editor must outlive the row that opened it.
     CustomColorEditor(visible = editingColor, palette = palette, onDismiss = { editingColor = false })
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -181,17 +159,17 @@ fun TextBoxDialog(
                     value = content,
                     onValueChange = { content = it },
                     singleLine = false,
-                    label = { Text("Text") },
+                    label = { Text("Texto") },
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FontFamilyPicker(family = family, onFamily = { family = it })
-                    FilterChip(selected = bold, onClick = { bold = !bold }, label = { Text("Bold") })
-                    FilterChip(selected = italic, onClick = { italic = !italic }, label = { Text("Italic") })
+                    FilterChip(selected = bold, onClick = { bold = !bold }, label = { Text("Negrita") })
+                    FilterChip(selected = italic, onClick = { italic = !italic }, label = { Text("Cursiva") })
                 }
-                Text("Size: ${size.roundToInt()} pt")
+                Text("Tamaño: ${size.roundToInt()} pt")
                 Slider(
                     value = size,
                     onValueChange = { size = it },
@@ -207,14 +185,13 @@ fun TextBoxDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(content, family, bold, italic, size.toDouble(), colorArgb) }) {
-                Text("Save")
+                Text("Guardar")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
 
-/** Dropdown to pick a text font family from [TEXT_FAMILIES]. */
 @Composable
 fun FontFamilyPicker(family: String, onFamily: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }

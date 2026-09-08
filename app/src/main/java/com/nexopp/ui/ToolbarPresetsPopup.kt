@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ToolbarPresetsPopup.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -35,15 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * The presets rail slot: the user's saved [ToolPreset]s, each one tap away.
- *
- * The menu lists every saved preset numbered by its slot (what a position-based palette action
- * fires), with a swatch in its colour and a dot scaled to its width (the
- * same [TipDot] language the size popup uses), then a "save current tool" row with an inline name
- * field. Reorder arrows and a delete button sit on each row; every edit goes through the pure
- * helpers in `ToolPresetList.kt` and back out via [onPresets], which is what persists it.
- */
 @Composable
 internal fun PresetsPopupButton(
     presets: List<ToolPreset>,
@@ -54,10 +46,10 @@ internal fun PresetsPopupButton(
     var newName by remember { mutableStateOf("") }
     ToolbarPopupButton(
         icon = Icons.Filled.Bookmark,
-        contentDescription = "Presets",
+        contentDescription = "Preajustes",
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
     ) { dismiss ->
-        MenuHeading(if (presets.isEmpty()) "No presets saved yet" else "Presets")
+        MenuHeading(if (presets.isEmpty()) "Sin preajustes guardados" else "Preajustes")
         presets.forEachIndexed { i, preset ->
             PresetRow(
                 preset = preset,
@@ -76,7 +68,7 @@ internal fun PresetsPopupButton(
             name = newName,
             onName = { newName = it },
             onSave = {
-                val name = newName.trim().ifEmpty { "Preset ${presets.size + 1}" }
+                val name = newName.trim().ifEmpty { "Preajuste ${presets.size + 1}" }
                 onPresets(addToolPreset(presets, onCapture(name)))
                 newName = ""
             },
@@ -84,11 +76,6 @@ internal fun PresetsPopupButton(
     }
 }
 
-/**
- * One saved preset: swatch, name, reorder arrows, delete. Tapping the row activates the preset;
- * long-pressing it overwrites the slot with the live tool, so presets can be tuned in place instead
- * of only being appended under a new name.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PresetRow(
@@ -114,7 +101,6 @@ private fun PresetRow(
         ) {
             PresetSwatch(preset)
             Spacer(Modifier.width(12.dp))
-            // The slot number is what a position-based palette action fires, so it leads the row.
             Text(
                 "$slot.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -133,16 +119,11 @@ private fun PresetRow(
     }
 }
 
-/**
- * A preset's face: a dot in the preset's colour, sized against the width slider's own maximum so a
- * fine pen and a fat marker read differently at a glance. Outlined so a white preset is still visible.
- */
 @Composable
 private fun PresetSwatch(preset: ToolPreset) {
     WidthDot(preset.widthPt, PEN_WIDTH_MAX, Color(preset.colorArgb), bordered = true)
 }
 
-/** The "save the live tool" row: a name field plus the button that captures it. */
 @Composable
 private fun SavePresetRow(name: String, onName: (String) -> Unit, onSave: () -> Unit) {
     Row(
@@ -154,12 +135,11 @@ private fun SavePresetRow(name: String, onName: (String) -> Unit, onSave: () -> 
             value = name,
             onValueChange = onName,
             singleLine = true,
-            label = { Text("Save current tool as…") },
+            label = { Text("Guardar herramienta actual como…") },
             modifier = Modifier.width(200.dp),
         )
         IconButton(onClick = onSave) {
-            Icon(Icons.Filled.Add, contentDescription = "Save preset")
+            Icon(Icons.Filled.Add, contentDescription = "Guardar preajuste")
         }
     }
 }
-

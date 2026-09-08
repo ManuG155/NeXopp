@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/nexopp/ui/ScrollThumb.kt
 package com.nexopp.ui
 
 import androidx.compose.foundation.Canvas
