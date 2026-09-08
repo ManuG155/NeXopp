@@ -10,10 +10,13 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.nexopp.audio.AudioSession
 import com.nexopp.format.SaveFormat
@@ -22,6 +25,7 @@ import com.nexopp.io.IncomingDocument
 import com.nexopp.io.UriStaging
 import com.nexopp.library.LibraryScreen
 import com.nexopp.library.LibraryStore
+import com.nexopp.library.Notebook
 import com.nexopp.panes.EditorPane
 import com.nexopp.panes.MirrorSync
 import com.nexopp.render.BitmapBudget
@@ -30,14 +34,17 @@ import com.nexopp.render.ImportPdfMode
 import com.nexopp.render.PdfFonts
 import com.nexopp.render.Placement
 import com.nexopp.render.TextPdfGenerator
+import com.nexopp.render.blankDocument
 import com.nexopp.render.cancelSpline
 import com.nexopp.render.finishSpline
 import com.nexopp.render.splineInProgress
 import com.nexopp.render.undoLastSplineNode
+import com.nexopp.tabs.OpenTab
 import com.nexopp.tabs.TabManager
 import com.nexopp.tabs.TabStore
 import com.nexopp.ui.AppSettings
 import com.nexopp.ui.EditorScreen
+import com.nexopp.ui.SettingsScreen
 import com.nexopp.ui.SettingsStore
 import com.nexopp.ui.theme.XoppTheme
 import com.nexopp.ui.theme.isDark
@@ -154,25 +161,31 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             var settings by remember { mutableStateOf(store.load().also { applyStorageLimits(it) }) }
+            var showLibrarySettings by remember { mutableStateOf(false) }
+
             XoppTheme(darkTheme = settings.themeMode.isDark(), dynamicColor = settings.dynamicColor) {
                 
                 if (currentScreen.value == AppScreen.LIBRARY) {
-                    LibraryScreen(
-                        store = libraryStore,
-                        onOpenNotebook = { 
-                            // Más adelante aquí abriremos cuadernos guardados. 
-                            // Por ahora, saltamos directamente al lienzo.
-                            currentScreen.value = AppScreen.EDITOR
-                        },
-                        onSettings = { /* Implementaremos el menú de ajustes de la biblioteca pronto */ }
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LibraryScreen(
+                            store = libraryStore,
+                            onOpenNotebook = { notebook -> openLibraryNotebook(notebook) },
+                            onSettings = { showLibrarySettings = true }
+                        )
+                        if (showLibrarySettings) {
+                            SettingsScreen(
+                                settings = settings,
+                                onChange = { settings = it; store.save(it); applyStorageLimits(it) },
+                                onBack = { showLibrarySettings = false }
+                            )
+                        }
+                    }
                 } else {
                     EditorScreen(
                         onOpen = { openLauncher.launch(arrayOf("*/*")) },
                         onSave = { saveActiveTab() },
                         busy = busy.value,
                         onExit = { 
-                            // En lugar de salir de la app, volvemos a la biblioteca
                             currentScreen.value = AppScreen.LIBRARY 
                         },
                         onSaveAs = { name, format -> beginSaveAs(name, format) },
@@ -204,6 +217,48 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    internal fun openLibraryNotebook(notebook: Notebook) {
+        val notebooksDir = File(filesDir, "notebooks").apply { mkdirs() }
+        val file = File(notebooksDir, notebook.fileName)
+        val uri = Uri.fromFile(file)
+        
+        currentScreen.value = AppScreen.EDITOR
+        
+        if (file.exists()) {
+            openLibraryDocument(notebook, uri)
+        } else {
+            snapshotActiveTab()
+            val newTab = OpenTab(TabStore.newId(), notebook.name, blankDocument(), uri.toString())
+            tabs.open(newTab)
+            pendingSaveName = notebook.name
+            tabsTick.value++
+            persistTabs()
+            tabs.active?.let { show(it, pane) }
+        }
+    }
+
+    internal fun openLibraryDocument(notebook: Notebook, uri: Uri) {
+        snapshotActiveTab()
+        val created = tabs.open(OpenTab(TabStore.newId(), notebook.name, blankDocument(), uri.toString()))
+        pendingSaveName = notebook.name
+        tabsTick.value++
+        io.persist(uri)
+        inBackground("Abriendo ${notebook.name}…", { io.stageIn(uri, "open") }) { result ->
+            result.mapCatching { staged -> try { loadDocument(staged, uri) } finally { staged.delete() } }
+                .onSuccess { 
+                    tabs.updateActive { it.copy(title = notebook.name) } 
+                    snapshotActiveTab() 
+                }
+                .onFailure {
+                    toast("Error al abrir: ${it.message}")
+                    tabs.close(created)
+                    tabs.active?.let(::showTab)
+                }
+            tabsTick.value++
+            persistTabs()
         }
     }
 
