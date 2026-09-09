@@ -183,7 +183,7 @@ fun GlobalSearchDialog(
                                         onClick = {
                                             selectedTagIds = if (isSelected) selectedTagIds - tag.id else selectedTagIds + tag.id
                                         },
-                                        label = { Text("#${tag.name}") },
+                                        label = { Text(tag.name) },
                                         leadingIcon = {
                                             Box(
                                                 modifier = Modifier
@@ -382,7 +382,7 @@ fun GlobalSearchDialog(
                                                         color = Color(tag.color).copy(alpha = 0.15f)
                                                     ) {
                                                         Text(
-                                                            "#${tag.name}",
+                                                            tag.name,
                                                             style = MaterialTheme.typography.labelSmall,
                                                             color = Color(tag.color),
                                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)

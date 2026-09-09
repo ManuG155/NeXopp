@@ -83,17 +83,22 @@ fun FunctionPlotterDialog(
     }
 
     var points by remember { mutableStateOf<List<PlotPoint>>(emptyList()) }
+    var newPointLabel by remember { mutableStateOf("A") }
     var newPointX by remember { mutableStateOf("") }
     var newPointY by remember { mutableStateOf("") }
 
     var evalXStr by remember { mutableStateOf("0") }
     var evalResult by remember { mutableStateOf("") }
 
-    // Range Bounds
+    // Range Bounds & Axes
     var xMinStr by remember { mutableStateOf("-5") }
     var xMaxStr by remember { mutableStateOf("5") }
     var yMinStr by remember { mutableStateOf("-4") }
     var yMaxStr by remember { mutableStateOf("4") }
+    var axisNameX by remember { mutableStateOf("x") }
+    var axisNameY by remember { mutableStateOf("y") }
+    var stepXStr by remember { mutableStateOf("") }
+    var stepYStr by remember { mutableStateOf("") }
     var drawAxes by remember { mutableStateOf(true) }
     var gridStyle by remember { mutableStateOf(PlotGridStyle.SUBTLE) }
     var highlightRoots by remember { mutableStateOf(false) }
@@ -133,6 +138,8 @@ fun FunctionPlotterDialog(
                                 val xMax = xMaxStr.toDoubleOrNull() ?: 5.0
                                 val yMin = yMinStr.toDoubleOrNull() ?: -4.0
                                 val yMax = yMaxStr.toDoubleOrNull() ?: 4.0
+                                val stepX = stepXStr.toDoubleOrNull()
+                                val stepY = stepYStr.toDoubleOrNull()
 
                                 val elements = FunctionPlotter.generateAdvancedPlotElements(
                                     functions = functions,
@@ -147,6 +154,10 @@ fun FunctionPlotterDialog(
                                     yMin = yMin,
                                     yMax = yMax,
                                     drawAxes = drawAxes,
+                                    axisNameX = axisNameX,
+                                    axisNameY = axisNameY,
+                                    stepX = stepX,
+                                    stepY = stepY,
                                     gridStyle = gridStyle,
                                     highlightRoots = highlightRoots,
                                     highlightIntersections = highlightIntersections
@@ -302,6 +313,27 @@ fun FunctionPlotterDialog(
                                                     ) {
                                                         Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
                                                     }
+                                                }
+                                            }
+
+                                            // Line style & Stroke width
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Text("Estilo:", style = MaterialTheme.typography.labelSmall)
+                                                PlotLineStyle.values().forEach { style ->
+                                                    FilterChip(
+                                                        selected = fn.lineStyle == style,
+                                                        onClick = {
+                                                            functions = functions.mapIndexed { i, item ->
+                                                                if (i == index) item.copy(lineStyle = style) else item
+                                                            }
+                                                        },
+                                                        label = { Text(style.label, style = MaterialTheme.typography.labelSmall) },
+                                                        modifier = Modifier.height(28.dp)
+                                                    )
                                                 }
                                             }
 
@@ -517,6 +549,13 @@ fun FunctionPlotterDialog(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             OutlinedTextField(
+                                                value = newPointLabel,
+                                                onValueChange = { newPointLabel = it },
+                                                label = { Text("Nombre") },
+                                                singleLine = true,
+                                                modifier = Modifier.width(80.dp)
+                                            )
+                                            OutlinedTextField(
                                                 value = newPointX,
                                                 onValueChange = { newPointX = it },
                                                 label = { Text("Coord X") },
@@ -535,9 +574,12 @@ fun FunctionPlotterDialog(
                                                     val px = newPointX.toDoubleOrNull()
                                                     val py = newPointY.toDoubleOrNull()
                                                     if (px != null && py != null) {
-                                                        points = points + PlotPoint(x = px, y = py)
+                                                        val lbl = newPointLabel.trim().ifBlank { "P" }
+                                                        points = points + PlotPoint(x = px, y = py, label = lbl)
                                                         newPointX = ""
                                                         newPointY = ""
+                                                        val nextChar = if (lbl.length == 1 && lbl[0] in 'A'..'Y') (lbl[0] + 1).toString() else "P"
+                                                        newPointLabel = nextChar
                                                     }
                                                 },
                                                 enabled = newPointX.isNotBlank() && newPointY.isNotBlank()
@@ -618,7 +660,44 @@ fun FunctionPlotterDialog(
                                             .padding(14.dp),
                                         verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Text("Configuración de Cuadrícula:", fontWeight = FontWeight.Bold)
+                                        Text("Configuración de Ejes y Cuadrícula:", fontWeight = FontWeight.Bold)
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = axisNameX,
+                                                onValueChange = { axisNameX = it },
+                                                label = { Text("Nombre eje X") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = axisNameY,
+                                                onValueChange = { axisNameY = it },
+                                                label = { Text("Nombre eje Y") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = stepXStr,
+                                                onValueChange = { stepXStr = it },
+                                                label = { Text("Paso / División X") },
+                                                placeholder = { Text("Auto (1.0)") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = stepYStr,
+                                                onValueChange = { stepYStr = it },
+                                                label = { Text("Paso / División Y") },
+                                                placeholder = { Text("Auto (1.0)") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
                                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                             PlotGridStyle.values().forEach { style ->
                                                 FilterChip(
@@ -632,7 +711,64 @@ fun FunctionPlotterDialog(
                                         Spacer(Modifier.height(4.dp))
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(checked = drawAxes, onCheckedChange = { drawAxes = it })
-                                            Text("Dibujar ejes coordenados cartesianos (X, Y) con marcas de graduación")
+                                            Text("Dibujar ejes coordenados cartesianos con flechas y nombres")
+                                        }
+
+                                        // Quick Zoom Controls
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Zoom independiente de gráfica:", style = MaterialTheme.typography.labelSmall)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    val x0 = xMinStr.toDoubleOrNull() ?: -5.0
+                                                    val x1 = xMaxStr.toDoubleOrNull() ?: 5.0
+                                                    val y0 = yMinStr.toDoubleOrNull() ?: -4.0
+                                                    val y1 = yMaxStr.toDoubleOrNull() ?: 4.0
+                                                    xMinStr = String.format(java.util.Locale.US, "%.1f", x0 * 0.75)
+                                                    xMaxStr = String.format(java.util.Locale.US, "%.1f", x1 * 0.75)
+                                                    yMinStr = String.format(java.util.Locale.US, "%.1f", y0 * 0.75)
+                                                    yMaxStr = String.format(java.util.Locale.US, "%.1f", y1 * 0.75)
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Icon(Icons.Filled.ZoomIn, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Zoom +", fontSize = 11.sp)
+                                            }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    val x0 = xMinStr.toDoubleOrNull() ?: -5.0
+                                                    val x1 = xMaxStr.toDoubleOrNull() ?: 5.0
+                                                    val y0 = yMinStr.toDoubleOrNull() ?: -4.0
+                                                    val y1 = yMaxStr.toDoubleOrNull() ?: 4.0
+                                                    xMinStr = String.format(java.util.Locale.US, "%.1f", x0 * 1.33)
+                                                    xMaxStr = String.format(java.util.Locale.US, "%.1f", x1 * 1.33)
+                                                    yMinStr = String.format(java.util.Locale.US, "%.1f", y0 * 1.33)
+                                                    yMaxStr = String.format(java.util.Locale.US, "%.1f", y1 * 1.33)
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Icon(Icons.Filled.ZoomOut, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Zoom -", fontSize = 11.sp)
+                                            }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    xMinStr = "-5"
+                                                    xMaxStr = "5"
+                                                    yMinStr = "-4"
+                                                    yMaxStr = "4"
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Text("Restablecer", fontSize = 11.sp)
+                                            }
                                         }
                                     }
                                 }

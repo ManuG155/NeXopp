@@ -21,7 +21,15 @@ class ExportManager(
     private val pdfSource: PdfPageCache? = null,
     private val imageSource: ImageBackgroundCache? = null
 ) {
-    enum class ExportFormat { PDF, PNG, JPEG }
+    enum class ExportFormat(val label: String, val extension: String, val mimeType: String) {
+        PDF("PDF Vectorial", "pdf", "application/pdf"),
+        PNG("Imagen PNG", "png", "image/png"),
+        JPEG("Imagen JPEG", "jpg", "image/jpeg"),
+        SVG("Vectorial SVG", "svg", "image/svg+xml"),
+        TEXT_MARKDOWN("Markdown / Texto", "md", "text/markdown"),
+        XOPP("Cuaderno XOPP (Xournal++)", "xopp", "application/x-xopp"),
+        BACKUP_ZIP("Copia de seguridad (.zip)", "zip", "application/zip")
+    }
     enum class PageScope { ALL, CURRENT, RANGE }
 
     val exportDir: File = File(context.cacheDir, "exports").apply { mkdirs() }
@@ -79,12 +87,77 @@ class ExportManager(
             ExportFormat.PNG, ExportFormat.JPEG -> {
                 val imgFormat = if (format == ExportFormat.PNG) ImageExporter.Format.PNG else ImageExporter.Format.JPEG
                 val exporter = ImageExporter(pdfSource, imageSource)
-                // For a single stream (e.g. single page export), render the first selected page
                 val targetPageIdx = pageIndices.firstOrNull() ?: 0
                 val page = doc.pages.getOrNull(targetPageIdx) ?: return
                 exporter.exportPage(page, outputStream, imgFormat, quality, scale)
             }
+            ExportFormat.SVG -> {
+                val targetPageIdx = pageIndices.firstOrNull() ?: 0
+                val page = doc.pages.getOrNull(targetPageIdx) ?: return
+                outputStream.writer(Charsets.UTF_8).use { writer ->
+                    writer.write(generateSvgForPage(page))
+                }
+            }
+            ExportFormat.TEXT_MARKDOWN -> {
+                outputStream.writer(Charsets.UTF_8).use { writer ->
+                    writer.write(generateMarkdownForDoc(doc, pageIndices))
+                }
+            }
+            ExportFormat.XOPP -> {
+                com.nexopp.format.Xopp.save(doc, outputStream)
+            }
+            ExportFormat.BACKUP_ZIP -> {
+                java.util.zip.ZipOutputStream(outputStream).use { zos ->
+                    val xoppEntry = java.util.zip.ZipEntry("document.xopp")
+                    zos.putNextEntry(xoppEntry)
+                    com.nexopp.format.Xopp.save(doc, zos)
+                    zos.closeEntry()
+                }
+            }
         }
+    }
+
+    private fun generateSvgForPage(page: com.nexopp.format.model.Page): String {
+        val sb = StringBuilder()
+        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${page.width}pt" height="${page.height}pt" viewBox="0 0 ${page.width} ${page.height}">""").append("\n")
+        sb.append("""<rect width="100%" height="100%" fill="white"/>""").append("\n")
+        for (layer in page.layers) {
+            for (element in layer.elements) {
+                if (element is com.nexopp.format.model.Stroke && element.points.size >= 2) {
+                    val colorHex = String.format("#%06X", 0xFFFFFF and element.color)
+                    val strokeW = element.points.firstOrNull()?.width ?: 1.5
+                    sb.append("""<path d="M ${element.points.first().x} ${element.points.first().y} """)
+                    for (i in 1 until element.points.size) {
+                        sb.append("""L ${element.points[i].x} ${element.points[i].y} """)
+                    }
+                    sb.append("""" fill="none" stroke="$colorHex" stroke-width="$strokeW" stroke-linecap="round" stroke-linejoin="round"/>""").append("\n")
+                } else if (element is com.nexopp.format.model.TextElement) {
+                    val colorHex = String.format("#%06X", 0xFFFFFF and element.color)
+                    sb.append("""<text x="${element.x}" y="${element.y}" font-size="${element.size}pt" fill="$colorHex">${element.content}</text>""").append("\n")
+                }
+            }
+        }
+        sb.append("</svg>")
+        return sb.toString()
+    }
+
+    private fun generateMarkdownForDoc(doc: Document, pageIndices: List<Int>): String {
+        val sb = StringBuilder()
+        sb.append("# ${doc.title ?: "Apuntes STEM"}").append("\n\n")
+        for (idx in pageIndices) {
+            val page = doc.pages.getOrNull(idx) ?: continue
+            sb.append("## Página ${idx + 1}").append("\n\n")
+            for (layer in page.layers) {
+                for (el in layer.elements) {
+                    if (el is com.nexopp.format.model.TextElement && el.content.isNotBlank()) {
+                        sb.append(el.content).append("\n\n")
+                    } else if (el is com.nexopp.format.model.TexImageElement) {
+                        sb.append("$$ ${el.latex} $$").append("\n\n")
+                    }
+                }
+            }
+        }
+        return sb.toString()
     }
 
     /**
@@ -110,6 +183,59 @@ class ExportManager(
                 val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 return Intent(Intent.ACTION_SEND).apply {
                     type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    putExtra(Intent.EXTRA_SUBJECT, safeTitle)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            ExportFormat.SVG -> {
+                val targetPageIdx = pageIndices.firstOrNull() ?: 0
+                val file = File(exportDir, "${safeTitle}_p${targetPageIdx + 1}.svg")
+                FileOutputStream(file).use { fos ->
+                    exportToStream(doc, fos, ExportFormat.SVG, pageIndices, scale, quality)
+                }
+                val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                return Intent(Intent.ACTION_SEND).apply {
+                    type = "image/svg+xml"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    putExtra(Intent.EXTRA_SUBJECT, safeTitle)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            ExportFormat.TEXT_MARKDOWN -> {
+                val file = File(exportDir, "$safeTitle.md")
+                FileOutputStream(file).use { fos ->
+                    exportToStream(doc, fos, ExportFormat.TEXT_MARKDOWN, pageIndices, scale, quality)
+                }
+                val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                return Intent(Intent.ACTION_SEND).apply {
+                    type = "text/markdown"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    putExtra(Intent.EXTRA_SUBJECT, safeTitle)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            ExportFormat.XOPP -> {
+                val file = File(exportDir, "$safeTitle.xopp")
+                FileOutputStream(file).use { fos ->
+                    exportToStream(doc, fos, ExportFormat.XOPP, pageIndices, scale, quality)
+                }
+                val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                return Intent(Intent.ACTION_SEND).apply {
+                    type = "application/x-xopp"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    putExtra(Intent.EXTRA_SUBJECT, safeTitle)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            ExportFormat.BACKUP_ZIP -> {
+                val file = File(exportDir, "${safeTitle}_backup.zip")
+                FileOutputStream(file).use { fos ->
+                    exportToStream(doc, fos, ExportFormat.BACKUP_ZIP, pageIndices, scale, quality)
+                }
+                val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                return Intent(Intent.ACTION_SEND).apply {
+                    type = "application/zip"
                     putExtra(Intent.EXTRA_STREAM, contentUri)
                     putExtra(Intent.EXTRA_SUBJECT, safeTitle)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

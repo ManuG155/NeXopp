@@ -1069,6 +1069,49 @@ class DrawingSurfaceView @JvmOverloads constructor(
     /** Place an encoded image (PNG/JPEG bytes) at the placement, scaled to fit a default extent. */
     fun insertImage(p: Placement, data: ByteArray) = textEdits.insertImage(p, data)
 
+    /** Insert arbitrary elements (e.g. table, graph plot) into the active layer of the current page. */
+    fun insertElements(elements: List<com.nexopp.format.model.Element>, pageIndex: Int = currentPageIndex()) {
+        if (elements.isEmpty()) return
+        val targetPageIdx = pageIndex.coerceIn(0, (doc.pages.size - 1).coerceAtLeast(0))
+        val page = doc.pages.getOrNull(targetPageIdx) ?: return
+        val activeLayer = resolvedActiveLayer(page)
+        val layer = page.layers.getOrNull(activeLayer) ?: return
+
+        val before = doc
+        val updatedElements = layer.elements.toMutableList().apply { addAll(elements) }
+        val updatedLayers = page.layers.toMutableList()
+        updatedLayers[activeLayer] = com.nexopp.format.model.Layer(updatedElements, layer.name)
+        val updatedPages = doc.pages.toMutableList()
+        updatedPages[targetPageIdx] = page.copy(layers = updatedLayers)
+
+        doc = doc.copy(pages = updatedPages)
+        history.record(before)
+        notifyHistory()
+        relayout()
+        render()
+    }
+
+    /** Insert a text element directly onto the canvas. */
+    fun insertTextElement(
+        content: String,
+        x: Double = 100.0,
+        y: Double = 100.0,
+        font: String = "Liberation Sans",
+        sizePt: Double = 14.0,
+        color: Int = this.colorArgb
+    ) {
+        if (content.isBlank()) return
+        val textEl = com.nexopp.format.model.TextElement(
+            x = x,
+            y = y,
+            content = content,
+            font = font,
+            size = sizePt,
+            color = color
+        )
+        insertElements(listOf(textEl))
+    }
+
     /** Discard a pending text-edit target (the editor's dialog was dismissed without saving). */
     fun cancelTextEdit() = textEdits.cancel()
 

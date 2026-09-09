@@ -1,9 +1,12 @@
 package com.nexopp.render
 
 import com.nexopp.format.model.Element
+import com.nexopp.format.model.ImageElement
 import com.nexopp.format.model.Layer
 import com.nexopp.format.model.Page
 import com.nexopp.format.model.Stroke
+import com.nexopp.format.model.TexImageElement
+import com.nexopp.format.model.TextElement
 
 /** How the eraser removes ink: rub out touched segments, or delete whole strokes. */
 enum class EraserMode { STANDARD, WHOLE_STROKE }
@@ -72,14 +75,29 @@ object PageEraser {
     ): Layer? {
         var touched = false
         val rebuilt = ArrayList<Element>(layer.elements.size)
+        val eraserBounds = Bounds(px - radius, py - radius, px + radius, py + radius)
         for (el in layer.elements) {
-            if (el !is Stroke) { rebuilt += el; continue }
-            when (mode) {
-                EraserMode.WHOLE_STROKE ->
-                    if (StrokeHitTester.hits(el, px, py, radius)) touched = true else rebuilt += el
-                EraserMode.STANDARD -> {
-                    val pieces = StrokeEraser.erase(el, px, py, radius)
-                    if (pieces == null) rebuilt += el else { touched = true; rebuilt += pieces }
+            when (el) {
+                is Stroke -> {
+                    when (mode) {
+                        EraserMode.WHOLE_STROKE ->
+                            if (StrokeHitTester.hits(el, px, py, radius)) touched = true else rebuilt += el
+                        EraserMode.STANDARD -> {
+                            val pieces = StrokeEraser.erase(el, px, py, radius)
+                            if (pieces == null) rebuilt += el else { touched = true; rebuilt += pieces }
+                        }
+                    }
+                }
+                is TexImageElement, is ImageElement, is TextElement -> {
+                    val b = ElementBounds.of(el)
+                    if (b.intersects(eraserBounds) || b.contains(px, py)) {
+                        touched = true // Atomically erased as a single complete object
+                    } else {
+                        rebuilt += el
+                    }
+                }
+                else -> {
+                    rebuilt += el
                 }
             }
         }

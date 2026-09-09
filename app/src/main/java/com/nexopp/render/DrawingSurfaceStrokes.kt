@@ -388,6 +388,14 @@ internal fun DrawingSurfaceView.resolvedActiveLayer(page: Page): Int =
  */
 internal fun DrawingSurfaceView.eraseOnPage(pageIndex: Int, px: Double, py: Double, radius: Double, mode: EraserMode = eraserMode): Boolean {
     val page = doc.pages.getOrNull(pageIndex) ?: return false
+    val sel = selection
+    if (sel != null && sel.pageIndex == pageIndex) {
+        val selBox = SelectionTester.boundsOf(page, sel.refs)
+        if (selBox != null && (selBox.contains(px, py) || selBox.intersects(Bounds(px - radius, py - radius, px + radius, py + radius)))) {
+            deleteSelection()
+            return true
+        }
+    }
     val hidden = page.layers.indices.filter { isLayerHidden(pageIndex, it) }.toSet()
     val target = resolvedActiveLayer(page)
     val erased = PageEraser.erase(page, px, py, radius, mode, hidden, target) ?: return false

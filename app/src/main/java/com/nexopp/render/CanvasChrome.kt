@@ -129,14 +129,24 @@ internal class CanvasChrome {
         style = Paint.Style.STROKE
         strokeWidth = 2f
     }
+    /** Outer contrasting stroke for the hover cursor to remain sharp against any backdrop or dark theme. */
+    val hoverOuterRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1f
+        color = 0xAAFFFFFF.toInt()
+    }
+    /** Center pinpoint dot for precise stylus landing. */
+    val hoverCenterDot = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFFFFFFFF.toInt()
+    }
     /**
-     * The eraser tip outline — a thin black ring at the rubber's true radius, so its boundary is
-     * visible while hovering and while erasing. Fixed black: it marks a hole, not a colour.
+     * The eraser tip outline — a high-contrast ring at the rubber's true radius.
      */
     val eraserOutline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        color = 0xFF000000.toInt()
+        strokeWidth = 1.8f
+        color = 0xFF1E88E5.toInt()
     }
     /** PDF-text selection highlight: translucent blue wash. */
     val textSelect = Paint(Paint.ANTI_ALIAS_FLAG).apply {

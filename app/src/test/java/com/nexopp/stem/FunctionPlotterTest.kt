@@ -67,4 +67,43 @@ class FunctionPlotterTest {
         // Should contain axes and the curve stroke
         assertTrue(elements.size >= 3)
     }
+
+    @Test
+    fun `evaluates arbitrary independent variables like t, theta, u`() {
+        assertEquals(16.0, FunctionPlotter.evaluate("t^2", 4.0), eps)
+        assertEquals(sin(PI / 2), FunctionPlotter.evaluate("sin(theta)", PI / 2), eps)
+        assertEquals(7.0, FunctionPlotter.evaluate("2u + 1", 3.0), eps)
+    }
+
+    @Test
+    fun `generates plot with labeled manual points and custom axis names`() {
+        val points = listOf(
+            PlotPoint(1.0, 2.0, "A"),
+            PlotPoint(-1.0, -2.0, "B")
+        )
+        val fns = listOf(
+            PlotFunctionItem(
+                formula = "2x",
+                lineStyle = PlotLineStyle.DASHED
+            )
+        )
+        val elements = FunctionPlotter.generateAdvancedPlotElements(
+            functions = fns,
+            points = points,
+            originX = 100.0,
+            originY = 100.0,
+            xMin = -5.0,
+            xMax = 5.0,
+            yMin = -5.0,
+            yMax = 5.0,
+            axisNameX = "Tiempo (s)",
+            axisNameY = "Voltaje (V)"
+        )
+        assertTrue(elements.isNotEmpty())
+        // Should contain text elements for axis names and point labels
+        val textElements = elements.filterIsInstance<com.nexopp.format.model.TextElement>()
+        assertTrue(textElements.any { it.content.contains("Tiempo") })
+        assertTrue(textElements.any { it.content.contains("Voltaje") })
+        assertTrue(textElements.any { it.content.contains("A") })
+    }
 }

@@ -170,7 +170,6 @@ fun LibraryScreen(
                         }
                     },
                     actions = {
-                        // Instant Search Bar & Full Search button
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
@@ -195,7 +194,7 @@ fun LibraryScreen(
                             ),
                             modifier = Modifier
                                 .width(220.dp)
-                                .height(44.dp)
+                                .heightIn(min = 46.dp)
                         )
 
                         Spacer(Modifier.width(6.dp))
@@ -495,7 +494,7 @@ fun LibraryScreen(
                                         onClick = {
                                             selectedTagId = if (isSelected) null else tag.id
                                         },
-                                        label = { Text("#${tag.name}", style = MaterialTheme.typography.labelSmall) },
+                                        label = { Text(tag.name, style = MaterialTheme.typography.labelSmall) },
                                         leadingIcon = {
                                             Box(
                                                 modifier = Modifier
@@ -1016,7 +1015,7 @@ fun NotebookGridCard(
                                 color = Color(tag.color).copy(alpha = 0.15f)
                             ) {
                                 Text(
-                                    "#${tag.name}",
+                                    tag.name,
                                     style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Medium),
                                     color = Color(tag.color),
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -1118,7 +1117,7 @@ fun NotebookListRow(
                                 color = Color(tag.color).copy(alpha = 0.15f)
                             ) {
                                 Text(
-                                    "#${tag.name}",
+                                    tag.name,
                                     style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Medium),
                                     color = Color(tag.color),
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -1256,7 +1255,7 @@ fun CreateNotebookDialog(
                                     onClick = {
                                         selectedTagIds = if (isSelected) selectedTagIds - tag.id else selectedTagIds + tag.id
                                     },
-                                    label = { Text("#${tag.name}", style = MaterialTheme.typography.labelSmall) },
+                                    label = { Text(tag.name, style = MaterialTheme.typography.labelSmall) },
                                     leadingIcon = {
                                         Box(
                                             modifier = Modifier

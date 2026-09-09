@@ -132,4 +132,16 @@ class MathHandwritingEngineTest {
         val result = MathHandwritingEngine.recognize(listOf(x1, x2, exp1, exp2))
         assertTrue("Expected power ^, got: ${result.latex}", result.latex.contains("^"))
     }
+
+    @Test
+    fun `unknown ambiguous stroke produces Box without arbitrarily defaulting to x`() {
+        // A chaotic scribble that doesn't match standard digits or operators
+        val pts = listOf(
+            10.0 to 10.0, 50.0 to 90.0, 15.0 to 85.0, 45.0 to 15.0, 30.0 to 50.0, 10.0 to 90.0
+        )
+        val chaoticStroke = makeStroke(pts)
+        val result = MathHandwritingEngine.recognize(listOf(chaoticStroke))
+        assertTrue("Expected unknown symbol Box, got: ${result.latex}", result.latex.contains("\\Box") || result.hasUnknownSymbols)
+        assertNotEquals("Should not silently assume single clean x", "x", result.latex)
+    }
 }

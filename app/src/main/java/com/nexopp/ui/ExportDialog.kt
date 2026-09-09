@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nexopp.io.ExportManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,32 +70,10 @@ fun ExportDialog(
                 // 1. Format Selection
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Formato de exportación", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        SegmentedButton(
-                            selected = selectedFormat == ExportManager.ExportFormat.PDF,
-                            onClick = { selectedFormat = ExportManager.ExportFormat.PDF },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                            icon = { Icon(Icons.Filled.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        ) {
-                            Text("PDF Vector")
-                        }
-                        SegmentedButton(
-                            selected = selectedFormat == ExportManager.ExportFormat.PNG,
-                            onClick = { selectedFormat = ExportManager.ExportFormat.PNG },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                            icon = { Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        ) {
-                            Text("PNG")
-                        }
-                        SegmentedButton(
-                            selected = selectedFormat == ExportManager.ExportFormat.JPEG,
-                            onClick = { selectedFormat = ExportManager.ExportFormat.JPEG },
-                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                            icon = { Icon(Icons.Filled.Photo, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        ) {
-                            Text("JPEG")
-                        }
-                    }
+                    OptInFlowRowWrapper(
+                        selectedFormat = selectedFormat,
+                        onSelectFormat = { selectedFormat = it }
+                    )
                 }
 
                 // 2. Page Range Selection
@@ -162,7 +141,7 @@ fun ExportDialog(
                 }
 
                 // 3. Image Resolution / Quality (Only for PNG / JPEG)
-                if (selectedFormat != ExportManager.ExportFormat.PDF) {
+                if (selectedFormat == ExportManager.ExportFormat.PNG || selectedFormat == ExportManager.ExportFormat.JPEG) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Resolución de imagen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         Row(
@@ -178,14 +157,14 @@ fun ExportDialog(
                             FilterChip(
                                 selected = selectedScale == 2.0f,
                                 onClick = { selectedScale = 2.0f },
-                                label = { Text("2x HD (Recomendado)") },
-                                modifier = Modifier.weight(1.3f)
+                                label = { Text("2x HD") },
+                                modifier = Modifier.weight(1f)
                             )
                             FilterChip(
                                 selected = selectedScale == 3.0f,
                                 onClick = { selectedScale = 3.0f },
-                                label = { Text("3x Ultra 300 DPI") },
-                                modifier = Modifier.weight(1.3f)
+                                label = { Text("3x 300 DPI") },
+                                modifier = Modifier.weight(1.2f)
                             )
                         }
                     }
@@ -196,11 +175,7 @@ fun ExportDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
-                        val ext = when (selectedFormat) {
-                            ExportManager.ExportFormat.PDF -> "pdf"
-                            ExportManager.ExportFormat.PNG -> "png"
-                            ExportManager.ExportFormat.JPEG -> "jpg"
-                        }
+                        val ext = selectedFormat.extension
                         val filename = "${defaultTitle.substringBeforeLast('.')}.$ext"
                         onSaveToStorage(selectedFormat, filename, parsedIndices, selectedScale)
                     },
@@ -229,4 +204,35 @@ fun ExportDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun OptInFlowRowWrapper(
+    selectedFormat: ExportManager.ExportFormat,
+    onSelectFormat: (ExportManager.ExportFormat) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        ExportManager.ExportFormat.values().forEach { format ->
+            val icon = when (format) {
+                ExportManager.ExportFormat.PDF -> Icons.Filled.PictureAsPdf
+                ExportManager.ExportFormat.PNG -> Icons.Filled.Image
+                ExportManager.ExportFormat.JPEG -> Icons.Filled.Photo
+                ExportManager.ExportFormat.SVG -> Icons.Filled.Architecture
+                ExportManager.ExportFormat.TEXT_MARKDOWN -> Icons.Filled.Description
+                ExportManager.ExportFormat.XOPP -> Icons.Filled.EditNote
+                ExportManager.ExportFormat.BACKUP_ZIP -> Icons.Filled.Archive
+            }
+            FilterChip(
+                selected = selectedFormat == format,
+                onClick = { onSelectFormat(format) },
+                leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                label = { Text(format.label, fontSize = 12.sp) }
+            )
+        }
+    }
 }

@@ -16,6 +16,7 @@ class LibraryStore(private val context: Context) {
             return defaults
         }
         val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return defaultSubjects()
+        if (!json.has("subjects")) return defaultSubjects()
         val array = json.optJSONArray("subjects") ?: JSONArray()
         val list = mutableListOf<Subject>()
         for (i in 0 until array.length()) {
@@ -32,13 +33,14 @@ class LibraryStore(private val context: Context) {
                 )
             )
         }
-        return if (list.isEmpty()) defaultSubjects() else list.sortedBy { it.order }
+        return list.sortedBy { it.order }
     }
 
     fun loadTags(): List<Tag> {
         if (!file.exists()) return defaultTags()
         val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return defaultTags()
-        val array = json.optJSONArray("tags") ?: return defaultTags()
+        if (!json.has("tags")) return defaultTags()
+        val array = json.optJSONArray("tags") ?: JSONArray()
         val list = mutableListOf<Tag>()
         for (i in 0 until array.length()) {
             val obj = array.getJSONObject(i)
@@ -50,7 +52,7 @@ class LibraryStore(private val context: Context) {
                 )
             )
         }
-        return if (list.isEmpty()) defaultTags() else list
+        return list
     }
 
     fun loadNotebooks(): List<Notebook> {

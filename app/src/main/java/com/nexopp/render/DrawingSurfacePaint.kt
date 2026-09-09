@@ -541,9 +541,14 @@ internal fun DrawingSurfaceView.drawEraserTip(canvas: Canvas, vx: Float, vy: Flo
 }
 
 internal fun DrawingSurfaceView.drawHover(canvas: Canvas) {
-    val r = (baseWidthPt * 3f).coerceIn(6f, 28f)
+    val r = (baseWidthPt * 2.5f).coerceIn(4f, 22f)
     chrome.tintHover(colorArgb)
+    // Draw outer high-contrast ring
+    canvas.drawCircle(hoverX, hoverY, r + 1.2f, chrome.hoverOuterRing)
+    // Draw current pen color ring
     canvas.drawCircle(hoverX, hoverY, r, chrome.hover)
+    // Draw center pinpoint
+    canvas.drawCircle(hoverX, hoverY, 1.5f, chrome.hoverCenterDot)
 }
 
 /** Draw the vertical-space grab line across the page being reflowed (view px). */

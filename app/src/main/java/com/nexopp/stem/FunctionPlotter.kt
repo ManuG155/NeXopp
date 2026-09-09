@@ -3,6 +3,7 @@ package com.nexopp.stem
 import com.nexopp.format.model.Element
 import com.nexopp.format.model.Stroke
 import com.nexopp.format.model.StrokePoint
+import com.nexopp.format.model.TextElement
 import com.nexopp.format.model.Tool
 import java.util.UUID
 import kotlin.math.*
@@ -13,12 +14,20 @@ enum class PlotGridStyle(val label: String) {
     DENSE("Cuadrícula densa")
 }
 
+enum class PlotLineStyle(val label: String) {
+    SOLID("Sólida"),
+    DASHED("Discontinua"),
+    DOTTED("Punteada")
+}
+
 data class PlotFunctionItem(
     val id: String = UUID.randomUUID().toString(),
     val formula: String,
     val color: Int = 0xFF1976D2.toInt(),
     val isVisible: Boolean = true,
     val strokeWidthPt: Float = 2.0f,
+    val lineStyle: PlotLineStyle = PlotLineStyle.SOLID,
+    val variable: String = "x",
     val label: String = ""
 )
 
@@ -94,8 +103,8 @@ object FunctionPlotter {
         // 2. Closing parenthesis before number/variable/opening parenthesis: )( -> )*(, )x -> )*x
         s = s.replace(Regex("(\\))([0-9a-zA-Z(])"), "$1*$2")
         // 3. Variable before opening parenthesis or function: x( -> x*(, xsin -> x*sin
-        s = s.replace(Regex("(^|[^a-zA-Z])([xt])(\\()"), "$1$2*$3")
-        s = s.replace(Regex("(^|[^a-zA-Z])([xt])(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|abs|exp|ln|log|sinc)"), "$1$2*$3")
+        s = s.replace(Regex("(^|[^a-zA-Z])([xtuvzrθ])(\\()"), "$1$2*$3")
+        s = s.replace(Regex("(^|[^a-zA-Z])([xtuvzrθ])(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|abs|exp|ln|log|sinc)"), "$1$2*$3")
 
         return s
     }
@@ -194,6 +203,10 @@ object FunctionPlotter {
         yMax: Double = 5.0,
         drawAxes: Boolean = true,
         axesColor: Int = 0xFF455A64.toInt(),
+        axisNameX: String = "x",
+        axisNameY: String = "y",
+        stepX: Double? = null,
+        stepY: Double? = null,
         gridStyle: PlotGridStyle = PlotGridStyle.SUBTLE,
         gridColor: Int = 0x3390A4AE.toInt(),
         highlightRoots: Boolean = false,
@@ -216,8 +229,8 @@ object FunctionPlotter {
 
         // 1. Grid Lines
         if (gridStyle != PlotGridStyle.NONE) {
-            val gridStepX = calculateTickStep(xMin, xMax) / (if (gridStyle == PlotGridStyle.DENSE) 2.0 else 1.0)
-            val gridStepY = calculateTickStep(yMin, yMax) / (if (gridStyle == PlotGridStyle.DENSE) 2.0 else 1.0)
+            val gridStepX = stepX ?: (calculateTickStep(xMin, xMax) / (if (gridStyle == PlotGridStyle.DENSE) 2.0 else 1.0))
+            val gridStepY = stepY ?: (calculateTickStep(yMin, yMax) / (if (gridStyle == PlotGridStyle.DENSE) 2.0 else 1.0))
             val gridLineWidth = 0.6
 
             var gx = ceil(xMin / gridStepX) * gridStepX
@@ -306,8 +319,16 @@ object FunctionPlotter {
                 )
             )
 
+            // Axis Name Labels
+            if (axisNameX.isNotBlank()) {
+                elements.add(TextElement(font = "Sans", size = 11.0, x = right + 12.0, y = axisY0 - 4.0, color = axesColor, content = axisNameX))
+            }
+            if (axisNameY.isNotBlank()) {
+                elements.add(TextElement(font = "Sans", size = 11.0, x = axisX0 + 4.0, y = top - 12.0, color = axesColor, content = axisNameY))
+            }
+
             // X Ticks
-            val xStep = calculateTickStep(xMin, xMax)
+            val xStep = stepX ?: calculateTickStep(xMin, xMax)
             var curX = ceil(xMin / xStep) * xStep
             while (curX <= xMax) {
                 if (abs(curX) > 1e-6) {
@@ -326,7 +347,7 @@ object FunctionPlotter {
             }
 
             // Y Ticks
-            val yStep = calculateTickStep(yMin, yMax)
+            val yStep = stepY ?: calculateTickStep(yMin, yMax)
             var curY = ceil(yMin / yStep) * yStep
             while (curY <= yMax) {
                 if (abs(curY) > 1e-6) {
@@ -363,32 +384,12 @@ object FunctionPlotter {
                     val py = toPageY(mathY).coerceIn(top - 20.0, bottom + 20.0)
                     currentSegment.add(StrokePoint(px, py, curveWidth))
                 } else {
-                    if (currentSegment.size >= 2) {
-                        elements.add(
-                            Stroke(
-                                tool = Tool.PEN,
-                                color = fn.color,
-                                capStyle = "round",
-                                points = currentSegment.toList(),
-                                uniformWidth = true
-                            )
-                        )
-                    }
+                    addCurveStrokes(elements, currentSegment, fn.color, fn.lineStyle)
                     currentSegment.clear()
                 }
             }
 
-            if (currentSegment.size >= 2) {
-                elements.add(
-                    Stroke(
-                        tool = Tool.PEN,
-                        color = fn.color,
-                        capStyle = "round",
-                        points = currentSegment.toList(),
-                        uniformWidth = true
-                    )
-                )
-            }
+            addCurveStrokes(elements, currentSegment, fn.color, fn.lineStyle)
 
             // Highlight roots if requested
             if (highlightRoots) {
@@ -489,10 +490,64 @@ object FunctionPlotter {
                         uniformWidth = true
                     )
                 )
+                if (pt.label.isNotBlank()) {
+                    val labelText = if (pt.label.contains("(")) pt.label else "${pt.label}(${String.format(java.util.Locale.US, "%.1f", pt.x)}, ${String.format(java.util.Locale.US, "%.1f", pt.y)})"
+                    elements.add(TextElement(font = "Sans", size = 10.0, x = px + 6.0, y = py - 6.0, color = pt.color, content = labelText))
+                }
             }
         }
 
         return elements
+    }
+
+    private fun addCurveStrokes(
+        elements: MutableList<Element>,
+        segment: List<StrokePoint>,
+        color: Int,
+        style: PlotLineStyle
+    ) {
+        if (segment.size < 2) return
+        when (style) {
+            PlotLineStyle.SOLID -> {
+                elements.add(
+                    Stroke(
+                        tool = Tool.PEN,
+                        color = color,
+                        capStyle = "round",
+                        points = segment.toList(),
+                        uniformWidth = true
+                    )
+                )
+            }
+            PlotLineStyle.DASHED -> {
+                val dashLen = 4
+                val gapLen = 3
+                var i = 0
+                while (i < segment.size) {
+                    val end = min(segment.size, i + dashLen)
+                    if (end - i >= 2) {
+                        elements.add(
+                            Stroke(
+                                tool = Tool.PEN,
+                                color = color,
+                                capStyle = "round",
+                                points = segment.subList(i, end),
+                                uniformWidth = true
+                            )
+                        )
+                    }
+                    i += dashLen + gapLen
+                }
+            }
+            PlotLineStyle.DOTTED -> {
+                var i = 0
+                while (i < segment.size) {
+                    val p = segment[i]
+                    drawPointDot(elements, p.x, p.y, color, radius = p.width / 2.0)
+                    i += 3
+                }
+            }
+        }
     }
 
     private fun drawPointDot(elements: MutableList<Element>, px: Double, py: Double, color: Int, radius: Double) {
@@ -629,7 +684,7 @@ object FunctionPlotter {
                 while (ch in 'a'.code..'z'.code || ch in '0'.code..'9'.code) nextChar()
                 val func = str.substring(startPos, pos)
                 v = when (func) {
-                    "x", "t" -> xVal
+                    "x", "t", "u", "v", "z", "r", "theta", "θ" -> xVal
                     "pi" -> PI
                     "e" -> E
                     else -> {

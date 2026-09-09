@@ -51,6 +51,9 @@ import com.nexopp.stem.ScientificCalculatorDialog
 import com.nexopp.stem.UnitConverterDialog
 import com.nexopp.stem.TechnicalSymbolsDialog
 import com.nexopp.stem.PeriodicTableDialog
+import com.nexopp.stem.TableDialog
+import com.nexopp.stem.FloatingCalculatorWidget
+import com.nexopp.audio.AudioRecordingDialog
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -101,164 +104,41 @@ fun UnifiedTopBar(
     var showAttachmentDialog by remember { mutableStateOf(false) }
     var showFunctionPlotter by remember { mutableStateOf(false) }
     var showScientificCalculator by remember { mutableStateOf(false) }
+    var showTableDialog by remember { mutableStateOf(false) }
+    var showFloatingCalculator by remember { mutableStateOf(false) }
+    var showAudioDialog by remember { mutableStateOf(false) }
     var showUnitConverter by remember { mutableStateOf(false) }
     var showTechnicalSymbols by remember { mutableStateOf(false) }
     var showPeriodicTable by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
 
-    
-    val styleCallbacks = ToolbarStyleCallbacks(
-        color = ui.color,
-        onColor = { ui.color = it; surface?.colorArgb = it; onSettingsChange(settings.withColorUsed(it)) },
-        palette = rememberColorPaletteState(settings, onSettingsChange),
-        onRedefineCustom = { newColor -> redefineCustomColor(newColor, ui, surface, settings, onSettingsChange) },
-        width = ui.width,
-        onWidth = { ui.width = it; surface?.baseWidthPt = it; onSettingsChange(settings.copy(lastWidth = it)) },
-        widthSlots = settings.penWidths,
-        onRedefineSlot = { i, newPt -> redefineWidthSlot(i, newPt, ui, surface, settings, onSettingsChange) },
-        lineStyle = ui.lineStyle,
-        onLineStyle = { ui.lineStyle = it; surface?.currentLineStyle = it },
-        fill = settings.currentFill,
-        onFill = { applyFill(it, surface, settings, onSettingsChange) },
+    CategorizedTopBar(
+        ui = ui,
+        pane = pane,
+        settings = settings,
+        onSettingsChange = onSettingsChange,
+        audio = audio,
+        onExit = onExit,
+        onAddPageQuick = { surface?.addPage() },
+        onOpenPageManager = { showPageManager = true },
+        onOpenStructure = { showStructureDialog = true },
+        onOpenAttachments = { showAttachmentDialog = true },
+        onOpenFunctionPlotter = { showFunctionPlotter = true },
+        onOpenScientificCalculator = { showScientificCalculator = true },
+        onOpenTableDialog = { showTableDialog = true },
+        onOpenTechnicalSymbols = { showTechnicalSymbols = true },
+        onOpenPeriodicTable = { showPeriodicTable = true },
+        onOpenExportDialog = { showExportDialog = true },
+        onToggleFloatingCalculator = { showFloatingCalculator = !showFloatingCalculator },
+        onOpenSettings = onSettings,
+        onOpenDocument = onOpen,
+        onNewDocument = onNewTab,
+        onSaveDocument = onSave,
+        onSaveAsDocument = onSaveAs,
+        onImportPdf = onImportPdf,
+        splitView = splitView,
+        onToggleSplitView = onToggleSplitView
     )
-
-    val layerCallbacks = toolbarLayerCallbacks(surface, pane)
-
-    Surface(tonalElevation = 2.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-        Column {
-            // Fila 1: Barra Principal Unificada (48dp)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Izquierda: Volver, Deshacer, Rehacer y Paginador interactivo
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(36.dp)) { 
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la Biblioteca") 
-                    }
-                    Spacer(Modifier.width(2.dp))
-                    IconButton(onClick = { pane.surface?.undo() }, enabled = pane.canUndo, modifier = Modifier.size(36.dp)) { 
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer") 
-                    }
-                    IconButton(onClick = { pane.surface?.redo() }, enabled = pane.canRedo, modifier = Modifier.size(36.dp)) { 
-                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer") 
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    // Píldora de Página Interactiva (abre el gestor visual de páginas)
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.clickable { showPageManager = true }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Filled.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                "${pane.currentPage + 1} / ${pane.pageCount.coerceAtLeast(1)}",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(2.dp))
-                    IconButton(onClick = { showStructureDialog = true }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Índice y Marcadores", modifier = Modifier.size(18.dp))
-                    }
-                    IconButton(onClick = { showAttachmentDialog = true }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.AttachFile, contentDescription = "Archivos Adjuntos", modifier = Modifier.size(18.dp))
-                    }
-                    IconButton(
-                        onClick = { audio.onToggleRecord() },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            if (audio.recording) Icons.Filled.StopCircle else Icons.Filled.Mic,
-                            contentDescription = if (audio.recording) "Detener Grabación" else "Grabar Audio",
-                            tint = if (audio.recording) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Centro: Selector Segmentado de Herramientas Principales
-                PrimaryToolSegment(
-                    currentTool = ui.tool,
-                    onSelectTool = { 
-                        ui.tool = it
-                        surface?.applyTool(it) 
-                    },
-                    toolGroupSelections = settings.toolGroupSelections,
-                    onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) }
-                )
-
-                // Derecha: Capas, STEM, Fondo/Cuadrículas, Búsqueda, Exportar/Compartir y Menú
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StemToolsPopupButton(
-                        onPlotFunctions = { showFunctionPlotter = true },
-                        onScientificCalculator = { showScientificCalculator = true },
-                        onUnitConverter = { showUnitConverter = true },
-                        onTechnicalSymbols = { showTechnicalSymbols = true },
-                        onPeriodicTable = { showPeriodicTable = true },
-                        onInsertLatex = { ui.texPlacement = Placement(pane.currentPage, 100.0, 100.0) }
-                    )
-                    BackgroundPopupButton(pane.backgroundStyle, onBackgroundStyle = { surface?.setPageBackgroundStyle(it) })
-                    LayersPopupButton(layerCallbacks)
-                    SearchControls(pane)
-                    IconButton(onClick = { showExportDialog = true }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.Share, contentDescription = "Exportar y Compartir")
-                    }
-                    OverflowMenu(
-                        onOpen = onOpen,
-                        onNewTab = onNewTab,
-                        onSave = onSave,
-                        onSaveAs = onSaveAs,
-                        onImportPdf = onImportPdf,
-                        onExportPdf = { showExportDialog = true },
-                        onSettings = onSettings,
-                        splitView = splitView,
-                        onToggleSplitView = onToggleSplitView,
-                        onOpenStructure = { showStructureDialog = true },
-                        onOpenAttachments = { showAttachmentDialog = true }
-                    )
-                }
-            }
-            
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-            
-            // Fila 2: Barra Contextual Dinámica y Reactiva según la herramienta activa (42dp)
-            DynamicContextualBar(
-                tool = ui.tool,
-                surface = surface,
-                styleCallbacks = styleCallbacks,
-                recognizeShapes = settings.recognizeShapes,
-                onRecognizeShapes = { 
-                    surface?.recognizeShapes = it
-                    onSettingsChange(settings.copy(recognizeShapes = it))
-                },
-                guideKind = settings.guideKind,
-                onGuideKind = { 
-                    surface?.placeGuide(it)
-                    onSettingsChange(settings.copy(guideKind = it)) 
-                },
-                zoom = pane.zoom,
-                onZoomIn = { surface?.zoomIn() },
-                onZoomOut = { surface?.zoomOut() },
-                onZoomReset = { surface?.resetZoom() },
-                onInsertLatex = {
-                    ui.texPlacement = Placement(pane.currentPage, 100.0, 100.0)
-                },
-                onPlotFunction = {
-                    showFunctionPlotter = true
-                }
-            )
-        }
-    }
 
     if (showPageManager) {
         PageManagerDialog(
@@ -372,10 +252,45 @@ fun UnifiedTopBar(
         )
     }
 
+    if (showTableDialog) {
+        TableDialog(
+            originX = 80.0,
+            originY = 120.0,
+            onDismiss = { showTableDialog = false },
+            onInsertTable = { elements ->
+                surface?.insertElements(elements)
+            }
+        )
+    }
+
+    if (showFloatingCalculator) {
+        FloatingCalculatorWidget(
+            onDismiss = { showFloatingCalculator = false },
+            onInsertResult = { text ->
+                surface?.insertTextElement(text)
+            }
+        )
+    }
+
+    if (showAudioDialog) {
+        AudioRecordingDialog(
+            notebookTitle = currentNotebookName,
+            isRecording = audio.recording,
+            onDismiss = { showAudioDialog = false },
+            onStartRecording = { _, _ ->
+                audio.onToggleRecord()
+            },
+            onStopRecording = {
+                audio.onToggleRecord()
+                showAudioDialog = false
+            }
+        )
+    }
+
 }
 
 @Composable
-private fun SearchControls(pane: PaneState) {
+internal fun SearchControls(pane: PaneState) {
     fun apply(status: SearchStatus) {
         pane.searchCurrent = status.current
         pane.searchTotal = status.total
@@ -673,7 +588,7 @@ fun EditorPaneView(
 }
 
 @Composable
-private fun OverflowMenu(
+internal fun OverflowMenu(
     onOpen: () -> Unit,
     onNewTab: () -> Unit,
     onSave: () -> Unit,
@@ -685,12 +600,18 @@ private fun OverflowMenu(
     onToggleSplitView: () -> Unit,
     onOpenStructure: () -> Unit = {},
     onOpenAttachments: () -> Unit = {},
+    onAddPage: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(Icons.Filled.Menu, contentDescription = "Menú")
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenuItem(
+            text = { Text("Añadir página inmediatamente") },
+            leadingIcon = { Icon(Icons.Filled.PostAdd, contentDescription = null) },
+            onClick = { open = false; onAddPage() },
+        )
         DropdownMenuItem(
             text = { Text("Abrir") },
             leadingIcon = { Icon(Icons.Filled.FileOpen, contentDescription = null) },

@@ -32,7 +32,7 @@ enum class ThemeMode(val label: String) {
 }
 
 data class AppSettings(
-    val fingerDraws: Boolean = true,
+    val fingerDraws: Boolean = false,
     val strictPalmRejection: Boolean = true,
     val barrelAction: BarrelAction = BarrelAction.ERASE,
     val secondaryBarrelAction: BarrelAction = BarrelAction.SELECT,
@@ -55,8 +55,10 @@ data class AppSettings(
     val momentumCurve: MomentumCurve = MomentumCurve.QUADRATIC,
     val panSensitivity: Float = PanSensitivity.NORMAL,
     val recentColors: List<Int> = emptyList(),
+    val favoriteColors: List<Int> = DEFAULT_FAVORITE_COLORS,
     val lastColor: Int = DEFAULT_LAST_COLOR,
     val lastWidth: Float = DEFAULT_PEN_WIDTHS[1],
+    val lastEraserWidth: Float = 14f,
     val fillEnabled: Boolean = false,
     val fillAlpha: Int = DEFAULT_FILL_ALPHA,
     val toolGroupSelections: Map<String, EditorTool> = emptyMap(),
@@ -86,6 +88,7 @@ data class AppSettings(
     fun sanitized(): AppSettings = copy(
         penWidths = penWidths.map { it.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX) },
         lastWidth = lastWidth.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX),
+        lastEraserWidth = lastEraserWidth.coerceIn(1f, 60f),
         pageColumns = pageColumns.coerceIn(1, PageStacker.COLUMN_CHOICES.last()),
     )
 
@@ -98,7 +101,17 @@ data class AppSettings(
         val DEFAULT_PEN_WIDTHS: List<Float> = listOf(0.85f, 1.5f, 2.6f)
         val DEFAULT_CUSTOM_COLOR: Int = 0xFF9C27B0.toInt()
         val DEFAULT_LAST_COLOR: Int = 0xFF000000.toInt()
-        const val MAX_RECENT_COLORS: Int = 7
+        val DEFAULT_FAVORITE_COLORS: List<Int> = listOf(
+            0xFF000000.toInt(), // Black
+            0xFF1E88E5.toInt(), // Blue
+            0xFFE53935.toInt(), // Red
+            0xFF43A047.toInt(), // Green
+            0xFFFB8C00.toInt(), // Orange
+            0xFF8E24AA.toInt(), // Purple
+            0xFF00ACC1.toInt(), // Cyan
+            0xFFFDD835.toInt(), // Yellow
+        )
+        const val MAX_RECENT_COLORS: Int = 16
         const val BYTES_PER_MB: Long = 1024L * 1024L
         const val DEFAULT_TEXT_IMPORT_LIMIT_MB: Int = 64
         const val DEFAULT_PDF_CACHE_LIMIT_MB: Int = 256
