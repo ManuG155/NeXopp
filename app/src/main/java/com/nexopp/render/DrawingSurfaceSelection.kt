@@ -146,6 +146,75 @@ fun DrawingSurfaceView.insertTextElement(
     insertElements(listOf(textElem), pageIndex)
 }
 
+/** Returns the list of selected Stroke elements if any. */
+fun DrawingSurfaceView.getSelectedStrokes(): List<com.nexopp.format.model.Stroke> {
+    val sel = selection ?: return emptyList()
+    val page = doc.pages.getOrNull(sel.pageIndex) ?: return emptyList()
+    return SelectionOps.elementsAt(page, sel.refs).filterIsInstance<com.nexopp.format.model.Stroke>()
+}
+
+/** Recognizes handwriting or math from currently selected strokes. */
+fun DrawingSurfaceView.recognizeSelectedStrokes(
+    isMath: Boolean = false,
+    engine: com.nexopp.recognition.RecognitionEngine = com.nexopp.recognition.OfflineHeuristicRecognitionEngine()
+): com.nexopp.recognition.RecognitionResult? {
+    val strokes = getSelectedStrokes()
+    if (strokes.isEmpty()) return null
+    return if (isMath) engine.recognizeMath(strokes) else engine.recognize(strokes)
+}
+
+/** Replaces selected strokes with a recognized text element in an undoable step. */
+fun DrawingSurfaceView.replaceSelectionWithText(
+    text: String,
+    isLatex: Boolean = false
+) {
+    val sel = selection ?: return
+    val page = doc.pages.getOrNull(sel.pageIndex) ?: return
+    val selectedElements = SelectionOps.elementsAt(page, sel.refs)
+    if (selectedElements.isEmpty()) return
+
+    var minX = Double.MAX_VALUE
+    var minY = Double.MAX_VALUE
+    for (elem in selectedElements) {
+        when (elem) {
+            is com.nexopp.format.model.Stroke -> {
+                for (p in elem.points) {
+                    minX = minOf(minX, p.x)
+                    minY = minOf(minY, p.y)
+                }
+            }
+            is com.nexopp.format.model.TextElement -> {
+                minX = minOf(minX, elem.x)
+                minY = minOf(minY, elem.y)
+            }
+            else -> {}
+        }
+    }
+    if (minX == Double.MAX_VALUE) {
+        minX = 80.0
+        minY = 120.0
+    }
+
+    val before = doc
+    val pagesWithoutSel = SelectionOps.delete(doc.pages, sel.pageIndex, sel.refs)
+    val textElem = com.nexopp.format.model.TextElement(
+        font = if (isLatex) "Monospace" else "Sans",
+        size = 14.0,
+        x = minX,
+        y = minY,
+        color = colorArgb,
+        content = text
+    )
+    val (finalPages, newRefs) = SelectionOps.addToTopLayer(pagesWithoutSel, sel.pageIndex, listOf(textElem))
+    doc = doc.copy(pages = finalPages)
+    selection = ActiveSelection(sel.pageIndex, newRefs)
+    onSelectionChanged?.invoke(true)
+    history.record(before)
+    notifyHistory()
+    relayout()
+    render()
+}
+
 
 
 // --- PDF text selection -------------------------------------------------------------------------

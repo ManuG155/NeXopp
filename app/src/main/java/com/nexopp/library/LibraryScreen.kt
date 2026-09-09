@@ -19,6 +19,11 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.nexopp.backup.BackupManager
+import com.nexopp.backup.BackupRestoreDialog
+import com.nexopp.sync.CloudSyncDialog
+import com.nexopp.sync.SyncConfig
+import com.nexopp.sync.SyncEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +92,12 @@ fun LibraryScreen(
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
     var showTrashDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showCloudSyncDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val backupManager = remember { BackupManager(context.filesDir) }
+    val syncEngine = remember { SyncEngine(store.notebooksDir) }
 
     var editingSubject by remember { mutableStateOf<Subject?>(null) }
     var renamingNotebook by remember { mutableStateOf<Notebook?>(null) }
@@ -222,6 +233,14 @@ fun LibraryScreen(
 
                         IconButton(onClick = { showTrashDialog = true }) {
                             Icon(Icons.Filled.DeleteOutline, contentDescription = "Papelera")
+                        }
+
+                        IconButton(onClick = { showCloudSyncDialog = true }) {
+                            Icon(Icons.Filled.CloudSync, contentDescription = "Sincronización")
+                        }
+
+                        IconButton(onClick = { showBackupDialog = true }) {
+                            Icon(Icons.Filled.Backup, contentDescription = "Copias de seguridad")
                         }
 
                         IconButton(onClick = onSettings) {
@@ -636,6 +655,25 @@ fun LibraryScreen(
             onRestored = {
                 refresh()
             }
+        )
+    }
+
+    // 10. Backup & Restore Dialog
+    if (showBackupDialog) {
+        BackupRestoreDialog(
+            backupManager = backupManager,
+            onDismiss = { showBackupDialog = false },
+            onBackupsChanged = { refresh() }
+        )
+    }
+
+    // 11. Cloud & Local Sync Dialog
+    if (showCloudSyncDialog) {
+        CloudSyncDialog(
+            syncEngine = syncEngine,
+            onSaveConfig = { /* Configuration saved */ },
+            onDismiss = { showCloudSyncDialog = false },
+            onSyncCompleted = { refresh() }
         )
     }
 }
