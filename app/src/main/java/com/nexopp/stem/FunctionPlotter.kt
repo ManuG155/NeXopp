@@ -48,13 +48,66 @@ data class PlotPoint(
 object FunctionPlotter {
 
     /**
+     * Sanitizes and normalizes user math formulas (f(x)= prefixes, Spanish trig, Unicode superscripts, implicit multiplication).
+     */
+    fun sanitizeFormula(raw: String): String {
+        var s = raw.trim()
+        val eqIdx = s.indexOf('=')
+        if (eqIdx != -1) {
+            val left = s.substring(0, eqIdx).trim().lowercase()
+            if (left.matches(Regex("^[a-zA-Z](\\([a-zA-Z]\\))?$")) || left == "y" || left == "x") {
+                s = s.substring(eqIdx + 1).trim()
+            }
+        }
+
+        s = s.lowercase().replace(" ", "")
+
+        // Spanish & alternate trigonometric notations
+        s = s.replace("sen", "sin")
+        s = s.replace("tg", "tan")
+        s = s.replace("arcsen", "asin")
+        s = s.replace("arctg", "atan")
+
+        // Unicode radicals & constants
+        s = s.replace(Regex("√([a-zA-Z0-9]+)"), "sqrt($1)")
+        s = s.replace("√", "sqrt")
+        s = s.replace("π", "pi")
+
+        // Unicode superscripts
+        s = s.replace("⁰", "^0")
+             .replace("¹", "^1")
+             .replace("²", "^2")
+             .replace("³", "^3")
+             .replace("⁴", "^4")
+             .replace("⁵", "^5")
+             .replace("⁶", "^6")
+             .replace("⁷", "^7")
+             .replace("⁸", "^8")
+             .replace("⁹", "^9")
+             .replace("⁺", "+")
+             .replace("⁻", "-")
+
+        // Implicit multiplications:
+        // 1. Number before variable/function/parenthesis (protect log10, log2, etc.):
+        s = s.replace(Regex("(?<!log|log1|log2)(\\d)([a-zA-Z])"), "$1*$2")
+        s = s.replace(Regex("(?<!log|log1|log2)(\\d)(\\()"), "$1*$2")
+        // 2. Closing parenthesis before number/variable/opening parenthesis: )( -> )*(, )x -> )*x
+        s = s.replace(Regex("(\\))([0-9a-zA-Z(])"), "$1*$2")
+        // 3. Variable before opening parenthesis or function: x( -> x*(, xsin -> x*sin
+        s = s.replace(Regex("(^|[^a-zA-Z])([xt])(\\()"), "$1$2*$3")
+        s = s.replace(Regex("(^|[^a-zA-Z])([xt])(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|abs|exp|ln|log|sinc)"), "$1$2*$3")
+
+        return s
+    }
+
+    /**
      * Evaluates a mathematical expression [expr] for variable [x] (or parameter [t]).
      * Returns [Double.NaN] on syntax errors, division by zero or out of domain.
      * @param isRad Whether angle arguments in trig functions are radians (true) or degrees (false).
      */
     fun evaluate(expr: String, x: Double = 0.0, isRad: Boolean = true): Double {
         return try {
-            val sanitized = expr.lowercase().replace(" ", "")
+            val sanitized = sanitizeFormula(expr)
             val parser = MathParser(sanitized, x, isRad)
             parser.parse()
         } catch (e: Exception) {

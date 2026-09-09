@@ -260,6 +260,77 @@ class DrawingSurfaceView @JvmOverloads constructor(
         activeLayerOf = { resolvedActiveLayer(it) },
         commit = { commitElementEdit(it) },
     )
+
+    /** Interactive Math Mode: stylus handwriting is recognized and rendered as typography formulas. */
+    var mathMode: Boolean = false
+    internal val mathSessionStrokes = mutableListOf<com.nexopp.format.model.Stroke>()
+    internal var mathSessionPageIndex = 0
+    private var mathConvertRunnable: Runnable? = null
+
+    fun cancelMathSchedule() {
+        mathConvertRunnable?.let { removeCallbacks(it) }
+        mathConvertRunnable = null
+    }
+
+    fun scheduleMathConversion() {
+        if (!mathMode || mathSessionStrokes.isEmpty()) return
+        cancelMathSchedule()
+        val r = Runnable { convertMathSession() }
+        mathConvertRunnable = r
+        postDelayed(r, 1100L) // 1.1s debounce after stylus lift
+    }
+
+    fun convertMathSession() {
+        mathConvertRunnable?.let { removeCallbacks(it) }
+        mathConvertRunnable = null
+        if (mathSessionStrokes.isEmpty()) return
+        val strokesToConvert = mathSessionStrokes.toList()
+        mathSessionStrokes.clear()
+
+        val result = com.nexopp.stem.MathHandwritingEngine.recognize(strokesToConvert)
+        if (result.latex.isBlank() || result.latex == "?") return
+
+        val pageIdx = mathSessionPageIndex
+        val page = doc.pages.getOrNull(pageIdx) ?: return
+        val activeLayer = resolvedActiveLayer(page)
+        val layer = page.layers.getOrNull(activeLayer) ?: return
+
+        // Compute bounding box with comfortable padding
+        val pad = 6.0
+        val left = maxOf(0.0, result.bounds.left - pad)
+        val top = maxOf(0.0, result.bounds.top - pad)
+        val right = maxOf(left + 24.0, result.bounds.right + pad)
+        val bottom = maxOf(top + 18.0, result.bounds.bottom + pad)
+
+        val texElement = com.nexopp.format.model.TexImageElement(
+            left = left,
+            top = top,
+            right = right,
+            bottom = bottom,
+            latex = result.latex,
+            color = colorArgb,
+            latexInAttribute = true
+        )
+
+        // Snapshot history before replacement
+        history.record(doc)
+
+        // Remove the original strokes and insert the TexImageElement
+        val updatedElements = layer.elements.toMutableList()
+        updatedElements.removeAll { it in strokesToConvert }
+        updatedElements.add(texElement)
+
+        val newLayers = page.layers.toMutableList()
+        newLayers[activeLayer] = com.nexopp.format.model.Layer(updatedElements, layer.name)
+
+        val newPages = doc.pages.toMutableList()
+        newPages[pageIdx] = page.copy(layers = newLayers)
+
+        doc = doc.copy(pages = newPages)
+        notifyHistory()
+        relayout()
+        render()
+    }
     /** Which page index was last reported to [onCurrentPageChanged], to suppress duplicate calls. */
     private var lastReportedPage = -1
     /** Last (scrollY, totalHeightPx, viewportPx) reported to [onScrollChanged], to suppress duplicate calls. */

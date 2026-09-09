@@ -124,7 +124,15 @@ fun PrimaryToolSegment(
             onClick = { onSelectTool(EditorTool.TEXT) }
         )
 
-        // 7. LaTeX
+        // 7. Modo Matemáticas Manuscrito Interactivo
+        ToolPillButton(
+            icon = Icons.Filled.Calculate,
+            label = "Matemáticas",
+            selected = currentTool == EditorTool.MATH_INK,
+            onClick = { onSelectTool(EditorTool.MATH_INK) }
+        )
+
+        // 8. LaTeX tradicional
         ToolPillButton(
             icon = Icons.Filled.Functions,
             label = "LaTeX",
@@ -132,7 +140,7 @@ fun PrimaryToolSegment(
             onClick = { onSelectTool(EditorTool.TEXIMAGE) }
         )
 
-        // 8. Mano / Navegación
+        // 9. Mano / Navegación
         ToolPillButton(
             icon = Icons.Filled.PanTool,
             label = "Mano",
@@ -256,8 +264,35 @@ fun DynamicContextualBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when (tool) {
-                EditorTool.PEN -> {
-                    // Grosores para Pluma
+                EditorTool.PEN, EditorTool.MATH_INK -> {
+                    if (tool == EditorTool.MATH_INK) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Filled.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "Modo Matemáticas",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+
+                    // Grosores para Pluma / Matemáticas
                     val maxPt = styleCallbacks.widthSlots.maxOrNull() ?: styleCallbacks.width
                     styleCallbacks.widthSlots.forEach { pt ->
                         val isSelected = kotlin.math.abs(styleCallbacks.width - pt) < 0.05f

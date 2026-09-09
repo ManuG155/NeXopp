@@ -29,6 +29,7 @@ private fun EditorTool.glyph(): String = when (this) {
     EditorTool.TEXT_SELECT -> "T◌"
     EditorTool.BG_SELECT -> "▤"
     EditorTool.TEXT -> "T"
+    EditorTool.MATH_INK -> "∫"
     EditorTool.IMAGE -> "🖼"
     EditorTool.TEXIMAGE -> "∑"
     EditorTool.LINE -> "／"

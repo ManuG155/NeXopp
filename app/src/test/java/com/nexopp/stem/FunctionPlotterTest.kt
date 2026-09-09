@@ -35,6 +35,21 @@ class FunctionPlotterTest {
     }
 
     @Test
+    fun `evaluates natural formula inputs with prefixes and implicit multiplication`() {
+        // f(x) = sin(x) + x²
+        assertEquals(sin(2.0) + 4.0, FunctionPlotter.evaluate("f(x) = sin(x) + x²", 2.0), eps)
+        // y = 2x + 3
+        assertEquals(9.0, FunctionPlotter.evaluate("y = 2x + 3", 3.0), eps)
+        // f(x) = e^(-x²)
+        assertEquals(kotlin.math.exp(-4.0), FunctionPlotter.evaluate("f(x) = e^(-x²)", 2.0), eps)
+        // Spanish trig: sen(x), tg(x)
+        assertEquals(sin(PI / 2), FunctionPlotter.evaluate("sen(x)", PI / 2), eps)
+        assertEquals(kotlin.math.tan(PI / 4), FunctionPlotter.evaluate("tg(x)", PI / 4), eps)
+        // Unicode radical: √x
+        assertEquals(3.0, FunctionPlotter.evaluate("√x", 9.0), eps)
+    }
+
+    @Test
     fun `generates valid vector elements with axes`() {
         val elements = FunctionPlotter.generatePlotElements(
             formula = "sin(x)",

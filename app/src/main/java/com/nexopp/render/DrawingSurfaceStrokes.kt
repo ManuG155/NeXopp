@@ -19,6 +19,9 @@ import com.nexopp.format.model.Tool
 import kotlin.math.hypot
 
 internal fun DrawingSurfaceView.startStroke(event: MotionEvent, pointerIndex: Int) {
+    if (mathMode) {
+        cancelMathSchedule()
+    }
     scrolling = false
     shaping = shapeKind != null
     gestureStartDoc = doc
@@ -320,6 +323,11 @@ internal fun DrawingSurfaceView.commitCurrent() {
             lineStyle = currentLineStyle, fill = currentFill,
         )
         appendStroke(currentPage, stroke)
+        if (mathMode && tool == Tool.PEN && !wasShaping && !snapped) {
+            mathSessionStrokes.add(stroke)
+            mathSessionPageIndex = currentPage
+            scheduleMathConversion()
+        }
     }
     render()
 }
