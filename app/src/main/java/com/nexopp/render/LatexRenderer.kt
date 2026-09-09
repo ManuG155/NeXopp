@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Typeface
 import kotlin.math.max
 import kotlin.math.min
 
@@ -25,7 +26,9 @@ class LatexRenderer {
         val height: Float get() = ascent + descent
     }
 
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+    }
     private val rulePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val radicalPath = Path()
 
