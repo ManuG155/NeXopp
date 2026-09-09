@@ -46,13 +46,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.nexopp.render.insertElements
 import com.nexopp.render.insertTextElement
+import androidx.compose.foundation.background
 import com.nexopp.stem.FunctionPlotterDialog
 import com.nexopp.stem.ScientificCalculatorDialog
 import com.nexopp.stem.UnitConverterDialog
 import com.nexopp.stem.TechnicalSymbolsDialog
 import com.nexopp.stem.PeriodicTableDialog
 import com.nexopp.stem.TableDialog
-import com.nexopp.stem.FloatingCalculatorWidget
 import com.nexopp.audio.AudioRecordingDialog
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
@@ -105,7 +105,7 @@ fun UnifiedTopBar(
     var showFunctionPlotter by remember { mutableStateOf(false) }
     var showScientificCalculator by remember { mutableStateOf(false) }
     var showTableDialog by remember { mutableStateOf(false) }
-    var showFloatingCalculator by remember { mutableStateOf(false) }
+    var showInsertLinkDialog by remember { mutableStateOf(false) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var showUnitConverter by remember { mutableStateOf(false) }
     var showTechnicalSymbols by remember { mutableStateOf(false) }
@@ -129,7 +129,7 @@ fun UnifiedTopBar(
         onOpenTechnicalSymbols = { showTechnicalSymbols = true },
         onOpenPeriodicTable = { showPeriodicTable = true },
         onOpenExportDialog = { showExportDialog = true },
-        onToggleFloatingCalculator = { showFloatingCalculator = !showFloatingCalculator },
+        onOpenInsertLinkDialog = { showInsertLinkDialog = true },
         onOpenSettings = onSettings,
         onOpenDocument = onOpen,
         onNewDocument = onNewTab,
@@ -263,11 +263,17 @@ fun UnifiedTopBar(
         )
     }
 
-    if (showFloatingCalculator) {
-        FloatingCalculatorWidget(
-            onDismiss = { showFloatingCalculator = false },
-            onInsertResult = { text ->
-                surface?.insertTextElement(text)
+    if (showInsertLinkDialog) {
+        InsertLinkDialog(
+            onDismiss = { showInsertLinkDialog = false },
+            onInsertLink = { url, title, asCard ->
+                val displayTitle = if (title.isNotBlank()) title else url
+                surface?.insertTextElement(
+                    text = "🔗 $displayTitle\n$url",
+                    x = 80.0,
+                    y = 120.0
+                )
+                showInsertLinkDialog = false
             }
         )
     }
@@ -296,15 +302,24 @@ internal fun SearchControls(pane: PaneState) {
         pane.searchTotal = status.total
     }
     if (!pane.searchOpen) {
-        IconButton(onClick = {
-            pane.searchOpen = true
-            pane.surface?.setSearchQuery(pane.searchQuery)?.let(::apply)
-        }) {
-            Icon(Icons.Filled.Search, contentDescription = "Buscar")
+        IconButton(
+            onClick = {
+                pane.searchOpen = true
+                pane.surface?.setSearchQuery(pane.searchQuery)?.let(::apply)
+            },
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(Icons.Filled.Search, contentDescription = "Buscar", modifier = Modifier.size(22.dp))
         }
         return
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
         CompactSearchField(
             value = pane.searchQuery,
             onValueChange = {
@@ -312,22 +327,28 @@ internal fun SearchControls(pane: PaneState) {
                 pane.surface?.setSearchQuery(it)?.let(::apply) ?: apply(SearchStatus())
             },
         )
-        Text("${pane.searchCurrent}/${pane.searchTotal}")
+        Text(
+            "${pane.searchCurrent}/${pane.searchTotal}",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 6.dp)
+        )
         CompactIconButton(
             contentDescription = "Coincidencia anterior",
             enabled = pane.searchTotal > 0,
             onClick = { pane.surface?.previousSearchHit()?.let(::apply) },
-        ) { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Coincidencia anterior") }
+        ) { Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Coincidencia anterior", modifier = Modifier.size(20.dp)) }
         CompactIconButton(
             contentDescription = "Siguiente coincidencia",
             enabled = pane.searchTotal > 0,
             onClick = { pane.surface?.nextSearchHit()?.let(::apply) },
-        ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Siguiente coincidencia") }
+        ) { Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Siguiente coincidencia", modifier = Modifier.size(20.dp)) }
         CompactIconButton(contentDescription = "Cerrar búsqueda", onClick = {
             pane.searchOpen = false
             pane.searchQuery = ""
             pane.surface?.clearSearch()?.let(::apply) ?: apply(SearchStatus())
-        }) { Icon(Icons.Filled.Close, contentDescription = "Cerrar búsqueda") }
+        }) { Icon(Icons.Filled.Close, contentDescription = "Cerrar búsqueda", modifier = Modifier.size(20.dp)) }
     }
 }
 
@@ -356,15 +377,15 @@ private fun CompactSearchField(value: String, onValueChange: (String) -> Unit) {
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = TextStyle(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
+        textStyle = TextStyle(fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface),
         modifier = Modifier
-            .width(88.dp)
-            .height(36.dp)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .width(190.dp)
+            .height(38.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         decorationBox = { inner ->
-            Box {
-                if (value.isEmpty()) Text("Buscar", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (value.isEmpty()) Text("Buscar en cuaderno...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                 inner()
             }
         },

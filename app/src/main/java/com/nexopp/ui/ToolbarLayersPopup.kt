@@ -65,7 +65,7 @@ internal fun LayersPopupButton(callbacks: ToolbarLayerCallbacks) {
         DropdownMenuItem(
             text = { Text("Añadir capa") },
             leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            onClick = { callbacks.onAddLayer(); dismiss() },
+            onClick = { callbacks.onAddLayer() },
         )
     }
     if (renaming >= 0) {

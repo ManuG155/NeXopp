@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -25,7 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nexopp.format.FontDescription
 import com.nexopp.format.SaveFormat
 import com.nexopp.render.ImportPdfMode
@@ -148,28 +153,47 @@ fun TextBoxDialog(
     var size by remember { mutableStateOf(initialSize.toFloat().coerceIn(TEXT_SIZE_MIN, TEXT_SIZE_MAX)) }
     var colorArgb by remember { mutableStateOf(initialColor) }
     var editingColor by remember { mutableStateOf(false) }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)
+        focusRequester.requestFocus()
+    }
 
     CustomColorEditor(visible = editingColor, palette = palette, onDismiss = { editingColor = false })
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
                     singleLine = false,
+                    minLines = 3,
                     label = { Text("Texto") },
+                    textStyle = TextStyle(
+                        fontSize = 16.sp,
+                        color = androidx.compose.ui.graphics.Color(colorArgb)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     FontFamilyPicker(family = family, onFamily = { family = it })
                     FilterChip(selected = bold, onClick = { bold = !bold }, label = { Text("Negrita") })
                     FilterChip(selected = italic, onClick = { italic = !italic }, label = { Text("Cursiva") })
                 }
-                Text("Tamaño: ${size.roundToInt()} pt")
+                Text("Tamaño: ${size.roundToInt()} pt", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = size,
                     onValueChange = { size = it },
@@ -184,8 +208,8 @@ fun TextBoxDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(content, family, bold, italic, size.toDouble(), colorArgb) }) {
-                Text("Guardar")
+            androidx.compose.material3.Button(onClick = { onConfirm(content, family, bold, italic, size.toDouble(), colorArgb) }) {
+                Text("Insertar Texto")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },

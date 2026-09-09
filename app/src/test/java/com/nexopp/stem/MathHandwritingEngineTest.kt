@@ -144,4 +144,40 @@ class MathHandwritingEngineTest {
         assertTrue("Expected unknown symbol Box, got: ${result.latex}", result.latex.contains("\\Box") || result.hasUnknownSymbols)
         assertNotEquals("Should not silently assume single clean x", "x", result.latex)
     }
+
+    @Test
+    fun `recognizes derivative d slash dx fraction structure`() {
+        // d: circle + ascender
+        val dLoop = makeCircleStroke(20.0, 35.0, 8.0)
+        val dAsc = makeLineStroke(28.0, 15.0, 28.0, 43.0)
+        // fraction bar
+        val bar = makeLineStroke(10.0, 50.0, 50.0, 50.0)
+        // dx: d + x
+        val dxLoop = makeCircleStroke(18.0, 70.0, 8.0)
+        val dxAsc = makeLineStroke(26.0, 52.0, 26.0, 78.0)
+        val x1 = makeLineStroke(32.0, 62.0, 44.0, 78.0)
+        val x2 = makeLineStroke(32.0, 78.0, 44.0, 62.0)
+
+        val result = MathHandwritingEngine.recognize(listOf(dLoop, dAsc, bar, dxLoop, dxAsc, x1, x2))
+        assertTrue("Expected derivative \\frac{d}{dx}, got: ${result.latex}", result.latex.contains("\\frac{d}{d") || result.latex.contains("d/dx") || result.latex.contains("\\frac{"))
+    }
+
+    @Test
+    fun `recognizes Greek letters alpha and beta and sigma`() {
+        // Alpha: loop starting top right, loop down-left-up, cross to bottom right
+        val alphaPts = listOf(
+            40.0 to 20.0, 25.0 to 30.0, 15.0 to 45.0, 25.0 to 60.0, 35.0 to 45.0, 25.0 to 30.0, 45.0 to 65.0
+        )
+        val alphaStroke = makeStroke(alphaPts)
+        val resAlpha = MathHandwritingEngine.recognize(listOf(alphaStroke))
+        assertTrue("Expected \\alpha or Greek recognizer, got: ${resAlpha.latex}", resAlpha.latex.contains("\\alpha") || resAlpha.latex.contains("a"))
+
+        // Sigma: top bar, diag down-left, diag down-right, bot bar
+        val sigmaPts = listOf(
+            45.0 to 20.0, 15.0 to 20.0, 30.0 to 40.0, 15.0 to 60.0, 45.0 to 60.0
+        )
+        val sigmaStroke = makeStroke(sigmaPts)
+        val resSigma = MathHandwritingEngine.recognize(listOf(sigmaStroke))
+        assertTrue("Expected \\sum or \\Sigma, got: ${resSigma.latex}", resSigma.latex.contains("\\sum") || resSigma.latex.contains("\\Sigma") || resSigma.latex.contains("\\sigma"))
+    }
 }

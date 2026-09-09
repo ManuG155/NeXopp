@@ -62,7 +62,7 @@ fun CategorizedTopBar(
     onOpenTechnicalSymbols: () -> Unit,
     onOpenPeriodicTable: () -> Unit,
     onOpenExportDialog: () -> Unit,
-    onToggleFloatingCalculator: () -> Unit,
+    onOpenInsertLinkDialog: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDocument: () -> Unit,
     onNewDocument: () -> Unit,
@@ -104,28 +104,29 @@ fun CategorizedTopBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp)
-                    .padding(horizontal = 6.dp),
+                    .height(54.dp)
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // Izquierda: Volver, Deshacer (Siempre visible), Rehacer (Siempre visible), Añadir Página '+' (Siempre accesible)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la Biblioteca", modifier = Modifier.size(20.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(onClick = onExit, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la Biblioteca", modifier = Modifier.size(22.dp))
                     }
-
-                    Spacer(Modifier.width(2.dp))
 
                     // Deshacer Permanente
                     IconButton(
                         onClick = { pane.surface?.undo() },
                         enabled = pane.canUndo,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(40.dp)
                             .alpha(if (pane.canUndo) 1.0f else 0.38f)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer", modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Deshacer", modifier = Modifier.size(22.dp))
                     }
 
                     // Rehacer Permanente
@@ -133,23 +134,21 @@ fun CategorizedTopBar(
                         onClick = { pane.surface?.redo() },
                         enabled = pane.canRedo,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(40.dp)
                             .alpha(if (pane.canRedo) 1.0f else 0.38f)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer", modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rehacer", modifier = Modifier.size(22.dp))
                     }
-
-                    Spacer(Modifier.width(2.dp))
 
                     // Botón '+' Añadir Página Inmediata
                     IconButton(
                         onClick = onAddPageQuick,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Añadir Página Inmediatamente", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.Add, contentDescription = "Añadir Página Inmediatamente", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     }
                 }
 
@@ -157,9 +156,9 @@ fun CategorizedTopBar(
                 Row(
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .padding(horizontal = 4.dp)
+                        .padding(horizontal = 8.dp)
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TopBarSection.values().forEach { sec ->
@@ -175,19 +174,19 @@ fun CategorizedTopBar(
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     sec.icon,
                                     contentDescription = sec.label,
                                     tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(Modifier.width(4.dp))
+                                Spacer(Modifier.width(6.dp))
                                 Text(
                                     sec.label,
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -197,7 +196,10 @@ fun CategorizedTopBar(
                 }
 
                 // Derecha: Capas, Fondo, Búsqueda, Minimizar/Expandir y Menú
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     BackgroundPopupButton(pane.backgroundStyle, onBackgroundStyle = { surface?.setPageBackgroundStyle(it) })
                     LayersPopupButton(layerCallbacks)
                     SearchControls(pane)
@@ -205,13 +207,13 @@ fun CategorizedTopBar(
                     // Toggle Minimizar / Expandir Barra
                     IconButton(
                         onClick = { isMinimized = !isMinimized },
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             if (isMinimized) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
                             contentDescription = if (isMinimized) "Expandir barra de herramientas" else "Minimizar barra para pantalla completa",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
@@ -244,15 +246,15 @@ fun CategorizedTopBar(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp)
+                            .height(52.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 8.dp)
+                                .padding(horizontal = 10.dp)
                                 .horizontalScroll(rememberScrollState()),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             when (activeSection) {
                                 TopBarSection.ESCRITURA -> {
@@ -280,8 +282,7 @@ fun CategorizedTopBar(
                                         surface = surface,
                                         onOpenTechnicalSymbols = onOpenTechnicalSymbols,
                                         onOpenPeriodicTable = onOpenPeriodicTable,
-                                        onOpenScientificCalculator = onOpenScientificCalculator,
-                                        onToggleFloatingCalculator = onToggleFloatingCalculator
+                                        onOpenScientificCalculator = onOpenScientificCalculator
                                     )
                                 }
                                 TopBarSection.GRAFICAS -> {
@@ -305,7 +306,7 @@ fun CategorizedTopBar(
                                         surface = surface,
                                         onOpenTableDialog = onOpenTableDialog,
                                         onOpenTechnicalSymbols = onOpenTechnicalSymbols,
-                                        onToggleFloatingCalculator = onToggleFloatingCalculator
+                                        onOpenInsertLinkDialog = onOpenInsertLinkDialog
                                     )
                                 }
                                 TopBarSection.PAGINAS -> {
@@ -353,7 +354,7 @@ private fun EscrituraSectionContent(
     onSettingsChange: (AppSettings) -> Unit
 ) {
     // 1. Herramientas: Pluma, Subrayador, Borrador, Lazo
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SectionToolChip(
             label = "Pluma",
             icon = Icons.Filled.Create,
@@ -380,19 +381,19 @@ private fun EscrituraSectionContent(
         )
     }
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
-    // 2. Colores Rápidos Integrados
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    // 2. Colores Rápidos Integrados (Círculos limpios rellenos sin artefactos)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         FAST_PEN_COLORS.take(6).forEach { colorInt ->
             val isSelected = ui.color == colorInt
             Box(
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
                     .background(Color(colorInt))
                     .border(
-                        width = if (isSelected) 2.5.dp else 1.dp,
+                        width = if (isSelected) 3.dp else 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray.copy(alpha = 0.5f),
                         shape = CircleShape
                     )
@@ -404,21 +405,17 @@ private fun EscrituraSectionContent(
     // 3. Selector de Grosor y Selector de Color Completo
     ToolbarColorPopup(styleCallbacks = styleCallbacks)
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
-    // 4. Reconocer Formas Switch
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Formas auto", style = MaterialTheme.typography.labelSmall)
-        Spacer(Modifier.width(4.dp))
-        Switch(
-            checked = settings.recognizeShapes,
-            onCheckedChange = {
-                surface?.recognizeShapes = it
-                onSettingsChange(settings.copy(recognizeShapes = it))
-            },
-            modifier = Modifier.size(36.dp)
-        )
-    }
+    // 4. Reconocer Formas Switch (Espacioso y sin solapamientos)
+    CompactSwitchRow(
+        label = "Formas auto",
+        checked = settings.recognizeShapes,
+        onCheckedChange = {
+            surface?.recognizeShapes = it
+            onSettingsChange(settings.copy(recognizeShapes = it))
+        }
+    )
 }
 
 @Composable
@@ -439,7 +436,7 @@ private fun DibujoSectionContent(
         EditorTool.SPLINE to "Spline"
     )
 
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         drawingTools.forEach { (tool, label) ->
             SectionToolChip(
                 label = label,
@@ -450,19 +447,19 @@ private fun DibujoSectionContent(
         }
     }
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
     // Guías y Reglas
     var guideExpanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(
             onClick = { guideExpanded = true },
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.height(38.dp)
         ) {
-            Icon(Icons.Filled.SquareFoot, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Guía: ${settings.guideKind.name.lowercase().capitalize()}", fontSize = 11.sp)
+            Icon(Icons.Filled.SquareFoot, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Guía: ${settings.guideKind.name.lowercase().capitalize()}", fontSize = 13.sp)
         }
         DropdownMenu(expanded = guideExpanded, onDismissRequest = { guideExpanded = false }) {
             GuideKind.values().forEach { g ->
@@ -488,8 +485,7 @@ private fun MatematicasSectionContent(
     surface: DrawingSurfaceView?,
     onOpenTechnicalSymbols: () -> Unit,
     onOpenPeriodicTable: () -> Unit,
-    onOpenScientificCalculator: () -> Unit,
-    onToggleFloatingCalculator: () -> Unit
+    onOpenScientificCalculator: () -> Unit
 ) {
     // Modo Matemáticas Manuscrito Directo (Escritura 2D en lienzo con Stylus)
     Button(
@@ -501,12 +497,12 @@ private fun MatematicasSectionContent(
             containerColor = if (ui.tool == EditorTool.MATH_INK) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
             contentColor = if (ui.tool == EditorTool.MATH_INK) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
         ),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Calculate, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Calculate, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Modo Matemáticas Manuscrito", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Modo Matemáticas Manuscrito", fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 
     // LaTeX Tradicional
@@ -514,38 +510,28 @@ private fun MatematicasSectionContent(
         onClick = {
             ui.texPlacement = com.nexopp.render.Placement(pane.currentPage, 100.0, 100.0)
         },
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Functions, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("LaTeX Tradicional", fontSize = 11.sp)
+        Icon(Icons.Filled.Functions, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("LaTeX Tradicional", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = onOpenTechnicalSymbols,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Text("∫ Símbolos Técnicos", fontSize = 11.sp)
+        Text("∫ Símbolos Técnicos", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = onOpenPeriodicTable,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Text("⚗ Tabla Periódica", fontSize = 11.sp)
-    }
-
-    OutlinedButton(
-        onClick = onToggleFloatingCalculator,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
-    ) {
-        Icon(Icons.Filled.Calculate, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("Calculadora Flotante", fontSize = 11.sp)
+        Text("⚗ Tabla Periódica", fontSize = 13.sp)
     }
 }
 
@@ -557,15 +543,15 @@ private fun GraficasSectionContent(
 ) {
     Button(
         onClick = onOpenPlotter,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Trazador de Funciones Vectorial", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Trazador de Funciones Vectorial", fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
     // Preajustes rápidos de funciones STEM
     val presets = listOf(
@@ -575,7 +561,7 @@ private fun GraficasSectionContent(
         "exp(-x^2)" to "Gauss"
     )
 
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         presets.forEach { (formula, name) ->
             OutlinedButton(
                 onClick = {
@@ -586,10 +572,10 @@ private fun GraficasSectionContent(
                     )
                     surface?.insertElements(elements)
                 },
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                modifier = Modifier.height(32.dp)
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.height(38.dp)
             ) {
-                Text(name, fontSize = 11.sp)
+                Text(name, fontSize = 13.sp)
             }
         }
     }
@@ -608,7 +594,7 @@ private fun TextoSectionContent(
         onClick = { ui.tool = EditorTool.TEXT; surface?.applyTool(EditorTool.TEXT) }
     )
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
     // Rich Text Format: Negrita, Cursiva, Subrayado
     var isBold by remember { mutableStateOf(false) }
@@ -617,49 +603,50 @@ private fun TextoSectionContent(
     var selectedFontSize by remember { mutableStateOf(11) } // Default 11 pt
     var fontSizeMenuExpanded by remember { mutableStateOf(false) }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(
             onClick = { isBold = !isBold },
             modifier = Modifier
-                .size(32.dp)
+                .size(38.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(if (isBold) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
         ) {
-            Icon(Icons.Filled.FormatBold, contentDescription = "Negrita", modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.FormatBold, contentDescription = "Negrita", modifier = Modifier.size(20.dp))
         }
 
         IconButton(
             onClick = { isItalic = !isItalic },
             modifier = Modifier
-                .size(32.dp)
+                .size(38.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(if (isItalic) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
         ) {
-            Icon(Icons.Filled.FormatItalic, contentDescription = "Cursiva", modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.FormatItalic, contentDescription = "Cursiva", modifier = Modifier.size(20.dp))
         }
 
         IconButton(
             onClick = { isUnderline = !isUnderline },
             modifier = Modifier
-                .size(32.dp)
+                .size(38.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(if (isUnderline) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
         ) {
-            Icon(Icons.Filled.FormatUnderlined, contentDescription = "Subrayado", modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.FormatUnderlined, contentDescription = "Subrayado", modifier = Modifier.size(20.dp))
         }
     }
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
     // Selector Numérico de Tamaño de Fuente (Default 11 pt)
     Box {
         OutlinedButton(
             onClick = { fontSizeMenuExpanded = true },
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-            modifier = Modifier.height(32.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.height(38.dp)
         ) {
-            Text("$selectedFontSize pt", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+            Text("$selectedFontSize pt", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(4.dp))
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
         }
         DropdownMenu(expanded = fontSizeMenuExpanded, onDismissRequest = { fontSizeMenuExpanded = false }) {
             TEXT_FONT_SIZES.forEach { size ->
@@ -687,46 +674,46 @@ private fun InsertarSectionContent(
     surface: DrawingSurfaceView?,
     onOpenTableDialog: () -> Unit,
     onOpenTechnicalSymbols: () -> Unit,
-    onToggleFloatingCalculator: () -> Unit
+    onOpenInsertLinkDialog: () -> Unit
 ) {
     OutlinedButton(
         onClick = onOpenTableDialog,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.TableChart, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.TableChart, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Tabla Interactiva", fontSize = 12.sp)
+        Text("Tabla Interactiva", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = { ui.texPlacement = com.nexopp.render.Placement(pane.currentPage, 100.0, 100.0) },
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Functions, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Functions, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Fórmula LaTeX", fontSize = 12.sp)
+        Text("Fórmula LaTeX", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = onOpenTechnicalSymbols,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Símbolo Técnico", fontSize = 12.sp)
+        Text("Símbolo Técnico", fontSize = 13.sp)
     }
 
     OutlinedButton(
-        onClick = onToggleFloatingCalculator,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        onClick = onOpenInsertLinkDialog,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Calculate, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Calculadora Flotante", fontSize = 12.sp)
+        Text("Enlace Web", fontSize = 13.sp)
     }
 }
 
@@ -746,9 +733,9 @@ private fun PaginasSectionContent(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Icon(Icons.Filled.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(Icons.Filled.AutoStories, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             Spacer(Modifier.width(6.dp))
             Text(
                 "Página ${pane.currentPage + 1} de ${pane.pageCount.coerceAtLeast(1)}",
@@ -760,42 +747,42 @@ private fun PaginasSectionContent(
 
     Button(
         onClick = onAddPageQuick,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("Añadir Página", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Añadir Página", fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 
     OutlinedButton(
         onClick = { surface?.removePage() },
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("Eliminar Página", fontSize = 11.sp)
+        Icon(Icons.Filled.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Eliminar Página", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = onOpenStructure,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("Índice / TOC", fontSize = 11.sp)
+        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Índice / TOC", fontSize = 13.sp)
     }
 
     OutlinedButton(
         onClick = onOpenAttachments,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("Adjuntos", fontSize = 11.sp)
+        Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Adjuntos", fontSize = 13.sp)
     }
 }
 
@@ -809,18 +796,18 @@ private fun AudioSectionContent(
             containerColor = if (audio.recording) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primaryContainer,
             contentColor = if (audio.recording) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
         ),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
         Icon(
             if (audio.recording) Icons.Filled.Stop else Icons.Filled.Mic,
             contentDescription = null,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(18.dp)
         )
         Spacer(Modifier.width(6.dp))
         Text(
             if (audio.recording) "Detener Grabación" else "Grabar Audio (Offline)",
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -828,12 +815,12 @@ private fun AudioSectionContent(
     if (audio.playing) {
         OutlinedButton(
             onClick = { audio.onStopPlayback() },
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp)
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.height(38.dp)
         ) {
-            Icon(Icons.Filled.StopCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Detener Reproducción", fontSize = 11.sp)
+            Icon(Icons.Filled.StopCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Detener Reproducción", fontSize = 13.sp)
         }
     }
 }
@@ -844,12 +831,12 @@ private fun ExportarSectionContent(
 ) {
     Button(
         onClick = onOpenExportDialog,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Exportar y Compartir...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Exportar y Compartir...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 
     Text(
@@ -867,25 +854,21 @@ private fun AjustesSectionContent(
 ) {
     Button(
         onClick = onOpenSettings,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.height(38.dp)
     ) {
-        Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+        Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Abrir Ajustes Completos", fontSize = 12.sp)
+        Text("Abrir Ajustes Completos", fontSize = 13.sp)
     }
 
-    VerticalDivider(modifier = Modifier.height(24.dp))
+    VerticalDivider(modifier = Modifier.height(28.dp))
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Rechazo de palma", style = MaterialTheme.typography.labelSmall)
-        Spacer(Modifier.width(4.dp))
-        Switch(
-            checked = !settings.fingerDraws,
-            onCheckedChange = { onSettingsChange(settings.copy(fingerDraws = !it)) },
-            modifier = Modifier.size(36.dp)
-        )
-    }
+    CompactSwitchRow(
+        label = "Rechazo de palma",
+        checked = !settings.fingerDraws,
+        onCheckedChange = { onSettingsChange(settings.copy(fingerDraws = !it)) }
+    )
 }
 
 @Composable
@@ -903,19 +886,19 @@ private fun SectionToolChip(
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 icon,
                 contentDescription = label,
                 tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                 color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )

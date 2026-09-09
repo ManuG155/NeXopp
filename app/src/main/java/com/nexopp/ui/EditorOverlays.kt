@@ -70,7 +70,7 @@ fun BoxScope.EditorOverlays(
             initialBold = existing?.let { com.nexopp.format.FontDescription.parse(it.font) }?.bold ?: defaults.bold,
             initialItalic = existing?.let { com.nexopp.format.FontDescription.parse(it.font) }?.italic ?: defaults.italic,
             initialSize = existing?.size ?: defaults.size,
-            initialColor = existing?.color ?: defaults.color,
+            initialColor = existing?.color ?: ui.color,
             palette = palette,
             onConfirm = { content, family, bold, italic, sizePt, colorArgb ->
                 surface?.insertText(

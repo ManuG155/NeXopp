@@ -70,7 +70,8 @@ val TEMPLATE_OPTIONS = listOf(
 fun LibraryScreen(
     store: LibraryStore,
     onOpenNotebook: (Notebook) -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onNotebookDeletedOrTrashed: ((Notebook) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -781,6 +782,7 @@ fun LibraryScreen(
                 TextButton(
                     onClick = {
                         store.deleteNotebook(nb)
+                        onNotebookDeletedOrTrashed?.invoke(nb)
                         refresh()
                         deletingNotebook = null
                     },
@@ -798,6 +800,7 @@ fun LibraryScreen(
         TrashDialog(
             store = store,
             onDismiss = { showTrashDialog = false },
+            onNotebookDeleted = onNotebookDeletedOrTrashed,
             onRestored = {
                 refresh()
             }
@@ -1221,10 +1224,17 @@ fun CreateNotebookDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Subject Selector
+                // Subject Selector (Optional)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Asignatura", style = MaterialTheme.typography.labelMedium)
+                    Text("Asignatura (Opcional)", style = MaterialTheme.typography.labelMedium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = selectedSubjectId.isBlank(),
+                                onClick = { selectedSubjectId = "" },
+                                label = { Text("Sin asignatura") }
+                            )
+                        }
                         items(subjects) { sub ->
                             FilterChip(
                                 selected = selectedSubjectId == sub.id,
@@ -1318,7 +1328,7 @@ fun CreateNotebookDialog(
                         onCreate(name.trim(), selectedSubjectId, selectedCoverColor, selectedTemplate, selectedTagIds.toList())
                     }
                 },
-                enabled = name.isNotBlank() && selectedSubjectId.isNotBlank()
+                enabled = name.isNotBlank()
             ) {
                 Text("Crear Cuaderno")
             }
@@ -1439,7 +1449,8 @@ fun CreateSubjectDialog(
 fun TrashDialog(
     store: LibraryStore,
     onDismiss: () -> Unit,
-    onRestored: () -> Unit
+    onRestored: () -> Unit,
+    onNotebookDeleted: ((Notebook) -> Unit)? = null
 ) {
     var trashItems by remember { mutableStateOf(store.loadTrash()) }
     var confirmEmptyTrash by remember { mutableStateOf(false) }
@@ -1544,6 +1555,7 @@ fun TrashDialog(
                                     }
                                     IconButton(onClick = {
                                         store.permanentlyDelete(item.id)
+                                        onNotebookDeleted?.invoke(item.notebook)
                                         refreshTrash()
                                     }) {
                                         Icon(Icons.Filled.DeleteForever, contentDescription = "Eliminar definitivamente", tint = MaterialTheme.colorScheme.error)
@@ -1568,6 +1580,7 @@ fun TrashDialog(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        trashItems.forEach { onNotebookDeleted?.invoke(it.notebook) }
                         store.emptyTrash()
                         refreshTrash()
                         confirmEmptyTrash = false

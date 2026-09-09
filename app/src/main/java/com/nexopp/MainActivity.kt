@@ -337,7 +337,8 @@ class MainActivity : ComponentActivity() {
                         LibraryScreen(
                             store = libraryStore,
                             onOpenNotebook = { notebook -> openLibraryNotebook(notebook) },
-                            onSettings = { showLibrarySettings = true }
+                            onSettings = { showLibrarySettings = true },
+                            onNotebookDeletedOrTrashed = { nb -> closeNotebookTab(nb) }
                         )
                         if (showLibrarySettings) {
                             SettingsScreen(
@@ -472,6 +473,22 @@ class MainActivity : ComponentActivity() {
             tabsTick.value++
             persistTabs()
         }
+    }
+
+    internal fun closeNotebookTab(notebook: com.nexopp.library.Notebook) {
+        val allTabs = tabs.tabs
+        val indicesToClose = allTabs.indices.filter { idx ->
+            val tab = allTabs[idx]
+            tab.title == notebook.name ||
+            tab.title == notebook.fileName ||
+            tab.uri?.contains(notebook.fileName) == true ||
+            tab.uri?.contains(notebook.id) == true
+        }.reversed()
+        indicesToClose.forEach { idx ->
+            tabs.close(idx)
+        }
+        tabsTick.value++
+        persistTabs()
     }
 
     private var pendingIntentUri: Uri? = null

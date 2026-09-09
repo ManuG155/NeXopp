@@ -35,7 +35,28 @@ object DocumentSearch {
                 pdfTextIndex?.let { addAll(pdfHits(it, pageIndex, needle)) }
                 for (layer in page.layers) {
                     for (element in layer.elements) {
-                        if (element is TextElement) addAll(textHits(pageIndex, element, needle))
+                        when (element) {
+                            is TextElement -> addAll(textHits(pageIndex, element, needle))
+                            is com.nexopp.format.model.TexImageElement -> {
+                                val latexText = element.latex.lowercase(Locale.ROOT)
+                                if (latexText.contains(needle)) {
+                                    add(
+                                        SearchHit(
+                                            pageIndex = pageIndex,
+                                            boxes = listOf(
+                                                Bounds(
+                                                    left = element.left,
+                                                    top = element.top,
+                                                    right = element.right,
+                                                    bottom = element.bottom
+                                                )
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+                            else -> Unit
+                        }
                     }
                 }
             }

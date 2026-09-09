@@ -100,6 +100,7 @@ fun FunctionPlotterDialog(
     var stepXStr by remember { mutableStateOf("") }
     var stepYStr by remember { mutableStateOf("") }
     var drawAxes by remember { mutableStateOf(true) }
+    var showAxisNumbers by remember { mutableStateOf(true) }
     var gridStyle by remember { mutableStateOf(PlotGridStyle.SUBTLE) }
     var highlightRoots by remember { mutableStateOf(false) }
     var highlightIntersections by remember { mutableStateOf(false) }
@@ -159,6 +160,7 @@ fun FunctionPlotterDialog(
                                     stepX = stepX,
                                     stepY = stepY,
                                     gridStyle = gridStyle,
+                                    showAxisNumbers = showAxisNumbers,
                                     highlightRoots = highlightRoots,
                                     highlightIntersections = highlightIntersections
                                 )
@@ -266,6 +268,36 @@ fun FunctionPlotterDialog(
                                                     }
                                                 )
 
+                                                // Configurable Function Name (f, g, h, F, G...)
+                                                OutlinedTextField(
+                                                    value = fn.name,
+                                                    onValueChange = { newName ->
+                                                        functions = functions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(name = newName.take(3)) else item
+                                                        }
+                                                    },
+                                                    label = { Text("Nom.") },
+                                                    singleLine = true,
+                                                    modifier = Modifier.width(64.dp)
+                                                )
+
+                                                Spacer(Modifier.width(4.dp))
+
+                                                // Configurable Variable (x, y, t, u, v, z, θ, α, β...)
+                                                OutlinedTextField(
+                                                    value = fn.variable,
+                                                    onValueChange = { newVar ->
+                                                        functions = functions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(variable = newVar.take(3)) else item
+                                                        }
+                                                    },
+                                                    label = { Text("Var.") },
+                                                    singleLine = true,
+                                                    modifier = Modifier.width(64.dp)
+                                                )
+
+                                                Spacer(Modifier.width(6.dp))
+
                                                 OutlinedTextField(
                                                     value = fn.formula,
                                                     onValueChange = { newFormula ->
@@ -274,7 +306,7 @@ fun FunctionPlotterDialog(
                                                         }
                                                     },
                                                     prefix = {
-                                                        Text("f${index + 1}(x) = ", fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                                        Text("${fn.name.ifBlank { "f" }}(${fn.variable.ifBlank { "x" }}) = ", fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                                                     },
                                                     singleLine = true,
                                                     textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 15.sp),
@@ -519,14 +551,18 @@ fun FunctionPlotterDialog(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text("Análisis Automático:", fontWeight = FontWeight.Bold)
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(checked = highlightRoots, onCheckedChange = { highlightRoots = it })
-                                            Text("Calcular y marcar raíces / ceros de las funciones (f(x) = 0)")
-                                        }
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(checked = highlightIntersections, onCheckedChange = { highlightIntersections = it })
-                                            Text("Calcular y marcar intersecciones entre funciones (f1(x) = f2(x))")
-                                        }
+                                        com.nexopp.ui.AppSwitchRow(
+                                            label = "Calcular y marcar raíces / ceros (f(x) = 0)",
+                                            description = "Detecta numéricamente las raíces y coloca marcadores",
+                                            checked = highlightRoots,
+                                            onCheckedChange = { highlightRoots = it }
+                                        )
+                                        com.nexopp.ui.AppSwitchRow(
+                                            label = "Calcular y marcar intersecciones entre funciones",
+                                            description = "Encuentra puntos de corte simultáneos entre curvas",
+                                            checked = highlightIntersections,
+                                            onCheckedChange = { highlightIntersections = it }
+                                        )
                                     }
                                 }
 
@@ -709,10 +745,19 @@ fun FunctionPlotterDialog(
                                         }
 
                                         Spacer(Modifier.height(4.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(checked = drawAxes, onCheckedChange = { drawAxes = it })
-                                            Text("Dibujar ejes coordenados cartesianos con flechas y nombres")
-                                        }
+                                        com.nexopp.ui.AppSwitchRow(
+                                            label = "Mostrar valores numéricos en los ejes",
+                                            description = "Muestra los números y escala en las marcas de los ejes X e Y",
+                                            checked = showAxisNumbers,
+                                            onCheckedChange = { showAxisNumbers = it }
+                                        )
+
+                                        com.nexopp.ui.AppSwitchRow(
+                                            label = "Dibujar ejes coordenados cartesianos",
+                                            description = "Incluye flechas en los extremos y etiquetas de los ejes",
+                                            checked = drawAxes,
+                                            onCheckedChange = { drawAxes = it }
+                                        )
 
                                         // Quick Zoom Controls
                                         Row(

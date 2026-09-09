@@ -1,13 +1,15 @@
 package com.nexopp.render
 
 import com.nexopp.format.model.Element
+import com.nexopp.format.model.ImageElement
 import com.nexopp.format.model.Page
+import com.nexopp.format.model.RawElement
 import com.nexopp.format.model.Stroke
+import com.nexopp.format.model.TexImageElement
+import com.nexopp.format.model.TextElement
 
 /**
  * A stable address for one element on a page: its layer index and its index within that layer.
- * The selection tool addresses elements by position (not identity) because a move rewrites the
- * element objects but never reorders them, so these indices stay valid across a drag.
  */
 data class ElementRef(val layerIndex: Int, val elementIndex: Int)
 
@@ -16,68 +18,43 @@ data class Vec2(val x: Double, val y: Double)
 
 /**
  * Pure queries that turn a page + a gesture into a set of [ElementRef]s: rectangle-select
- * containment and single-tap topmost pick, plus the combined bounds of a selection. Free of
- * Android types so it's unit-testable on the JVM; [DrawingSurfaceView] converts touches to
- * page-local pt and calls in here.
+ * containment and single-tap topmost pick, plus the combined bounds of a selection.
  */
 object SelectionTester {
 
-    /** Extra pt margin around an element's bounds when tap-testing — owned by [ElementBounds]. */
     private const val TAP_PAD = ElementBounds.TAP_PAD
 
     /**
-     * Every element on [page] whose bounds lie wholly inside [rect] (desktop rectangle-select).
-     *
-     * The region is grown by [TAP_PAD] first, for the same reason [pickTopmost] pads: a hairline
-     * stroke or an empty text box has a box of (near) zero extent, and a user who drags the
-     * rectangle right along it has clearly enclosed it even if it lands a fraction outside.
-     *
-     * [onlyLayer] restricts the sweep to one layer — see [layerRange].
+     * Every element on [page] whose bounds lie wholly or primarily inside [rect].
      */
-    fun inRect(page: Page, rect: Bounds, onlyLayer: Int? = null): Set<ElementRef> {
+    fun inRect(page: Page, rect: Bounds, onlyLayer: Int? = null, hiddenLayers: Set<Int> = emptySet()): Set<ElementRef> {
         val padded = rect.expand(TAP_PAD)
         val hits = LinkedHashSet<ElementRef>()
-        for (li in layerRange(page, onlyLayer)) {
+        for (li in layerRange(page, onlyLayer, hiddenLayers)) {
             page.layers[li].elements.forEachIndexed { ei, el ->
-                if (ElementBounds.isHitTestable(el) && ElementBounds.of(el).containedBy(padded)) {
-                    hits += ElementRef(li, ei)
+                if (ElementBounds.isHitTestable(el)) {
+                    val b = ElementBounds.of(el)
+                    if (b.containedBy(padded)) {
+                        hits += ElementRef(li, ei)
+                    }
                 }
             }
         }
         return hits
     }
 
-    /**
-     * The layer indices a containment query sweeps: just [onlyLayer] when it names a real layer,
-     * every layer otherwise.
-     *
-     * Desktop Xournal++ selects within the current layer only, so the marquee never grabs ink the
-     * user cannot currently edit; NeXopp matches that. A null or out-of-range [onlyLayer] (no layer
-     * chosen yet) falls back to the whole page rather than selecting nothing.
-     */
-    private fun layerRange(page: Page, onlyLayer: Int?): IntRange =
-        if (onlyLayer != null && onlyLayer in page.layers.indices) onlyLayer..onlyLayer
-        else page.layers.indices
+    private fun layerRange(page: Page, onlyLayer: Int?, hiddenLayers: Set<Int>): List<Int> {
+        val candidates = if (onlyLayer != null && onlyLayer in page.layers.indices) listOf(onlyLayer) else page.layers.indices.toList()
+        return candidates.filter { it !in hiddenLayers }
+    }
 
     /**
-     * Every element on [page] that lies wholly inside the lasso [polygon] (page-local pt) — the
-     * free-form analogue of [inRect]. A stroke is tested against its own points rather than its
-     * bounding box: a diagonal or curved stroke drawn inside the lasso has box corners *outside*
-     * it, so the box rule would silently drop exactly the strokes the user traced around. Elements
-     * that really are rectangles (images, TeX, text) still use their four box corners. A degenerate
-     * polygon (< 3 points) selects nothing.
-     *
-     * Containment is tolerant by [TAP_PAD]: a point counts as inside when it is strictly inside the
-     * polygon *or* within [TAP_PAD] pt of one of its edges. This matches the padding [pickTopmost]
-     * and [inRect] apply, so a thin stroke traced closely by the lasso isn't dropped for landing a
-     * hair outside the traced line.
-     *
-     * [onlyLayer] restricts the sweep to one layer — see [layerRange].
+     * Every element on [page] that lies wholly or primarily inside the lasso [polygon].
      */
-    fun inPolygon(page: Page, polygon: List<Vec2>, onlyLayer: Int? = null): Set<ElementRef> {
+    fun inPolygon(page: Page, polygon: List<Vec2>, onlyLayer: Int? = null, hiddenLayers: Set<Int> = emptySet()): Set<ElementRef> {
         if (polygon.size < 3) return emptySet()
         val hits = LinkedHashSet<ElementRef>()
-        for (li in layerRange(page, onlyLayer)) {
+        for (li in layerRange(page, onlyLayer, hiddenLayers)) {
             page.layers[li].elements.forEachIndexed { ei, el ->
                 if (enclosedBy(polygon, el)) hits += ElementRef(li, ei)
             }
@@ -85,26 +62,33 @@ object SelectionTester {
         return hits
     }
 
-    /** True when every part of [el] we can test lies inside [poly]. */
+    /** True when [el] is enclosed or selected by [poly]. */
     private fun enclosedBy(poly: List<Vec2>, el: Element): Boolean = when {
-        // No trustworthy geometry (unmodelled element, empty stroke) — never enclosed.
         !ElementBounds.isHitTestable(el) -> false
-        el is Stroke -> el.points.all { contains(poly, it.x, it.y) }
+        el is Stroke -> {
+            val pts = el.points
+            if (pts.isEmpty()) false
+            else {
+                val insideCount = pts.count { contains(poly, it.x, it.y) }
+                insideCount >= (pts.size * 0.65).coerceAtLeast(1.0)
+            }
+        }
         else -> {
             val b = ElementBounds.of(el)
             contains(poly, b.left, b.top) && contains(poly, b.right, b.top) &&
-                contains(poly, b.right, b.bottom) && contains(poly, b.left, b.bottom)
+            contains(poly, b.right, b.bottom) && contains(poly, b.left, b.bottom)
         }
     }
 
+    private val Bounds.centerX: Double get() = (left + right) / 2.0
+    private val Bounds.centerY: Double get() = (top + bottom) / 2.0
+
     /**
-     * True when (x, y) is inside [poly] or within [TAP_PAD] of its boundary — the tolerant
-     * containment rule shared by every lasso test.
+     * True when (x, y) is inside [poly] or within [TAP_PAD] of its boundary.
      */
     private fun contains(poly: List<Vec2>, x: Double, y: Double): Boolean =
         strictlyInside(poly, x, y) || nearEdge(poly, x, y, TAP_PAD)
 
-    /** Even-odd ray-cast point-in-polygon test (pt space). */
     private fun strictlyInside(poly: List<Vec2>, x: Double, y: Double): Boolean {
         var inside = false
         var j = poly.size - 1
@@ -119,7 +103,6 @@ object SelectionTester {
         return inside
     }
 
-    /** True when (x, y) lies within [pad] pt of any edge of [poly]. */
     private fun nearEdge(poly: List<Vec2>, x: Double, y: Double, pad: Double): Boolean {
         var j = poly.size - 1
         for (i in poly.indices) {
@@ -129,7 +112,6 @@ object SelectionTester {
         return false
     }
 
-    /** Distance from (x, y) to the segment a–b (pt space). */
     private fun distToSegment(x: Double, y: Double, a: Vec2, b: Vec2): Double {
         val dx = b.x - a.x
         val dy = b.y - a.y
@@ -140,9 +122,10 @@ object SelectionTester {
         return kotlin.math.hypot(x - px, y - py)
     }
 
-    /** The topmost (last-drawn) element whose padded bounds contain (x, y), or null. */
-    fun pickTopmost(page: Page, x: Double, y: Double): ElementRef? {
+    /** The topmost (last-drawn) element whose padded bounds contain (x, y), skipping hidden layers. */
+    fun pickTopmost(page: Page, x: Double, y: Double, hiddenLayers: Set<Int> = emptySet()): ElementRef? {
         for (li in page.layers.indices.reversed()) {
+            if (li in hiddenLayers) continue
             val elements = page.layers[li].elements
             for (ei in elements.indices.reversed()) {
                 val el = elements[ei]
@@ -154,14 +137,15 @@ object SelectionTester {
         return null
     }
 
-    /** The union of the bounds of every element in [refs] on [page], or null if the set is empty. */
+    /** Union bounding box of all elements in [refs]. */
     fun boundsOf(page: Page, refs: Set<ElementRef>): Bounds? {
-        var acc: Bounds? = null
+        var result: Bounds? = null
         for (ref in refs) {
             val el = page.layers.getOrNull(ref.layerIndex)?.elements?.getOrNull(ref.elementIndex) ?: continue
+            if (!ElementBounds.isHitTestable(el)) continue
             val b = ElementBounds.of(el)
-            acc = acc?.union(b) ?: b
+            result = result?.union(b) ?: b
         }
-        return acc
+        return result
     }
 }

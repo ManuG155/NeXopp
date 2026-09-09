@@ -22,6 +22,7 @@ enum class PlotLineStyle(val label: String) {
 
 data class PlotFunctionItem(
     val id: String = UUID.randomUUID().toString(),
+    val name: String = "f",
     val formula: String,
     val color: Int = 0xFF1976D2.toInt(),
     val isVisible: Boolean = true,
@@ -64,12 +65,19 @@ object FunctionPlotter {
         val eqIdx = s.indexOf('=')
         if (eqIdx != -1) {
             val left = s.substring(0, eqIdx).trim().lowercase()
-            if (left.matches(Regex("^[a-zA-Z](\\([a-zA-Z]\\))?$")) || left == "y" || left == "x") {
+            if (left.matches(Regex("^[a-zA-Zα-ωΑ-Ω](\\([a-zA-Zα-ωΑ-Ω0-9]+\\))?$")) || left == "y" || left == "x") {
                 s = s.substring(eqIdx + 1).trim()
             }
         }
 
         s = s.lowercase().replace(" ", "")
+
+        // Greek letters to standard token equivalents if needed
+        s = s.replace("alpha", "α")
+             .replace("beta", "β")
+             .replace("gamma", "γ")
+             .replace("delta", "δ")
+             .replace("theta", "θ")
 
         // Spanish & alternate trigonometric notations
         s = s.replace("sen", "sin")
@@ -78,7 +86,7 @@ object FunctionPlotter {
         s = s.replace("arctg", "atan")
 
         // Unicode radicals & constants
-        s = s.replace(Regex("√([a-zA-Z0-9]+)"), "sqrt($1)")
+        s = s.replace(Regex("√([a-zA-Zα-ωΑ-Ω0-9]+)"), "sqrt($1)")
         s = s.replace("√", "sqrt")
         s = s.replace("π", "pi")
 
@@ -98,13 +106,13 @@ object FunctionPlotter {
 
         // Implicit multiplications:
         // 1. Number before variable/function/parenthesis (protect log10, log2, etc.):
-        s = s.replace(Regex("(?<!log|log1|log2)(\\d)([a-zA-Z])"), "$1*$2")
+        s = s.replace(Regex("(?<!log|log1|log2)(\\d)([a-zA-Zα-ωΑ-Ω])"), "$1*$2")
         s = s.replace(Regex("(?<!log|log1|log2)(\\d)(\\()"), "$1*$2")
         // 2. Closing parenthesis before number/variable/opening parenthesis: )( -> )*(, )x -> )*x
-        s = s.replace(Regex("(\\))([0-9a-zA-Z(])"), "$1*$2")
+        s = s.replace(Regex("(\\))([0-9a-zA-Zα-ωΑ-Ω(])"), "$1*$2")
         // 3. Variable before opening parenthesis or function: x( -> x*(, xsin -> x*sin
-        s = s.replace(Regex("(^|[^a-zA-Z])([xtuvzrθ])(\\()"), "$1$2*$3")
-        s = s.replace(Regex("(^|[^a-zA-Z])([xtuvzrθ])(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|abs|exp|ln|log|sinc)"), "$1$2*$3")
+        s = s.replace(Regex("(^|[^a-zA-Zα-ωΑ-Ω])([xyztuvzrθαβγδ])(\\()"), "$1$2*$3")
+        s = s.replace(Regex("(^|[^a-zA-Zα-ωΑ-Ω])([xyztuvzrθαβγδ])(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|abs|exp|ln|log|sinc)"), "$1$2*$3")
 
         return s
     }
@@ -209,6 +217,7 @@ object FunctionPlotter {
         stepY: Double? = null,
         gridStyle: PlotGridStyle = PlotGridStyle.SUBTLE,
         gridColor: Int = 0x3390A4AE.toInt(),
+        showAxisNumbers: Boolean = true,
         highlightRoots: Boolean = false,
         highlightIntersections: Boolean = false
     ): List<Element> {
@@ -327,7 +336,7 @@ object FunctionPlotter {
                 elements.add(TextElement(font = "Sans", size = 11.0, x = axisX0 + 4.0, y = top - 12.0, color = axesColor, content = axisNameY))
             }
 
-            // X Ticks
+            // X Ticks & Numbers
             val xStep = stepX ?: calculateTickStep(xMin, xMax)
             var curX = ceil(xMin / xStep) * xStep
             while (curX <= xMax) {
@@ -342,11 +351,24 @@ object FunctionPlotter {
                             uniformWidth = true
                         )
                     )
+                    if (showAxisNumbers) {
+                        val labelStr = if (curX == curX.toLong().toDouble()) "${curX.toLong()}" else String.format(java.util.Locale.US, "%.1f", curX)
+                        elements.add(
+                            TextElement(
+                                font = "Sans",
+                                size = 8.5,
+                                x = px - (labelStr.length * 2.5),
+                                y = axisY0 + 5.0,
+                                color = axesColor,
+                                content = labelStr
+                            )
+                        )
+                    }
                 }
                 curX += xStep
             }
 
-            // Y Ticks
+            // Y Ticks & Numbers
             val yStep = stepY ?: calculateTickStep(yMin, yMax)
             var curY = ceil(yMin / yStep) * yStep
             while (curY <= yMax) {
@@ -361,6 +383,19 @@ object FunctionPlotter {
                             uniformWidth = true
                         )
                     )
+                    if (showAxisNumbers) {
+                        val labelStr = if (curY == curY.toLong().toDouble()) "${curY.toLong()}" else String.format(java.util.Locale.US, "%.1f", curY)
+                        elements.add(
+                            TextElement(
+                                font = "Sans",
+                                size = 8.5,
+                                x = axisX0 - (labelStr.length * 5.0 + 5.0),
+                                y = py - 4.0,
+                                color = axesColor,
+                                content = labelStr
+                            )
+                        )
+                    }
                 }
                 curY += yStep
             }
@@ -680,11 +715,11 @@ object FunctionPlotter {
             } else if (ch in '0'.code..'9'.code || ch == '.'.code) {
                 while (ch in '0'.code..'9'.code || ch == '.'.code) nextChar()
                 v = str.substring(startPos, pos).toDoubleOrNull() ?: Double.NaN
-            } else if (ch in 'a'.code..'z'.code) {
-                while (ch in 'a'.code..'z'.code || ch in '0'.code..'9'.code) nextChar()
+            } else if (ch in 'a'.code..'z'.code || ch > 127) {
+                while ((ch in 'a'.code..'z'.code || ch > 127) || ch in '0'.code..'9'.code) nextChar()
                 val func = str.substring(startPos, pos)
                 v = when (func) {
-                    "x", "t", "u", "v", "z", "r", "theta", "θ" -> xVal
+                    "x", "y", "t", "u", "v", "z", "r", "theta", "θ", "alpha", "α", "beta", "β", "gamma", "γ", "delta", "δ", "w", "s", "k", "n" -> xVal
                     "pi" -> PI
                     "e" -> E
                     else -> {

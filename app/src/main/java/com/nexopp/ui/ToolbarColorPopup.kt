@@ -15,10 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
 
 val PEN_COLORS: List<Int> = listOf(
     0xFF000000.toInt(), // Black
@@ -42,28 +43,23 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
 
     ToolbarPopupButton(
         face = { open ->
-            IconButton(onClick = open, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = open, modifier = Modifier.size(46.dp)) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    modifier = Modifier.size(34.dp)
                 ) {
-                    val dotSize = (callbacks.width * 2.5f).coerceIn(6f, 22f)
-                    // High contrast outer ring so black ink is visible in dark theme
+                    val dotSize = (callbacks.width * 2.5f).coerceIn(8f, 24f).dp
+                    // Clean solid circle of current ink color
                     Box(
                         modifier = Modifier
-                            .size((dotSize + 2f).dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(dotSize.dp)
+                            .size(dotSize)
                             .clip(CircleShape)
                             .background(Color(callbacks.color))
+                            .border(
+                                width = 1.dp,
+                                color = if (Color(callbacks.color).luminance() < 0.2f) Color.Gray.copy(alpha = 0.6f) else Color.Transparent,
+                                shape = CircleShape
+                            )
                     )
                 }
             }
@@ -71,35 +67,44 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
     ) { dismiss ->
         Column(
             modifier = Modifier
-                .width(260.dp)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .width(320.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Section 1: Color
+            // Section 1: Color Header & Painter Palette
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Color", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    "Color de trazo",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
                 IconButton(
                     onClick = { editing = true; dismiss() },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(Icons.Filled.ColorLens, contentDescription = "Personalizado", modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Filled.ColorLens,
+                        contentDescription = "Paleta de pintor completa",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
-            // Quick Color Palette Grid
+            // Quick Color Palette Grid: Solid filled circles with clean selection ring
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 PEN_COLORS.take(4).forEach { col ->
-                    ColorSwatch(
+                    CleanColorSwatch(
                         color = col,
                         selected = callbacks.color == col,
-                        onClick = { callbacks.onColor(col); dismiss() }
+                        onClick = { callbacks.onColor(col); dismiss() },
+                        size = 40.dp
                     )
                 }
             }
@@ -108,10 +113,11 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 PEN_COLORS.drop(4).take(4).forEach { col ->
-                    ColorSwatch(
+                    CleanColorSwatch(
                         color = col,
                         selected = callbacks.color == col,
-                        onClick = { callbacks.onColor(col); dismiss() }
+                        onClick = { callbacks.onColor(col); dismiss() },
+                        size = 40.dp
                     )
                 }
             }
@@ -124,12 +130,21 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Grosor", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    String.format(java.util.Locale.US, "%.1f pt", callbacks.width),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary
+                    "Grosor de trazo",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        String.format(java.util.Locale.US, "%.1f pt", callbacks.width),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
 
             Slider(
@@ -139,17 +154,17 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Preset Width Buttons
+            // Preset Width Buttons (Large tablet targets)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("Fino" to 0.85f, "Medio" to 1.5f, "Grueso" to 3.0f).forEach { (label, w) ->
-                    val isSel = (callbacks.width - w).let { it in -0.1f..0.1f }
+                listOf("Fino (0.8 pt)" to 0.85f, "Medio (1.5 pt)" to 1.5f, "Grueso (3.0 pt)" to 3.0f, "Extra (6.0 pt)" to 6.0f).forEach { (label, w) ->
+                    val isSel = (callbacks.width - w).let { it in -0.15f..0.15f }
                     FilterChip(
                         selected = isSel,
                         onClick = { callbacks.onWidth(w) },
-                        label = { Text(label, fontSize = 11.sp) },
+                        label = { Text(label, fontSize = 12.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -165,41 +180,45 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
     )
 }
 
+/**
+ * Clean, uniform solid-color swatch with no strange white halos or multi-ring artifacts.
+ */
 @Composable
-private fun ColorSwatch(
+fun CleanColorSwatch(
     color: Int,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    size: Dp = 36.dp,
+    modifier: Modifier = Modifier
 ) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+        modifier = modifier
+            .size(size)
             .clickable(onClick = onClick)
     ) {
-        // Outer contrast ring for black/dark colors
+        // Main solid filled circle
         Box(
             modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(1.dp, Color.Gray.copy(alpha = 0.4f), CircleShape)
-        )
-        // Main swatch
-        Box(
-            modifier = Modifier
-                .size(22.dp)
+                .size(if (selected) size - 10.dp else size - 4.dp)
                 .clip(CircleShape)
                 .background(Color(color))
+                .border(
+                    width = 1.dp,
+                    color = if (Color(color).luminance() < 0.25f) Color.Gray.copy(alpha = 0.5f) else Color.Transparent,
+                    shape = CircleShape
+                )
         )
+        // Clean single high-contrast selection ring around the circle
         if (selected) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
+                    .size(size)
+                    .border(
+                        width = 3.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    )
             )
         }
     }
