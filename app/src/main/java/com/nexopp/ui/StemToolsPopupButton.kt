@@ -23,9 +23,9 @@ fun StemToolsPopupButton(
 ) {
     ToolbarPopupButton(
         icon = Icons.Filled.Functions,
-        contentDescription = "Herramientas STEM",
+        contentDescription = "Herramientas de Matemáticas y Ciencias",
     ) { dismiss ->
-        MenuHeading("Herramientas STEM")
+        MenuHeading("Matemáticas y Ciencias")
         DropdownMenuItem(
             text = { Text("Graficador de Funciones") },
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },

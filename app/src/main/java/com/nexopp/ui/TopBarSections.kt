@@ -527,7 +527,7 @@ private fun MatematicasSectionContent(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier = Modifier.height(32.dp)
     ) {
-        Text("∫ Símbolos STEM", fontSize = 11.sp)
+        Text("∫ Símbolos Técnicos", fontSize = 11.sp)
     }
 
     OutlinedButton(
@@ -819,7 +819,7 @@ private fun AudioSectionContent(
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            if (audio.recording) "Detener Grabación" else "Grabar Audio STEM (Offline)",
+            if (audio.recording) "Detener Grabación" else "Grabar Audio (Offline)",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )

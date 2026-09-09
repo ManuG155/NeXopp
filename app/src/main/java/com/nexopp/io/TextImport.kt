@@ -37,9 +37,17 @@ class TextImport(private val store: PdfStore, private val generator: TextPdfGene
                     "(raise it in Settings → Storage)"
             )
         }
-        val flavor = flavorOf(name)
+        val isOffice = OfficeDocumentExtractor.isOfficeDocument(name)
+        val flavor = if (isOffice || FileKind.isMarkdownName(name)) TextFlavor.MARKDOWN else TextFlavor.PLAIN
         return store.cached(key(staged, name, flavor)) { out ->
-            out.outputStream().use { generator.generate(staged, it, flavor = flavor) }
+            out.outputStream().use { os ->
+                if (isOffice) {
+                    val md = OfficeDocumentExtractor.extractToMarkdown(staged, name)
+                    generator.generate(md, os, flavor = TextFlavor.MARKDOWN)
+                } else {
+                    generator.generate(staged, os, flavor = flavor)
+                }
+            }
         }
     }
 
@@ -49,7 +57,7 @@ class TextImport(private val store: PdfStore, private val generator: TextPdfGene
      * [FileKind.isMarkdownName]).
      */
     private fun flavorOf(name: String): TextFlavor =
-        if (FileKind.isMarkdownName(name)) TextFlavor.MARKDOWN else TextFlavor.PLAIN
+        if (OfficeDocumentExtractor.isOfficeDocument(name) || FileKind.isMarkdownName(name)) TextFlavor.MARKDOWN else TextFlavor.PLAIN
 
     /** A size in bytes as whole MB, for the message above (rounded up, so nothing reads as "0 MB"). */
     private fun mb(bytes: Long): Long = (bytes + BYTES_PER_MB - 1) / BYTES_PER_MB

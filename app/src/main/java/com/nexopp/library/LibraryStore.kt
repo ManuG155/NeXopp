@@ -10,13 +10,9 @@ class LibraryStore(private val context: Context) {
     val notebooksDir: File = File(context.filesDir, "notebooks").apply { mkdirs() }
 
     fun loadSubjects(): List<Subject> {
-        if (!file.exists()) {
-            val defaults = defaultSubjects()
-            save(defaults, emptyList(), defaultTags())
-            return defaults
-        }
-        val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return defaultSubjects()
-        if (!json.has("subjects")) return defaultSubjects()
+        if (!file.exists()) return emptyList()
+        val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return emptyList()
+        if (!json.has("subjects")) return emptyList()
         val array = json.optJSONArray("subjects") ?: JSONArray()
         val list = mutableListOf<Subject>()
         for (i in 0 until array.length()) {
@@ -37,9 +33,9 @@ class LibraryStore(private val context: Context) {
     }
 
     fun loadTags(): List<Tag> {
-        if (!file.exists()) return defaultTags()
-        val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return defaultTags()
-        if (!json.has("tags")) return defaultTags()
+        if (!file.exists()) return emptyList()
+        val json = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return emptyList()
+        if (!json.has("tags")) return emptyList()
         val array = json.optJSONArray("tags") ?: JSONArray()
         val list = mutableListOf<Tag>()
         for (i in 0 until array.length()) {

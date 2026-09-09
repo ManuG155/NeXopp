@@ -161,10 +161,11 @@ class DocumentIo(
         // An image is likewise not a document to parse: it is handed back for the caller to hang on
         // a page as a pixmap background (see [LoadedFile.Image]).
         if (kind == FileKind.IMAGE) return LoadedFile.Image(staged, name)
-        // A text file has no `.xopp` representation of its own, so it is typeset into a PDF and then
+        val isOffice = OfficeDocumentExtractor.isOfficeDocument(name)
+        // A text or office file has no `.xopp` representation of its own, so it is typeset into a PDF and then
         // opened as one — every PDF path downstream (backgrounds, page building, text selection)
         // works unchanged from here (see [TextImport]).
-        if (kind == FileKind.TEXT) {
+        if (kind == FileKind.TEXT || isOffice) {
             val generator = textImport ?: error("no text generator configured")
             return LoadedFile.Pdf(
                 generator.pdfFor(staged, name, limits.textImportBytes),
