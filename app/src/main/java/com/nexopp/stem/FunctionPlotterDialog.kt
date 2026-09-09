@@ -5,12 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.nexopp.format.model.Element
 
 val STEM_PLOT_COLORS = listOf(
@@ -29,6 +33,7 @@ val STEM_PLOT_COLORS = listOf(
     0xFF388E3C.toInt(), // Green
     0xFF7B1FA2.toInt(), // Purple
     0xFFF57C00.toInt(), // Orange
+    0xFF00838F.toInt(), // Teal/Cyan
     0xFF000000.toInt(), // Black
 )
 
@@ -43,190 +48,599 @@ val PRESET_FORMULAS = listOf(
     "sin(x)/x" to "Sinc",
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FunctionPlotterDialog(
-    originX: Double,
-    originY: Double,
+    originX: Double = 250.0,
+    originY: Double = 250.0,
     onDismiss: () -> Unit,
     onInsertPlot: (List<Element>) -> Unit
 ) {
-    var formula by remember { mutableStateOf("sin(x)") }
+    var selectedTab by remember { mutableStateOf(0) } // 0: Funciones f(x), 1: Paramétricas, 2: Puntos y Análisis, 3: Ejes y Rejilla
+
+    var functions by remember {
+        mutableStateOf(
+            listOf(
+                PlotFunctionItem(formula = "sin(x)", color = STEM_PLOT_COLORS[0]),
+                PlotFunctionItem(formula = "cos(x)", color = STEM_PLOT_COLORS[1], isVisible = false)
+            )
+        )
+    }
+
+    var parametricFunctions by remember {
+        mutableStateOf(
+            listOf(
+                ParametricFunctionItem(
+                    formulaX = "3*cos(t)",
+                    formulaY = "3*sin(t)",
+                    tMin = 0.0,
+                    tMax = 6.28318,
+                    color = STEM_PLOT_COLORS[3],
+                    isVisible = false
+                )
+            )
+        )
+    }
+
+    var points by remember { mutableStateOf<List<PlotPoint>>(emptyList()) }
+    var newPointX by remember { mutableStateOf("") }
+    var newPointY by remember { mutableStateOf("") }
+
+    var evalXStr by remember { mutableStateOf("0") }
+    var evalResult by remember { mutableStateOf("") }
+
+    // Range Bounds
     var xMinStr by remember { mutableStateOf("-5") }
     var xMaxStr by remember { mutableStateOf("5") }
-    var yMinStr by remember { mutableStateOf("-3") }
-    var yMaxStr by remember { mutableStateOf("3") }
-    var selectedColor by remember { mutableStateOf(STEM_PLOT_COLORS.first()) }
+    var yMinStr by remember { mutableStateOf("-4") }
+    var yMaxStr by remember { mutableStateOf("4") }
     var drawAxes by remember { mutableStateOf(true) }
+    var gridStyle by remember { mutableStateOf(PlotGridStyle.SUBTLE) }
+    var highlightRoots by remember { mutableStateOf(false) }
+    var highlightIntersections by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text("Graficador de Funciones STEM", fontWeight = FontWeight.Bold)
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // Formula input
-                OutlinedTextField(
-                    value = formula,
-                    onValueChange = { formula = it },
-                    label = { Text("Función f(x)") },
-                    prefix = { Text("f(x) = ", fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) },
-                    singleLine = true,
-                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 16.sp),
-                    modifier = Modifier.fillMaxWidth()
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.90f),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp,
+            shadowElevation = 16.dp
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Graficador Matemático STEM", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cerrar")
+                        }
+                    },
+                    actions = {
+                        Button(
+                            onClick = {
+                                val xMin = xMinStr.toDoubleOrNull() ?: -5.0
+                                val xMax = xMaxStr.toDoubleOrNull() ?: 5.0
+                                val yMin = yMinStr.toDoubleOrNull() ?: -4.0
+                                val yMax = yMaxStr.toDoubleOrNull() ?: 4.0
+
+                                val elements = FunctionPlotter.generateAdvancedPlotElements(
+                                    functions = functions,
+                                    parametricFunctions = parametricFunctions,
+                                    points = points,
+                                    originX = originX,
+                                    originY = originY,
+                                    plotWidthPt = 320.0,
+                                    plotHeightPt = 240.0,
+                                    xMin = xMin,
+                                    xMax = xMax,
+                                    yMin = yMin,
+                                    yMax = yMax,
+                                    drawAxes = drawAxes,
+                                    gridStyle = gridStyle,
+                                    highlightRoots = highlightRoots,
+                                    highlightIntersections = highlightIntersections
+                                )
+                                onInsertPlot(elements)
+                                onDismiss()
+                            },
+                            enabled = functions.any { it.isVisible && it.formula.isNotBlank() } ||
+                                    parametricFunctions.any { it.isVisible && it.formulaX.isNotBlank() && it.formulaY.isNotBlank() }
+                        ) {
+                            Icon(Icons.Filled.AddCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Insertar en Página")
+                        }
+                        Spacer(Modifier.width(12.dp))
+                    }
                 )
 
-                // Quick Math Symbol Buttons
-                Row(
+                // Tabs Navigation
+                PrimaryTabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Funciones f(x)") },
+                        icon = { Icon(Icons.Filled.Functions, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Paramétricas") },
+                        icon = { Icon(Icons.Filled.Timeline, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        text = { Text("Puntos y Raíces") },
+                        icon = { Icon(Icons.Filled.ScatterPlot, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        text = { Text("Ejes y Cuadrícula") },
+                        icon = { Icon(Icons.Filled.Grid4x4, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Content for selected Tab
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        .weight(1f)
+                        .padding(20.dp)
                 ) {
-                    listOf("x", "^2", "+", "-", "*", "/", "sin(", "cos(", "tan(", "sqrt(", "exp(", "ln(", "abs(", "pi").forEach { symbol ->
-                        AssistChip(
-                            onClick = { formula += symbol },
-                            label = { Text(symbol, style = MaterialTheme.typography.labelSmall) },
-                            modifier = Modifier.height(28.dp)
-                        )
-                    }
-                }
-
-                // Preset formulas
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Preajustes comunes", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        PRESET_FORMULAS.forEach { (presetFormula, name) ->
-                            FilterChip(
-                                selected = formula == presetFormula,
-                                onClick = { formula = presetFormula },
-                                label = { Text(name, style = MaterialTheme.typography.labelSmall) }
-                            )
-                        }
-                    }
-                }
-
-                // Range Bounds Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = xMinStr,
-                        onValueChange = { xMinStr = it },
-                        label = { Text("X min") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = xMaxStr,
-                        onValueChange = { xMaxStr = it },
-                        label = { Text("X max") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = yMinStr,
-                        onValueChange = { yMinStr = it },
-                        label = { Text("Y min") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = yMaxStr,
-                        onValueChange = { yMaxStr = it },
-                        label = { Text("Y max") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // Curve Color & Axes Checkbox
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Color swatches
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        STEM_PLOT_COLORS.forEach { colorVal ->
-                            val isSelected = selectedColor == colorVal
-                            Box(
+                    when (selectedTab) {
+                        0 -> {
+                            // Tab 0: Multiple Functions f(x)
+                            Column(
                                 modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(colorVal))
-                                    .clickable { selectedColor = colorVal }
-                                    .then(
-                                        if (isSelected) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                        else Modifier
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                if (isSelected) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Funciones simultáneas:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Button(
+                                        onClick = {
+                                            val nextColor = STEM_PLOT_COLORS[functions.size % STEM_PLOT_COLORS.size]
+                                            functions = functions + PlotFunctionItem(formula = "x", color = nextColor)
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Añadir función")
+                                    }
+                                }
+
+                                functions.forEachIndexed { index, fn ->
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        tonalElevation = 2.dp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = fn.isVisible,
+                                                    onCheckedChange = { checked ->
+                                                        functions = functions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(isVisible = checked) else item
+                                                        }
+                                                    }
+                                                )
+
+                                                OutlinedTextField(
+                                                    value = fn.formula,
+                                                    onValueChange = { newFormula ->
+                                                        functions = functions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(formula = newFormula) else item
+                                                        }
+                                                    },
+                                                    prefix = {
+                                                        Text("f${index + 1}(x) = ", fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                                    },
+                                                    singleLine = true,
+                                                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 15.sp),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+
+                                                Spacer(Modifier.width(8.dp))
+
+                                                // Color Picker Swatches
+                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                    STEM_PLOT_COLORS.take(4).forEach { colorVal ->
+                                                        val isSelected = fn.color == colorVal
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(24.dp)
+                                                                .clip(CircleShape)
+                                                                .background(Color(colorVal))
+                                                                .clickable {
+                                                                    functions = functions.mapIndexed { i, item ->
+                                                                        if (i == index) item.copy(color = colorVal) else item
+                                                                    }
+                                                                }
+                                                                .then(
+                                                                    if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                                                    else Modifier
+                                                                )
+                                                        )
+                                                    }
+                                                }
+
+                                                if (functions.size > 1) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            functions = functions.filterIndexed { i, _ -> i != index }
+                                                        }
+                                                    ) {
+                                                        Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                                    }
+                                                }
+                                            }
+
+                                            // Quick Math Buttons for active editing
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                listOf("x", "^2", "+", "-", "*", "/", "sin(", "cos(", "tan(", "sqrt(", "exp(", "ln(", "abs(", "pi").forEach { symbol ->
+                                                    AssistChip(
+                                                        onClick = {
+                                                            functions = functions.mapIndexed { i, item ->
+                                                                if (i == index) item.copy(formula = item.formula + symbol) else item
+                                                            }
+                                                        },
+                                                        label = { Text(symbol, style = MaterialTheme.typography.labelSmall) },
+                                                        modifier = Modifier.height(26.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Quick presets
+                                Text("Preajustes rápidos:", style = MaterialTheme.typography.labelMedium)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    PRESET_FORMULAS.forEach { (presetFormula, name) ->
+                                        FilterChip(
+                                            selected = functions.firstOrNull()?.formula == presetFormula,
+                                            onClick = {
+                                                functions = listOf(PlotFunctionItem(formula = presetFormula, color = STEM_PLOT_COLORS.first()))
+                                            },
+                                            label = { Text(name, style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            // Tab 1: Parametric Functions
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text("Curvas Paramétricas (x(t), y(t)):", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                                parametricFunctions.forEachIndexed { index, pFn ->
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        tonalElevation = 2.dp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = pFn.isVisible,
+                                                    onCheckedChange = { checked ->
+                                                        parametricFunctions = parametricFunctions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(isVisible = checked) else item
+                                                        }
+                                                    }
+                                                )
+                                                Text("Habilitar curva paramétrica ${index + 1}", fontWeight = FontWeight.Bold)
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = pFn.formulaX,
+                                                    onValueChange = { newX ->
+                                                        parametricFunctions = parametricFunctions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(formulaX = newX) else item
+                                                        }
+                                                    },
+                                                    prefix = { Text("x(t) = ", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
+                                                    singleLine = true,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+
+                                                OutlinedTextField(
+                                                    value = pFn.formulaY,
+                                                    onValueChange = { newY ->
+                                                        parametricFunctions = parametricFunctions.mapIndexed { i, item ->
+                                                            if (i == index) item.copy(formulaY = newY) else item
+                                                        }
+                                                    },
+                                                    prefix = { Text("y(t) = ", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
+                                                    singleLine = true,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Tab 2: Points & Roots Analysis
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // 1. Live Function Evaluator
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("Evaluación de Función en Punto:", fontWeight = FontWeight.Bold)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = evalXStr,
+                                                onValueChange = { evalXStr = it },
+                                                label = { Text("Valor de x") },
+                                                singleLine = true,
+                                                modifier = Modifier.width(120.dp)
+                                            )
+
+                                            Button(
+                                                onClick = {
+                                                    val x = evalXStr.toDoubleOrNull() ?: 0.0
+                                                    val evals = functions.filter { it.isVisible }.map { fn ->
+                                                        val y = FunctionPlotter.evaluate(fn.formula, x)
+                                                        "f(x) = ${if (y.isNaN()) "Indefinido" else String.format(java.util.Locale.US, "%.4f", y)}"
+                                                    }
+                                                    evalResult = evals.joinToString("  |  ")
+                                                }
+                                            ) {
+                                                Text("Evaluar f(x)")
+                                            }
+
+                                            if (evalResult.isNotBlank()) {
+                                                Text(evalResult, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 2. Automated Roots & Intersections Highlights
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("Análisis Automático:", fontWeight = FontWeight.Bold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(checked = highlightRoots, onCheckedChange = { highlightRoots = it })
+                                            Text("Calcular y marcar raíces / ceros de las funciones (f(x) = 0)")
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(checked = highlightIntersections, onCheckedChange = { highlightIntersections = it })
+                                            Text("Calcular y marcar intersecciones entre funciones (f1(x) = f2(x))")
+                                        }
+                                    }
+                                }
+
+                                // 3. Custom Point Markers
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("Puntos Notables y Coordenadas:", fontWeight = FontWeight.Bold)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            OutlinedTextField(
+                                                value = newPointX,
+                                                onValueChange = { newPointX = it },
+                                                label = { Text("Coord X") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = newPointY,
+                                                onValueChange = { newPointY = it },
+                                                label = { Text("Coord Y") },
+                                                singleLine = true,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Button(
+                                                onClick = {
+                                                    val px = newPointX.toDoubleOrNull()
+                                                    val py = newPointY.toDoubleOrNull()
+                                                    if (px != null && py != null) {
+                                                        points = points + PlotPoint(x = px, y = py)
+                                                        newPointX = ""
+                                                        newPointY = ""
+                                                    }
+                                                },
+                                                enabled = newPointX.isNotBlank() && newPointY.isNotBlank()
+                                            ) {
+                                                Text("Añadir punto")
+                                            }
+                                        }
+
+                                        if (points.isNotEmpty()) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                points.forEachIndexed { pIdx, pt ->
+                                                    InputChip(
+                                                        selected = true,
+                                                        onClick = { points = points.filterIndexed { i, _ -> i != pIdx } },
+                                                        label = { Text("(${pt.x}, ${pt.y})") },
+                                                        trailingIcon = { Icon(Icons.Filled.Close, contentDescription = "Eliminar", modifier = Modifier.size(14.dp)) }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        3 -> {
+                            // Tab 3: Grid & Axes Settings
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text("Rangos y Límites de Visualización:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = xMinStr,
+                                        onValueChange = { xMinStr = it },
+                                        label = { Text("X mínimo") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = xMaxStr,
+                                        onValueChange = { xMaxStr = it },
+                                        label = { Text("X máximo") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = yMinStr,
+                                        onValueChange = { yMinStr = it },
+                                        label = { Text("Y mínimo") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = yMaxStr,
+                                        onValueChange = { yMaxStr = it },
+                                        label = { Text("Y máximo") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("Configuración de Cuadrícula:", fontWeight = FontWeight.Bold)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            PlotGridStyle.values().forEach { style ->
+                                                FilterChip(
+                                                    selected = gridStyle == style,
+                                                    onClick = { gridStyle = style },
+                                                    label = { Text(style.label) }
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(checked = drawAxes, onCheckedChange = { drawAxes = it })
+                                            Text("Dibujar ejes coordenados cartesianos (X, Y) con marcas de graduación")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-
-                    // Draw axes toggle
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = drawAxes,
-                            onCheckedChange = { drawAxes = it }
-                        )
-                        Text("Ejes", style = MaterialTheme.typography.bodySmall)
-                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val xMin = xMinStr.toDoubleOrNull() ?: -5.0
-                    val xMax = xMaxStr.toDoubleOrNull() ?: 5.0
-                    val yMin = yMinStr.toDoubleOrNull() ?: -5.0
-                    val yMax = yMaxStr.toDoubleOrNull() ?: 5.0
-
-                    val elements = FunctionPlotter.generatePlotElements(
-                        formula = formula,
-                        originX = originX,
-                        originY = originY,
-                        plotWidthPt = 280.0,
-                        plotHeightPt = 200.0,
-                        xMin = xMin,
-                        xMax = xMax,
-                        yMin = yMin,
-                        yMax = yMax,
-                        strokeColor = selectedColor,
-                        strokeWidthPt = 2.0f,
-                        drawAxes = drawAxes
-                    )
-                    onInsertPlot(elements)
-                    onDismiss()
-                },
-                enabled = formula.isNotBlank()
-            ) {
-                Text("Insertar en Página")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    )
+    }
 }

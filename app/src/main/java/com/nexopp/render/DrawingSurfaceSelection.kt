@@ -126,6 +126,28 @@ fun DrawingSurfaceView.insertElements(elements: List<Element>, pageIndex: Int = 
     render()
 }
 
+/** Insert text element onto current page as an undoable edit. */
+fun DrawingSurfaceView.insertTextElement(
+    text: String,
+    x: Double = 80.0,
+    y: Double = 120.0,
+    sizePt: Double = 14.0,
+    color: Int = colorArgb,
+    pageIndex: Int = visiblePageIndex()
+) {
+    val textElem = com.nexopp.format.model.TextElement(
+        font = "Sans",
+        size = sizePt,
+        x = x,
+        y = y,
+        color = color,
+        content = text
+    )
+    insertElements(listOf(textElem), pageIndex)
+}
+
+
+
 // --- PDF text selection -------------------------------------------------------------------------
 
 /** Down with the text-select tool: anchor the selection at the word nearest the touch. */

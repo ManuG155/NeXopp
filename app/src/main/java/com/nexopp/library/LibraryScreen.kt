@@ -1,9 +1,7 @@
-// Ruta: app/src/main/java/com/nexopp/library/LibraryScreen.kt
 package com.nexopp.library
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -73,45 +70,56 @@ fun LibraryScreen(
     BackHandler { activity?.finish() }
 
     var subjects by remember { mutableStateOf(store.loadSubjects()) }
+    var tags by remember { mutableStateOf(store.loadTags()) }
     var notebooks by remember { mutableStateOf(store.loadNotebooks()) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(LibraryFilter.ALL) }
     var selectedSubjectId by remember { mutableStateOf<String?>(null) }
+    var selectedTagId by remember { mutableStateOf<String?>(null) }
+    var sortOption by remember { mutableStateOf(NotebookSortOption.RECENT_DESC) }
     var viewMode by remember { mutableStateOf(LibraryViewMode.GRID) }
 
     // Dialog states
     var showCreateNotebookDialog by remember { mutableStateOf(false) }
     var showSubjectDialog by remember { mutableStateOf(false) }
+    var showTagsDialog by remember { mutableStateOf(false) }
+    var showGlobalSearchDialog by remember { mutableStateOf(false) }
     var showTrashDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
+
     var editingSubject by remember { mutableStateOf<Subject?>(null) }
     var renamingNotebook by remember { mutableStateOf<Notebook?>(null) }
     var deletingNotebook by remember { mutableStateOf<Notebook?>(null) }
-    var deletingSubject by remember { mutableStateOf<Subject?>(null) }
+    var assigningTagsNotebook by remember { mutableStateOf<Notebook?>(null) }
+    var movingNotebook by remember { mutableStateOf<Notebook?>(null) }
+
+    val searchEngine = remember { GlobalSearchEngine() }
 
     fun refresh() {
         subjects = store.loadSubjects()
+        tags = store.loadTags()
         notebooks = store.loadNotebooks()
     }
 
-    // Filtered notebooks logic
-    val filteredNotebooks = remember(notebooks, searchQuery, selectedFilter, selectedSubjectId) {
-        notebooks.filter { nb ->
-            val matchesQuery = searchQuery.isBlank() || 
-                nb.name.contains(searchQuery, ignoreCase = true) ||
-                subjects.find { it.id == nb.subjectId }?.name?.contains(searchQuery, ignoreCase = true) == true
+    // Filtered & Sorted notebooks logic
+    val filteredNotebooks = remember(notebooks, subjects, tags, searchQuery, selectedFilter, selectedSubjectId, selectedTagId, sortOption) {
+        val searchResults = searchEngine.search(
+            query = searchQuery,
+            notebooks = notebooks,
+            subjects = subjects,
+            tags = tags,
+            filterSubjectId = selectedSubjectId,
+            filterTagIds = if (selectedTagId != null) setOf(selectedTagId!!) else emptySet(),
+            onlyFavorites = selectedFilter == LibraryFilter.FAVORITES,
+            sortOption = sortOption
+        )
+        val candidateNotebooks = searchResults.map { it.notebook }
 
-            val matchesFilter = when (selectedFilter) {
-                LibraryFilter.ALL -> true
-                LibraryFilter.RECENT -> true // Sorted by lastModified
-                LibraryFilter.FAVORITES -> nb.isFavorite
-            }
-
-            val matchesSubject = selectedSubjectId == null || nb.subjectId == selectedSubjectId
-
-            matchesQuery && matchesFilter && matchesSubject
-        }.let { list ->
-            if (selectedFilter == LibraryFilter.RECENT) list.sortedByDescending { it.lastModified } else list
+        when (selectedFilter) {
+            LibraryFilter.ALL -> candidateNotebooks
+            LibraryFilter.RECENT -> candidateNotebooks.sortedByDescending { it.lastModified }
+            LibraryFilter.FAVORITES -> candidateNotebooks.filter { it.isFavorite }
         }
     }
 
@@ -140,12 +148,16 @@ fun LibraryScreen(
                         }
                     },
                     actions = {
-                        // Search bar input
+                        // Instant Search Bar & Full Search button
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Buscar cuadernos…", style = MaterialTheme.typography.bodyMedium) },
-                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodyMedium) },
+                            leadingIcon = {
+                                IconButton(onClick = { showGlobalSearchDialog = true }) {
+                                    Icon(Icons.Filled.Search, contentDescription = "Búsqueda global", modifier = Modifier.size(20.dp))
+                                }
+                            },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
@@ -160,11 +172,43 @@ fun LibraryScreen(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                             ),
                             modifier = Modifier
-                                .width(260.dp)
+                                .width(220.dp)
                                 .height(44.dp)
                         )
 
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
+
+                        // Sort Menu
+                        Box {
+                            IconButton(onClick = { showSortMenu = true }) {
+                                Icon(Icons.Filled.Sort, contentDescription = "Ordenar")
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                Text(
+                                    "Ordenar cuadernos por:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                )
+                                NotebookSortOption.values().forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label, fontWeight = if (sortOption == option) FontWeight.Bold else FontWeight.Normal) },
+                                        trailingIcon = {
+                                            if (sortOption == option) {
+                                                Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        },
+                                        onClick = {
+                                            sortOption = option
+                                            showSortMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
 
                         // Toggle Grid / List view
                         IconButton(onClick = {
@@ -186,84 +230,129 @@ fun LibraryScreen(
                     }
                 )
 
-                // Sub-header: Navigation Chips & Subjects row
+                // Sub-header: Navigation Chips, Subjects row & Tags row
                 Surface(
                     tonalElevation = 1.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Filter Pills
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == LibraryFilter.ALL && selectedSubjectId == null,
-                                onClick = { selectedFilter = LibraryFilter.ALL; selectedSubjectId = null },
-                                label = { Text("Todos") },
-                                leadingIcon = { Icon(Icons.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            )
-                        }
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == LibraryFilter.RECENT && selectedSubjectId == null,
-                                onClick = { selectedFilter = LibraryFilter.RECENT; selectedSubjectId = null },
-                                label = { Text("Recientes") },
-                                leadingIcon = { Icon(Icons.Filled.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            )
-                        }
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == LibraryFilter.FAVORITES,
-                                onClick = { selectedFilter = LibraryFilter.FAVORITES; selectedSubjectId = null },
-                                label = { Text("Favoritos") },
-                                leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp)) }
-                            )
+                    Column {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Filter Pills
+                            item {
+                                FilterChip(
+                                    selected = selectedFilter == LibraryFilter.ALL && selectedSubjectId == null && selectedTagId == null,
+                                    onClick = { selectedFilter = LibraryFilter.ALL; selectedSubjectId = null; selectedTagId = null },
+                                    label = { Text("Todos") },
+                                    leadingIcon = { Icon(Icons.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                )
+                            }
+                            item {
+                                FilterChip(
+                                    selected = selectedFilter == LibraryFilter.RECENT && selectedSubjectId == null && selectedTagId == null,
+                                    onClick = { selectedFilter = LibraryFilter.RECENT; selectedSubjectId = null; selectedTagId = null },
+                                    label = { Text("Recientes") },
+                                    leadingIcon = { Icon(Icons.Filled.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                )
+                            }
+                            item {
+                                FilterChip(
+                                    selected = selectedFilter == LibraryFilter.FAVORITES,
+                                    onClick = { selectedFilter = LibraryFilter.FAVORITES; selectedSubjectId = null; selectedTagId = null },
+                                    label = { Text("Favoritos") },
+                                    leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp)) }
+                                )
+                            }
+
+                            item {
+                                VerticalDivider(Modifier.height(24.dp).padding(horizontal = 4.dp))
+                            }
+
+                            // Subject chips
+                            items(subjects) { subject ->
+                                val isSelected = selectedSubjectId == subject.id
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        selectedSubjectId = if (isSelected) null else subject.id
+                                        selectedFilter = LibraryFilter.ALL
+                                    },
+                                    label = { Text(subject.name) },
+                                    leadingIcon = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(subject.color))
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        val count = notebooks.count { it.subjectId == subject.id }
+                                        Text(
+                                            "$count",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                )
+                            }
+
+                            // Add Subject Button
+                            item {
+                                AssistChip(
+                                    onClick = { showSubjectDialog = true },
+                                    label = { Text("Nueva Asignatura") },
+                                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                )
+                            }
                         }
 
-                        item {
-                            VerticalDivider(Modifier.height(24.dp).padding(horizontal = 4.dp))
-                        }
-
-                        // Subject chips
-                        items(subjects) { subject ->
-                            val isSelected = selectedSubjectId == subject.id
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    selectedSubjectId = if (isSelected) null else subject.id
-                                    selectedFilter = LibraryFilter.ALL
-                                },
-                                label = { Text(subject.name) },
-                                leadingIcon = {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(subject.color))
-                                    )
-                                },
-                                trailingIcon = {
-                                    val count = notebooks.count { it.subjectId == subject.id }
-                                    Text(
-                                        "$count",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Tags Row
+                        if (tags.isNotEmpty()) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                item {
+                                    Text("Etiquetas:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                items(tags) { tag ->
+                                    val isSelected = selectedTagId == tag.id
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedTagId = if (isSelected) null else tag.id
+                                        },
+                                        label = { Text("#${tag.name}", style = MaterialTheme.typography.labelSmall) },
+                                        leadingIcon = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(tag.color))
+                                            )
+                                        }
                                     )
                                 }
-                            )
-                        }
-
-                        // Add Subject Button
-                        item {
-                            AssistChip(
-                                onClick = { showSubjectDialog = true },
-                                label = { Text("Nueva Asignatura") },
-                                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            )
+                                item {
+                                    TextButton(
+                                        onClick = { showTagsDialog = true },
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                                    ) {
+                                        Icon(Icons.Filled.LocalOffer, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Gestionar", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -297,7 +386,8 @@ fun LibraryScreen(
                             tint = MaterialTheme.colorScheme.outline
                         )
                         Text(
-                            if (searchQuery.isNotBlank()) "No se encontraron cuadernos" else "No hay cuadernos en esta sección",
+                            if (searchQuery.isNotBlank() || selectedTagId != null) "No se encontraron cuadernos con los filtros aplicados"
+                            else "No hay cuadernos en esta sección",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -310,7 +400,7 @@ fun LibraryScreen(
                 }
             } else if (viewMode == LibraryViewMode.GRID) {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 190.dp),
+                    columns = GridCells.Adaptive(minSize = 200.dp),
                     contentPadding = PaddingValues(20.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -318,14 +408,18 @@ fun LibraryScreen(
                 ) {
                     items(filteredNotebooks, key = { it.id }) { notebook ->
                         val subject = subjects.find { it.id == notebook.subjectId }
+                        val notebookTags = notebook.tagIds.mapNotNull { tagId -> tags.find { it.id == tagId } }
                         NotebookGridCard(
                             notebook = notebook,
                             subject = subject,
+                            tags = notebookTags,
                             onOpen = { onOpenNotebook(notebook) },
                             onToggleFavorite = {
                                 store.toggleFavorite(notebook.id)
                                 refresh()
                             },
+                            onAssignTags = { assigningTagsNotebook = notebook },
+                            onMoveSubject = { movingNotebook = notebook },
                             onRename = { renamingNotebook = notebook },
                             onDuplicate = {
                                 store.duplicateNotebook(notebook)
@@ -343,14 +437,18 @@ fun LibraryScreen(
                 ) {
                     items(filteredNotebooks, key = { it.id }) { notebook ->
                         val subject = subjects.find { it.id == notebook.subjectId }
+                        val notebookTags = notebook.tagIds.mapNotNull { tagId -> tags.find { it.id == tagId } }
                         NotebookListRow(
                             notebook = notebook,
                             subject = subject,
+                            tags = notebookTags,
                             onOpen = { onOpenNotebook(notebook) },
                             onToggleFavorite = {
                                 store.toggleFavorite(notebook.id)
                                 refresh()
                             },
+                            onAssignTags = { assigningTagsNotebook = notebook },
+                            onMoveSubject = { movingNotebook = notebook },
                             onRename = { renamingNotebook = notebook },
                             onDuplicate = {
                                 store.duplicateNotebook(notebook)
@@ -370,9 +468,10 @@ fun LibraryScreen(
     if (showCreateNotebookDialog) {
         CreateNotebookDialog(
             subjects = subjects,
+            availableTags = tags,
             defaultSubjectId = selectedSubjectId ?: subjects.firstOrNull()?.id ?: "",
             onDismiss = { showCreateNotebookDialog = false },
-            onCreate = { name, subjectId, coverColor, template ->
+            onCreate = { name, subjectId, coverColor, template, chosenTagIds ->
                 val fileName = "${java.util.UUID.randomUUID()}.xopp"
                 val newNb = Notebook(
                     subjectId = subjectId,
@@ -380,6 +479,7 @@ fun LibraryScreen(
                     fileName = fileName,
                     coverColor = coverColor,
                     initialTemplate = template,
+                    tagIds = chosenTagIds,
                     lastModified = System.currentTimeMillis()
                 )
                 store.addNotebook(newNb)
@@ -408,7 +508,75 @@ fun LibraryScreen(
         )
     }
 
-    // 3. Rename Notebook Dialog
+    // 3. Tags Management Dialog
+    if (showTagsDialog) {
+        TagsManagementDialog(
+            tags = tags,
+            notebooks = notebooks,
+            onDismiss = { showTagsDialog = false },
+            onAddTag = { name, color ->
+                store.addTag(Tag(name = name, color = color))
+                refresh()
+            },
+            onUpdateTag = { updated ->
+                store.updateTag(updated)
+                refresh()
+            },
+            onDeleteTag = { tagId ->
+                store.deleteTag(tagId)
+                refresh()
+            }
+        )
+    }
+
+    // 4. Assign Tags Dialog for a notebook
+    assigningTagsNotebook?.let { nb ->
+        AssignTagsDialog(
+            notebook = nb,
+            availableTags = tags,
+            onDismiss = { assigningTagsNotebook = null },
+            onSaveTags = { newTagIds ->
+                store.setNotebookTags(nb.id, newTagIds)
+                refresh()
+                assigningTagsNotebook = null
+            },
+            onCreateNewTagRequest = {
+                showTagsDialog = true
+            }
+        )
+    }
+
+    // 5. Move Notebook Subject Dialog
+    movingNotebook?.let { nb ->
+        MoveNotebookDialog(
+            notebook = nb,
+            subjects = subjects,
+            onDismiss = { movingNotebook = null },
+            onMove = { newSubjectId ->
+                store.setNotebookSubject(nb.id, newSubjectId)
+                refresh()
+                movingNotebook = null
+            }
+        )
+    }
+
+    // 6. Global Search Dialog
+    if (showGlobalSearchDialog) {
+        GlobalSearchDialog(
+            initialQuery = searchQuery,
+            notebooks = notebooks,
+            subjects = subjects,
+            tags = tags,
+            searchEngine = searchEngine,
+            onDismiss = { showGlobalSearchDialog = false },
+            onOpenNotebook = { nb ->
+                showGlobalSearchDialog = false
+                onOpenNotebook(nb)
+            }
+        )
+    }
+
+    // 7. Rename Notebook Dialog
     renamingNotebook?.let { nb ->
         var newTitle by remember { mutableStateOf(nb.name) }
         AlertDialog(
@@ -438,7 +606,7 @@ fun LibraryScreen(
         )
     }
 
-    // 4. Delete Notebook Confirmation Dialog (Moves to Trash)
+    // 8. Delete Notebook Confirmation Dialog (Moves to Trash)
     deletingNotebook?.let { nb ->
         AlertDialog(
             onDismissRequest = { deletingNotebook = null },
@@ -460,7 +628,7 @@ fun LibraryScreen(
         )
     }
 
-    // 5. Trash Dialog
+    // 9. Trash Dialog
     if (showTrashDialog) {
         TrashDialog(
             store = store,
@@ -476,8 +644,11 @@ fun LibraryScreen(
 fun NotebookGridCard(
     notebook: Notebook,
     subject: Subject?,
+    tags: List<Tag>,
     onOpen: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onAssignTags: () -> Unit,
+    onMoveSubject: () -> Unit,
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit
@@ -527,6 +698,22 @@ fun NotebookGridCard(
                 ) {
                     Text(
                         TEMPLATE_OPTIONS.find { it.first == notebook.initialTemplate }?.second ?: "Rayado",
+                        style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Medium),
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+
+                // Page count badge
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.Black.copy(alpha = 0.35f),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 8.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        "${notebook.pageCount} pág.",
                         style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Medium),
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -594,6 +781,16 @@ fun NotebookGridCard(
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
+                                text = { Text("Etiquetas") },
+                                leadingIcon = { Icon(Icons.Filled.LocalOffer, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                onClick = { menuExpanded = false; onAssignTags() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Mover a Asignatura") },
+                                leadingIcon = { Icon(Icons.Filled.DriveFileMove, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                onClick = { menuExpanded = false; onMoveSubject() }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Renombrar") },
                                 leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                                 onClick = { menuExpanded = false; onRename() }
@@ -624,6 +821,26 @@ fun NotebookGridCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
+                // Tags badges
+                if (tags.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(tags) { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(tag.color).copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    "#${tag.name}",
+                                    style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Medium),
+                                    color = Color(tag.color),
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(4.dp))
 
                 // Date
@@ -641,8 +858,11 @@ fun NotebookGridCard(
 fun NotebookListRow(
     notebook: Notebook,
     subject: Subject?,
+    tags: List<Tag>,
     onOpen: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onAssignTags: () -> Unit,
+    onMoveSubject: () -> Unit,
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit
@@ -705,8 +925,27 @@ fun NotebookListRow(
                         }
                         Spacer(Modifier.width(8.dp))
                     }
+
+                    if (tags.isNotEmpty()) {
+                        tags.take(3).forEach { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(tag.color).copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    "#${tag.name}",
+                                    style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Medium),
+                                    color = Color(tag.color),
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+
                     Text(
-                        formattedDate,
+                        "${notebook.pageCount} pág. • $formattedDate",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -733,6 +972,16 @@ fun NotebookListRow(
                     onDismissRequest = { menuExpanded = false }
                 ) {
                     DropdownMenuItem(
+                        text = { Text("Etiquetas") },
+                        leadingIcon = { Icon(Icons.Filled.LocalOffer, contentDescription = null) },
+                        onClick = { menuExpanded = false; onAssignTags() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Mover a Asignatura") },
+                        leadingIcon = { Icon(Icons.Filled.DriveFileMove, contentDescription = null) },
+                        onClick = { menuExpanded = false; onMoveSubject() }
+                    )
+                    DropdownMenuItem(
                         text = { Text("Renombrar") },
                         leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                         onClick = { menuExpanded = false; onRename() }
@@ -757,14 +1006,16 @@ fun NotebookListRow(
 @Composable
 fun CreateNotebookDialog(
     subjects: List<Subject>,
+    availableTags: List<Tag> = emptyList(),
     defaultSubjectId: String,
     onDismiss: () -> Unit,
-    onCreate: (name: String, subjectId: String, coverColor: Long, template: String) -> Unit
+    onCreate: (name: String, subjectId: String, coverColor: Long, template: String, tagIds: List<String>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var selectedSubjectId by remember { mutableStateOf(defaultSubjectId.ifBlank { subjects.firstOrNull()?.id ?: "" }) }
     var selectedCoverColor by remember { mutableStateOf(COVER_COLORS.first()) }
     var selectedTemplate by remember { mutableStateOf("ruled") }
+    var selectedTagIds by remember { mutableStateOf(setOf<String>()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -804,6 +1055,33 @@ fun CreateNotebookDialog(
                                     )
                                 }
                             )
+                        }
+                    }
+                }
+
+                // Tags Selector
+                if (availableTags.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Etiquetas", style = MaterialTheme.typography.labelMedium)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(availableTags) { tag ->
+                                val isSelected = selectedTagIds.contains(tag.id)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        selectedTagIds = if (isSelected) selectedTagIds - tag.id else selectedTagIds + tag.id
+                                    },
+                                    label = { Text("#${tag.name}", style = MaterialTheme.typography.labelSmall) },
+                                    leadingIcon = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(tag.color))
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -853,7 +1131,7 @@ fun CreateNotebookDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onCreate(name.trim(), selectedSubjectId, selectedCoverColor, selectedTemplate)
+                        onCreate(name.trim(), selectedSubjectId, selectedCoverColor, selectedTemplate, selectedTagIds.toList())
                     }
                 },
                 enabled = name.isNotBlank() && selectedSubjectId.isNotBlank()

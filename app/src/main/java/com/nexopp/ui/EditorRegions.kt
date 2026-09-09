@@ -45,7 +45,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.nexopp.render.insertElements
+import com.nexopp.render.insertTextElement
 import com.nexopp.stem.FunctionPlotterDialog
+import com.nexopp.stem.ScientificCalculatorDialog
+import com.nexopp.stem.UnitConverterDialog
+import com.nexopp.stem.TechnicalSymbolsDialog
+import com.nexopp.stem.PeriodicTableDialog
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -80,7 +85,12 @@ fun UnifiedTopBar(
     val surface = pane.surface
     var showPageManager by remember { mutableStateOf(false) }
     var showFunctionPlotter by remember { mutableStateOf(false) }
+    var showScientificCalculator by remember { mutableStateOf(false) }
+    var showUnitConverter by remember { mutableStateOf(false) }
+    var showTechnicalSymbols by remember { mutableStateOf(false) }
+    var showPeriodicTable by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
+
     
     val styleCallbacks = ToolbarStyleCallbacks(
         color = ui.color,
@@ -154,8 +164,16 @@ fun UnifiedTopBar(
                     onToolGroupSelections = { onSettingsChange(settings.copy(toolGroupSelections = it)) }
                 )
 
-                // Derecha: Capas, Fondo/Cuadrículas, Búsqueda, Exportar/Compartir y Menú
+                // Derecha: Capas, STEM, Fondo/Cuadrículas, Búsqueda, Exportar/Compartir y Menú
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    StemToolsPopupButton(
+                        onPlotFunctions = { showFunctionPlotter = true },
+                        onScientificCalculator = { showScientificCalculator = true },
+                        onUnitConverter = { showUnitConverter = true },
+                        onTechnicalSymbols = { showTechnicalSymbols = true },
+                        onPeriodicTable = { showPeriodicTable = true },
+                        onInsertLatex = { ui.texPlacement = Placement(pane.currentPage, 100.0, 100.0) }
+                    )
                     BackgroundPopupButton(pane.backgroundStyle, onBackgroundStyle = { surface?.setPageBackgroundStyle(it) })
                     LayersPopupButton(layerCallbacks)
                     SearchControls(pane)
@@ -228,6 +246,46 @@ fun UnifiedTopBar(
         )
     }
 
+    if (showScientificCalculator) {
+        ScientificCalculatorDialog(
+            onDismiss = { showScientificCalculator = false },
+            onInsertText = { text ->
+                surface?.insertTextElement(text)
+            }
+        )
+    }
+
+    if (showUnitConverter) {
+        UnitConverterDialog(
+            onDismiss = { showUnitConverter = false },
+            onInsertText = { text ->
+                surface?.insertTextElement(text)
+            }
+        )
+    }
+
+    if (showTechnicalSymbols) {
+        TechnicalSymbolsDialog(
+            onDismiss = { showTechnicalSymbols = false },
+            onInsertSymbol = { sym, asLatex ->
+                if (asLatex) {
+                    ui.texPlacement = Placement(pane.currentPage, 100.0, 100.0)
+                } else {
+                    surface?.insertTextElement(sym.char)
+                }
+            }
+        )
+    }
+
+    if (showPeriodicTable) {
+        PeriodicTableDialog(
+            onDismiss = { showPeriodicTable = false },
+            onInsertText = { text ->
+                surface?.insertTextElement(text)
+            }
+        )
+    }
+
     if (showExportDialog) {
         ExportDialog(
             currentPageNo = pane.currentPage,
@@ -244,6 +302,7 @@ fun UnifiedTopBar(
             }
         )
     }
+
 }
 
 @Composable

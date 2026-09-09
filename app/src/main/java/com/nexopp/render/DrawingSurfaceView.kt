@@ -163,6 +163,24 @@ class DrawingSurfaceView @JvmOverloads constructor(
     internal var placing = false
     internal var placeDownX = 0f
     internal var placeDownY = 0f
+
+    /** Set of zero-indexed page indices marked as bookmarks/favorites by the user. */
+    var bookmarkedPages: MutableSet<Int> = mutableSetOf()
+
+    fun isPageBookmarked(pageIndex: Int): Boolean = bookmarkedPages.contains(pageIndex)
+
+    fun togglePageBookmark(pageIndex: Int): Boolean {
+        val nowBookmarked = if (bookmarkedPages.contains(pageIndex)) {
+            bookmarkedPages.remove(pageIndex)
+            false
+        } else {
+            bookmarkedPages.add(pageIndex)
+            true
+        }
+        requestRender()
+        return nowBookmarked
+    }
+
     internal var lastFocusY = 0f
     internal var lastFocusX = 0f
     /** The two-finger span (mean pointer distance from the focus, view px) at the last pan frame,
