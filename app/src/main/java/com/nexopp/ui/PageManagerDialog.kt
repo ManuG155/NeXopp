@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +39,8 @@ fun PageManagerDialog(
     currentPage: Int,
     onDismiss: () -> Unit,
     onGoToPage: (Int) -> Unit,
+    onOpenStructure: (() -> Unit)? = null,
+    onOpenAttachments: (() -> Unit)? = null,
 ) {
     if (!visible || surface == null) return
 
@@ -179,6 +182,40 @@ fun PageManagerDialog(
                                 )
                             }
                         )
+
+                        if (onOpenStructure != null) {
+                            AssistChip(
+                                onClick = {
+                                    onDismiss()
+                                    onOpenStructure()
+                                },
+                                label = { Text("Índice / TOC") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.MenuBook,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                        }
+
+                        if (onOpenAttachments != null) {
+                            AssistChip(
+                                onClick = {
+                                    onDismiss()
+                                    onOpenAttachments()
+                                },
+                                label = { Text("Adjuntos") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.AttachFile,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
 

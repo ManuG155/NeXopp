@@ -6,6 +6,7 @@
  */
 package com.nexopp.render
 
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.SurfaceView
 import com.nexopp.format.model.Tool
@@ -227,10 +228,26 @@ internal fun DrawingSurfaceView.cancelGesture() {
  * clamped by the same [ViewportState] bounds the pan gesture uses.
  */
 internal fun DrawingSurfaceView.handleWheelScroll(event: MotionEvent): Boolean {
-    val notches = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
-    if (notches == 0f) return false
+    val vNotches = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+    val hNotches = event.getAxisValue(MotionEvent.AXIS_HSCROLL)
+    if (vNotches == 0f && hNotches == 0f) return false
+
+    val isCtrl = (event.metaState and KeyEvent.META_CTRL_ON) != 0 ||
+        (event.metaState and KeyEvent.META_CTRL_MASK) != 0
+    val isShift = (event.metaState and KeyEvent.META_SHIFT_ON) != 0
+
+    if (isCtrl && vNotches != 0f) {
+        val factor = if (vNotches > 0) 1.12f else 1f / 1.12f
+        zoomAbout(event.x, event.y, factor)
+        render()
+        return true
+    }
+
     val step = DrawingSurfaceDefaults.WHEEL_SCROLL_DP * resources.displayMetrics.density
-    if (!scrollViewportBy(0f, -notches * step)) return false
+    val dx = if (isShift) -vNotches * step else hNotches * step
+    val dy = if (isShift) 0f else -vNotches * step
+
+    if (!scrollViewportBy(dx, dy)) return false
     render()
     return true
 }

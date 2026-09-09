@@ -37,11 +37,30 @@ fun DrawingSurfaceView.deleteSelection() {
     render()
 }
 
+/** Returns whether there is an active selection. */
+fun DrawingSurfaceView.hasSelection(): Boolean = selection != null
+
 /** Drop the current selection (a view-only change; not recorded in history). */
 fun DrawingSurfaceView.clearSelection() {
     if (selection == null) return
     gestures.clearSelection()
     render()
+}
+
+/** Select all elements on the given (or visible) page. */
+fun DrawingSurfaceView.selectAllOnCurrentPage(pageIndex: Int = visiblePageIndex()) {
+    val page = doc.pages.getOrNull(pageIndex) ?: return
+    val refs = mutableSetOf<ElementRef>()
+    page.layers.forEachIndexed { li, layer ->
+        layer.elements.indices.forEach { ei ->
+            refs.add(ElementRef(li, ei))
+        }
+    }
+    if (refs.isNotEmpty()) {
+        selection = ActiveSelection(pageIndex, refs)
+        onSelectionChanged?.invoke(true)
+        render()
+    }
 }
 
 /** Recolour and/or re-width the selected elements as one undoable edit (selection stays). */

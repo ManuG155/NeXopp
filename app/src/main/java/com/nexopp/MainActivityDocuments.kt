@@ -201,6 +201,27 @@ internal fun MainActivity.insertPickedImage(uri: Uri) = runCatching {
     surface?.insertImage(placement, bytes)
 }.onFailure { toast("Error al insertar imagen: ${it.message}") }
 
+internal fun MainActivity.insertCapturedPhoto(bitmap: android.graphics.Bitmap) = runCatching {
+    val placement = pendingImagePlacement ?: com.nexopp.render.Placement(surface?.visiblePageIndex() ?: 0, 100.0, 100.0)
+    pendingImagePlacement = null
+    val stream = java.io.ByteArrayOutputStream()
+    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, stream)
+    val bytes = stream.toByteArray()
+    surface?.insertImage(placement, bytes)
+}.onFailure { toast("Error al procesar foto: ${it.message}") }
+
+internal fun MainActivity.importAttachmentUri(uri: Uri) = runCatching {
+    val notebook = pendingSaveName.ifBlank { "cuaderno.xopp" }
+    val filename = displayName(uri).ifBlank { "adjunto_${System.currentTimeMillis()}" }
+    val mime = contentResolver.getType(uri) ?: "application/octet-stream"
+    val stream = contentResolver.openInputStream(uri) ?: return@runCatching
+    val curPage = surface?.visiblePageIndex()
+    stream.use { input ->
+        attachmentStore.addAttachment(notebook, filename, mime, input, curPage)
+    }
+    toast("Archivo adjunto guardado: $filename")
+}.onFailure { toast("Error al adjuntar archivo: ${it.message}") }
+
 internal fun MainActivity.saveDocument(uri: Uri) {
     val view = surface ?: return
     val staged = runCatching {

@@ -44,6 +44,17 @@ import com.nexopp.render.undoLastSplineNode
 import com.nexopp.tabs.OpenTab
 import com.nexopp.tabs.TabManager
 import com.nexopp.tabs.TabStore
+import com.nexopp.document.structure.DocumentStructureStore
+import com.nexopp.document.attachments.AttachmentStore
+import com.nexopp.render.hasSelection
+import com.nexopp.render.selectAllOnCurrentPage
+import com.nexopp.render.copySelection
+import com.nexopp.render.cutSelection
+import com.nexopp.render.pasteClipboard
+import com.nexopp.render.deleteSelection
+import com.nexopp.render.clearSelection
+import com.nexopp.ui.EditorTool
+import com.nexopp.ui.applyTool
 import com.nexopp.ui.AppSettings
 import com.nexopp.ui.EditorScreen
 import com.nexopp.ui.SettingsScreen
@@ -57,6 +68,8 @@ class MainActivity : ComponentActivity() {
     internal enum class AppScreen { LIBRARY, EDITOR }
     internal var currentScreen = mutableStateOf(AppScreen.LIBRARY)
     internal val libraryStore by lazy { LibraryStore(this) }
+    internal val structureStore by lazy { DocumentStructureStore(File(filesDir, "notebooks")) }
+    internal val attachmentStore by lazy { AttachmentStore(File(filesDir, "notebooks")) }
 
     internal val panes: List<EditorPane> by lazy {
         TABS_DIRS.map { EditorPane(TabStore(File(filesDir, it))) }
@@ -126,6 +139,16 @@ class MainActivity : ComponentActivity() {
             uri?.let { insertPickedImage(it) }
         }
 
+    internal val takePhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+            bitmap?.let { insertCapturedPhoto(it) }
+        }
+
+    internal val pickAttachmentLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let { importAttachmentUri(it) }
+        }
+
     private class OpenDocumentForEditing : ActivityResultContracts.OpenDocument() {
         override fun createIntent(context: Context, input: Array<String>): Intent =
             super.createIntent(context, input).addFlags(
@@ -174,12 +197,121 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val view = surface
-        if (event.action == KeyEvent.ACTION_UP && view != null && view.splineInProgress()) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val isCtrl = event.isCtrlPressed
+            val isShift = event.isShiftPressed
+            val isAlt = event.isAltPressed
+
+            if (isCtrl) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_Z -> {
+                        if (isShift) view?.redo() else view?.undo()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_Y -> {
+                        view?.redo()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_S -> {
+                        saveActiveTab()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_C -> {
+                        view?.copySelection()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_X -> {
+                        view?.cutSelection()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_V -> {
+                        view?.pasteClipboard()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_A -> {
+                        view?.selectAllOnCurrentPage()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS, KeyEvent.KEYCODE_NUMPAD_ADD -> {
+                        view?.zoomIn()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_NUMPAD_SUBTRACT -> {
+                        view?.zoomOut()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> {
+                        view?.resetZoom()
+                        return true
+                    }
+                }
+            }
+
             when (event.keyCode) {
-                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { view.finishSpline(); return true }
-                KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_FORWARD_DEL ->
-                    { view.undoLastSplineNode(); return true }
-                KeyEvent.KEYCODE_ESCAPE -> { view.cancelSpline(); return true }
+                KeyEvent.KEYCODE_FORWARD_DEL, KeyEvent.KEYCODE_DEL -> {
+                    if (view != null && (view.hasSelection() || view.splineInProgress())) {
+                        if (view.splineInProgress()) {
+                            view.undoLastSplineNode()
+                        } else {
+                            view.deleteSelection()
+                        }
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_PAGE_UP -> {
+                    val cur = view?.visiblePageIndex() ?: 0
+                    view?.goToPage(cur - 1)
+                    return true
+                }
+                KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    val cur = view?.visiblePageIndex() ?: 0
+                    view?.goToPage(cur + 1)
+                    return true
+                }
+                KeyEvent.KEYCODE_ESCAPE -> {
+                    if (view?.splineInProgress() == true) {
+                        view.cancelSpline()
+                        return true
+                    }
+                    if (view?.hasSelection() == true) {
+                        view.clearSelection()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    if (view?.splineInProgress() == true) {
+                        view.finishSpline()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_P -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.PEN)
+                    return true
+                }
+                KeyEvent.KEYCODE_H -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.HIGHLIGHTER)
+                    return true
+                }
+                KeyEvent.KEYCODE_E -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.ERASER)
+                    return true
+                }
+                KeyEvent.KEYCODE_S -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.SELECT)
+                    return true
+                }
+                KeyEvent.KEYCODE_R -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.RECTANGLE)
+                    return true
+                }
+                KeyEvent.KEYCODE_L -> if (!isCtrl && !isAlt) {
+                    view?.applyTool(EditorTool.LINE)
+                    return true
+                }
+                KeyEvent.KEYCODE_M -> if (!isCtrl && !isAlt) {
+                    toggleRecording()
+                    return true
+                }
             }
         }
         return super.dispatchKeyEvent(event)
@@ -244,6 +376,9 @@ class MainActivity : ComponentActivity() {
                         onPickImage = { placement ->
                             pendingImagePlacement = placement
                             pickImageLauncher.launch(arrayOf("image/*"))
+                        },
+                        onPickAttachment = {
+                            pickAttachmentLauncher.launch(arrayOf("*/*"))
                         },
                         onSurfaceCreated = { index, view ->
                             val p = panes[index]

@@ -60,6 +60,13 @@ import com.nexopp.render.PlaceKind
 import com.nexopp.render.Placement
 import com.nexopp.render.SearchStatus
 import com.nexopp.ui.theme.rememberCanvasChromeColors
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import com.nexopp.document.structure.DocumentStructureDialog
+import com.nexopp.document.structure.DocumentStructureStore
+import com.nexopp.document.attachments.AttachmentDialog
+import com.nexopp.document.attachments.AttachmentStore
+import java.io.File
 
 @Composable
 fun UnifiedTopBar(
@@ -80,10 +87,18 @@ fun UnifiedTopBar(
     onToggleSplitView: () -> Unit,
     onExit: () -> Unit,
     onShareExport: (com.nexopp.io.ExportManager.ExportFormat, List<Int>, Float) -> Unit = { _, _, _ -> },
-    onSaveExport: (com.nexopp.io.ExportManager.ExportFormat, String, List<Int>, Float) -> Unit = { _, _, _, _ -> }
+    onSaveExport: (com.nexopp.io.ExportManager.ExportFormat, String, List<Int>, Float) -> Unit = { _, _, _, _ -> },
+    onPickAttachment: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val surface = pane.surface
+    val currentNotebookName = tabs.titles.getOrNull(tabs.activeIndex)?.ifBlank { "apuntes.xopp" } ?: "apuntes.xopp"
+    val structureStore = remember(context) { DocumentStructureStore(File(context.filesDir, "notebooks")) }
+    val attachmentStore = remember(context) { AttachmentStore(File(context.filesDir, "notebooks")) }
+
     var showPageManager by remember { mutableStateOf(false) }
+    var showStructureDialog by remember { mutableStateOf(false) }
+    var showAttachmentDialog by remember { mutableStateOf(false) }
     var showFunctionPlotter by remember { mutableStateOf(false) }
     var showScientificCalculator by remember { mutableStateOf(false) }
     var showUnitConverter by remember { mutableStateOf(false) }
@@ -151,6 +166,24 @@ fun UnifiedTopBar(
                             )
                         }
                     }
+                    Spacer(Modifier.width(2.dp))
+                    IconButton(onClick = { showStructureDialog = true }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Índice y Marcadores", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = { showAttachmentDialog = true }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Filled.AttachFile, contentDescription = "Archivos Adjuntos", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = { audio.onToggleRecord() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            if (audio.recording) Icons.Filled.StopCircle else Icons.Filled.Mic,
+                            contentDescription = if (audio.recording) "Detener Grabación" else "Grabar Audio",
+                            tint = if (audio.recording) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 // Centro: Selector Segmentado de Herramientas Principales
@@ -189,7 +222,9 @@ fun UnifiedTopBar(
                         onExportPdf = { showExportDialog = true },
                         onSettings = onSettings,
                         splitView = splitView,
-                        onToggleSplitView = onToggleSplitView
+                        onToggleSplitView = onToggleSplitView,
+                        onOpenStructure = { showStructureDialog = true },
+                        onOpenAttachments = { showAttachmentDialog = true }
                     )
                 }
             }
@@ -231,7 +266,41 @@ fun UnifiedTopBar(
             surface = surface,
             currentPage = pane.currentPage,
             onDismiss = { showPageManager = false },
-            onGoToPage = { surface?.goToPage(it) }
+            onGoToPage = { surface?.goToPage(it) },
+            onOpenStructure = { showStructureDialog = true },
+            onOpenAttachments = { showAttachmentDialog = true }
+        )
+    }
+
+    if (showStructureDialog) {
+        DocumentStructureDialog(
+            initialStructure = structureStore.loadStructure(currentNotebookName),
+            totalPages = surface?.toDocument()?.pages?.size ?: pane.pageCount.coerceAtLeast(1),
+            currentPageIndex = pane.currentPage,
+            onDismiss = { showStructureDialog = false },
+            onSaveStructure = { structureStore.saveStructure(currentNotebookName, it) },
+            onNavigateToPage = { pageIndex ->
+                surface?.goToPage(pageIndex)
+                showStructureDialog = false
+            },
+            onInsertLinkElement = { label, targetPageIndex ->
+                surface?.insertTextElement(
+                    text = "🔗 $label → Pág. ${targetPageIndex + 1}",
+                    x = 80.0,
+                    y = 120.0
+                )
+                showStructureDialog = false
+            }
+        )
+    }
+
+    if (showAttachmentDialog) {
+        AttachmentDialog(
+            notebookFileName = currentNotebookName,
+            attachmentStore = attachmentStore,
+            currentPageIndex = pane.currentPage,
+            onDismiss = { showAttachmentDialog = false },
+            onPickFileToAttach = onPickAttachment
         )
     }
 
@@ -614,6 +683,8 @@ private fun OverflowMenu(
     onSettings: () -> Unit,
     splitView: Boolean,
     onToggleSplitView: () -> Unit,
+    onOpenStructure: () -> Unit = {},
+    onOpenAttachments: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
@@ -629,6 +700,16 @@ private fun OverflowMenu(
             text = { Text("Nuevo documento") },
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
             onClick = { open = false; onNewTab() },
+        )
+        DropdownMenuItem(
+            text = { Text("Índice y Estructura") },
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
+            onClick = { open = false; onOpenStructure() },
+        )
+        DropdownMenuItem(
+            text = { Text("Archivos Adjuntos") },
+            leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
+            onClick = { open = false; onOpenAttachments() },
         )
         DropdownMenuItem(
             text = { Text("Importar PDF") },

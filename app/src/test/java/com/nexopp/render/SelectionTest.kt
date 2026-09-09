@@ -291,4 +291,41 @@ class SelectionTest {
     @Test fun inPolygonDegenerateSelectsNothing() {
         assertTrue(SelectionTester.inPolygon(p, listOf(Vec2(0.0, 0.0), Vec2(1.0, 1.0))).isEmpty())
     }
+
+    @Test fun selectionOpsTranslateImageAndText() {
+        val img = ImageElement(10.0, 20.0, 50.0, 80.0, "IMG_DATA".toByteArray())
+        val txt = TextElement("Sans", 12.0, 30.0, 40.0, 0xFF000000.toInt(), "Demostración")
+        val page = page(Layer(listOf(img, txt)))
+
+        val shifted = SelectionOps.translate(listOf(page), 0, setOf(ElementRef(0, 0), ElementRef(0, 1)), 15.0, 25.0)
+        val shiftedImg = shifted[0].layers[0].elements[0] as ImageElement
+        val shiftedTxt = shifted[0].layers[0].elements[1] as TextElement
+
+        assertEquals(25.0, shiftedImg.left, 0.001)
+        assertEquals(45.0, shiftedImg.top, 0.001)
+        assertEquals(65.0, shiftedImg.right, 0.001)
+        assertEquals(105.0, shiftedImg.bottom, 0.001)
+
+        assertEquals(45.0, shiftedTxt.x, 0.001)
+        assertEquals(65.0, shiftedTxt.y, 0.001)
+    }
+
+    @Test fun selectionOpsAffineScaleImageAndText() {
+        val img = ImageElement(10.0, 20.0, 50.0, 80.0, "IMG_DATA".toByteArray())
+        val txt = TextElement("Sans", 12.0, 30.0, 40.0, 0xFF000000.toInt(), "Demostración")
+        val page = page(Layer(listOf(img, txt)))
+
+        val scaled = SelectionOps.scale(listOf(page), 0, setOf(ElementRef(0, 0), ElementRef(0, 1)), 2.0, 0.0, 0.0)
+        val scaledImg = scaled[0].layers[0].elements[0] as ImageElement
+        val scaledTxt = scaled[0].layers[0].elements[1] as TextElement
+
+        assertEquals(20.0, scaledImg.left, 0.001)
+        assertEquals(40.0, scaledImg.top, 0.001)
+        assertEquals(100.0, scaledImg.right, 0.001)
+        assertEquals(160.0, scaledImg.bottom, 0.001)
+
+        assertEquals(60.0, scaledTxt.x, 0.001)
+        assertEquals(80.0, scaledTxt.y, 0.001)
+        assertEquals(24.0, scaledTxt.size, 0.001)
+    }
 }

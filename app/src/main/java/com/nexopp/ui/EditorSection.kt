@@ -6,6 +6,12 @@ import androidx.compose.runtime.Composable
 @Composable
 fun EditorSection(settings: AppSettings, onChange: (AppSettings) -> Unit) {
     SwitchRow(
+        title = "Reconocer formas automáticamente",
+        subtitle = "Convierte trazos manuscritos aproximados en líneas rectas, círculos y rectángulos geométricos precisos.",
+        checked = settings.recognizeShapes,
+        onCheckedChange = { onChange(settings.copy(recognizeShapes = it)) },
+    )
+    SwitchRow(
         title = "Ajustar a la cuadrícula",
         subtitle = "Los extremos de las formas se ajustan a las líneas del fondo de página.",
         checked = settings.snapToGrid,
