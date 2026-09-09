@@ -39,10 +39,15 @@ class GlobalSearchEngine(
         val subjectsMap = subjects.associateBy { it.id }
         val tagsMap = tags.associateBy { it.id }
 
+        val allowedSubjectIds = if (filterSubjectId != null) {
+            val sub = subjectsMap[filterSubjectId]
+            sub?.getAllDescendantIds(subjects) ?: setOf(filterSubjectId)
+        } else null
+
         // Filter by base criteria first (Subject, Tags, Favorites)
         val candidateNotebooks = notebooks.filter { nb ->
             if (onlyFavorites && !nb.isFavorite) return@filter false
-            if (filterSubjectId != null && nb.subjectId != filterSubjectId) return@filter false
+            if (allowedSubjectIds != null && nb.subjectId !in allowedSubjectIds) return@filter false
             if (filterTagIds.isNotEmpty() && !nb.tagIds.any { it in filterTagIds }) return@filter false
             true
         }

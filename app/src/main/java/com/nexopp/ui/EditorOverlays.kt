@@ -11,12 +11,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.nexopp.format.SaveFormat
+import com.nexopp.recognition.OcrReviewDialog
 import com.nexopp.render.ImportPdfMode
 import com.nexopp.render.captureBackgroundRegion
 import com.nexopp.render.clearBackgroundRegion
@@ -30,9 +35,14 @@ import com.nexopp.render.cutSelection
 import com.nexopp.render.deleteSelection
 import com.nexopp.render.duplicateSelection
 import com.nexopp.render.finishSpline
+import com.nexopp.render.getSelectedStrokes
+import com.nexopp.render.insertTextAdjacentToSelection
 import com.nexopp.render.pasteClipboard
+import com.nexopp.render.recognizeSelectedStrokes
+import com.nexopp.render.replaceSelectionWithText
 import com.nexopp.render.restyleSelection
 import com.nexopp.render.undoLastSplineNode
+import com.nexopp.stem.MathHandwritingEngine
 
 @Composable
 fun BoxScope.EditorOverlays(
@@ -110,6 +120,28 @@ private fun BoxScope.SelectionOverlays(
     onSettingsChange: (AppSettings) -> Unit,
 ) {
     val surface = pane.surface
+    var showOcrDialog by remember { mutableStateOf(false) }
+    var ocrText by remember { mutableStateOf("") }
+    var ocrConfidence by remember { mutableStateOf(0.9) }
+    var ocrIsMath by remember { mutableStateOf(false) }
+
+    if (showOcrDialog) {
+        OcrReviewDialog(
+            initialText = ocrText,
+            confidence = ocrConfidence,
+            isMath = ocrIsMath,
+            onDismiss = { showOcrDialog = false },
+            onReplaceSelection = { text, isLatex ->
+                surface?.replaceSelectionWithText(text, isLatex)
+                showOcrDialog = false
+            },
+            onInsertAdjacent = { text, isLatex ->
+                surface?.insertTextAdjacentToSelection(text, isLatex)
+                showOcrDialog = false
+            }
+        )
+    }
+
     if (pane.hasSelection) {
         SelectionActionBar(
             onCut = { surface?.cutSelection() },
@@ -120,6 +152,26 @@ private fun BoxScope.SelectionOverlays(
             palette = palette,
             onReWidth = { w -> surface?.restyleSelection(null, w.toDouble()) },
             widthSlots = settings.penWidths,
+            onOcr = {
+                val strokes = surface?.getSelectedStrokes() ?: emptyList()
+                if (strokes.isNotEmpty()) {
+                    val res = surface?.recognizeSelectedStrokes(isMath = false)
+                    ocrText = res?.text ?: ""
+                    ocrConfidence = (res?.candidates?.firstOrNull()?.confidence ?: 0.85f).toDouble()
+                    ocrIsMath = false
+                    showOcrDialog = true
+                }
+            },
+            onMathOcr = {
+                val strokes = surface?.getSelectedStrokes() ?: emptyList()
+                if (strokes.isNotEmpty()) {
+                    val mathRes = MathHandwritingEngine.recognize(strokes)
+                    ocrText = mathRes.latex
+                    ocrConfidence = mathRes.confidence
+                    ocrIsMath = true
+                    showOcrDialog = true
+                }
+            },
             onDeselect = { surface?.clearSelection() },
             modifier = barModifier,
         )

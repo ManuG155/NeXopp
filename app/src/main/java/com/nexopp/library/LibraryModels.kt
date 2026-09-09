@@ -7,7 +7,8 @@ data class Subject(
     val name: String,
     val color: Long = 0xFF1976D2, // Default Primary Blue
     val iconName: String = "folder",
-    val order: Int = 0
+    val order: Int = 0,
+    val parentId: String? = null // Parent folder ID for nested hierarchies
 )
 
 data class Tag(
@@ -66,3 +67,36 @@ data class SearchResultItem(
     val matchSnippet: String,
     val pageIndex: Int? = null
 )
+
+fun Subject.buildPath(allSubjects: List<Subject>): String {
+    val chain = mutableListOf(name)
+    var curr = this
+    while (curr.parentId != null) {
+        val parent = allSubjects.firstOrNull { it.id == curr.parentId } ?: break
+        chain.add(0, parent.name)
+        curr = parent
+    }
+    return chain.joinToString(" / ")
+}
+
+fun Subject.getParentChain(allSubjects: List<Subject>): List<Subject> {
+    val chain = mutableListOf(this)
+    var curr = this
+    val visited = mutableSetOf(id)
+    while (curr.parentId != null) {
+        val parent = allSubjects.firstOrNull { it.id == curr.parentId } ?: break
+        if (!visited.add(parent.id)) break // Guard against cycles
+        chain.add(0, parent)
+        curr = parent
+    }
+    return chain
+}
+
+fun Subject.getAllDescendantIds(allSubjects: List<Subject>): Set<String> {
+    val result = mutableSetOf(id)
+    val children = allSubjects.filter { it.parentId == id }
+    for (child in children) {
+        result.addAll(child.getAllDescendantIds(allSubjects))
+    }
+    return result
+}

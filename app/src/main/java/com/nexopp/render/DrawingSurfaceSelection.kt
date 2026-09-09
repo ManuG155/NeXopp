@@ -182,7 +182,7 @@ fun DrawingSurfaceView.recognizeSelectedStrokes(
     return if (isMath) engine.recognizeMath(strokes) else engine.recognize(strokes)
 }
 
-/** Replaces selected strokes with a recognized text element in an undoable step. */
+/** Replaces selected strokes with a recognized text or LaTeX element in an undoable step. */
 fun DrawingSurfaceView.replaceSelectionWithText(
     text: String,
     isLatex: Boolean = false
@@ -194,37 +194,110 @@ fun DrawingSurfaceView.replaceSelectionWithText(
 
     var minX = Double.MAX_VALUE
     var minY = Double.MAX_VALUE
+    var maxX = -Double.MAX_VALUE
+    var maxY = -Double.MAX_VALUE
     for (elem in selectedElements) {
-        when (elem) {
-            is com.nexopp.format.model.Stroke -> {
-                for (p in elem.points) {
-                    minX = minOf(minX, p.x)
-                    minY = minOf(minY, p.y)
-                }
-            }
-            is com.nexopp.format.model.TextElement -> {
-                minX = minOf(minX, elem.x)
-                minY = minOf(minY, elem.y)
-            }
-            else -> {}
-        }
+        val b = ElementBounds.of(elem)
+        minX = minOf(minX, b.left)
+        minY = minOf(minY, b.top)
+        maxX = maxOf(maxX, b.right)
+        maxY = maxOf(maxY, b.bottom)
     }
     if (minX == Double.MAX_VALUE) {
         minX = 80.0
         minY = 120.0
+        maxX = 140.0
+        maxY = 150.0
     }
 
     val before = doc
     val pagesWithoutSel = SelectionOps.delete(doc.pages, sel.pageIndex, sel.refs)
-    val textElem = com.nexopp.format.model.TextElement(
-        font = if (isLatex) "Monospace" else "Sans",
-        size = 14.0,
-        x = minX,
-        y = minY,
-        color = colorArgb,
-        content = text
-    )
-    val (finalPages, newRefs) = SelectionOps.addToTopLayer(pagesWithoutSel, sel.pageIndex, listOf(textElem))
+    val newElement: com.nexopp.format.model.Element = if (isLatex) {
+        com.nexopp.format.model.TexImageElement(
+            left = minX,
+            top = minY,
+            right = maxOf(minX + 30.0, maxX),
+            bottom = maxOf(minY + 20.0, maxY),
+            latex = text,
+            color = colorArgb,
+            latexInAttribute = true
+        )
+    } else {
+        com.nexopp.format.model.TextElement(
+            font = "Sans",
+            size = 14.0,
+            x = minX,
+            y = minY,
+            color = colorArgb,
+            content = text
+        )
+    }
+
+    val (finalPages, newRefs) = SelectionOps.addToTopLayer(pagesWithoutSel, sel.pageIndex, listOf(newElement))
+    doc = doc.copy(pages = finalPages)
+    selection = ActiveSelection(sel.pageIndex, newRefs)
+    onSelectionChanged?.invoke(true)
+    history.record(before)
+    notifyHistory()
+    relayout()
+    render()
+}
+
+/** Inserts a recognized text or LaTeX element adjacent to the selection without deleting original ink. */
+fun DrawingSurfaceView.insertTextAdjacentToSelection(
+    text: String,
+    isLatex: Boolean = false
+) {
+    val sel = selection ?: return
+    val page = doc.pages.getOrNull(sel.pageIndex) ?: return
+    val selectedElements = SelectionOps.elementsAt(page, sel.refs)
+    if (selectedElements.isEmpty()) return
+
+    var minX = Double.MAX_VALUE
+    var minY = Double.MAX_VALUE
+    var maxX = -Double.MAX_VALUE
+    var maxY = -Double.MAX_VALUE
+    for (elem in selectedElements) {
+        val b = ElementBounds.of(elem)
+        minX = minOf(minX, b.left)
+        minY = minOf(minY, b.top)
+        maxX = maxOf(maxX, b.right)
+        maxY = maxOf(maxY, b.bottom)
+    }
+    if (minX == Double.MAX_VALUE) {
+        minX = 80.0
+        minY = 120.0
+        maxX = 140.0
+        maxY = 150.0
+    }
+
+    // Place below the selection with comfortable spacing
+    val targetTop = maxY + 8.0
+    val targetLeft = minX
+    val before = doc
+
+    val newElement: com.nexopp.format.model.Element = if (isLatex) {
+        com.nexopp.format.model.TexImageElement(
+            left = targetLeft,
+            top = targetTop,
+            right = targetLeft + maxOf(30.0, maxX - minX),
+            bottom = targetTop + maxOf(20.0, maxY - minY),
+            latex = text,
+            color = colorArgb,
+            latexInAttribute = true
+        )
+    } else {
+        com.nexopp.format.model.TextElement(
+            font = "Sans",
+            size = 14.0,
+            x = targetLeft,
+            y = targetTop,
+            color = colorArgb,
+            content = text
+        )
+    }
+
+    val (finalPages, newRefs) = SelectionOps.addToTopLayer(doc.pages, sel.pageIndex, listOf(newElement))
     doc = doc.copy(pages = finalPages)
     selection = ActiveSelection(sel.pageIndex, newRefs)
     onSelectionChanged?.invoke(true)

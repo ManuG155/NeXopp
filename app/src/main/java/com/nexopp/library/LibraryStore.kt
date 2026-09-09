@@ -20,13 +20,15 @@ class LibraryStore(private val context: Context) {
         val list = mutableListOf<Subject>()
         for (i in 0 until array.length()) {
             val obj = array.getJSONObject(i)
+            val parentId = if (obj.has("parentId") && !obj.isNull("parentId")) obj.getString("parentId") else null
             list.add(
                 Subject(
                     id = obj.getString("id"),
                     name = obj.getString("name"),
                     color = obj.optLong("color", 0xFF1976D2),
                     iconName = obj.optString("iconName", "folder"),
-                    order = obj.optInt("order", i)
+                    order = obj.optInt("order", i),
+                    parentId = parentId
                 )
             )
         }
@@ -103,14 +105,14 @@ class LibraryStore(private val context: Context) {
         
         val subArray = JSONArray()
         subjects.forEach { s ->
-            subArray.put(
-                JSONObject()
-                    .put("id", s.id)
-                    .put("name", s.name)
-                    .put("color", s.color)
-                    .put("iconName", s.iconName)
-                    .put("order", s.order)
-            )
+            val sObj = JSONObject()
+                .put("id", s.id)
+                .put("name", s.name)
+                .put("color", s.color)
+                .put("iconName", s.iconName)
+                .put("order", s.order)
+            s.parentId?.let { sObj.put("parentId", it) }
+            subArray.put(sObj)
         }
 
         val tagArray = JSONArray()
@@ -371,9 +373,22 @@ class LibraryStore(private val context: Context) {
         save(subs, loadNotebooks(), loadTags())
     }
 
+    fun moveSubject(subjectId: String, newParentId: String?) {
+        if (subjectId == newParentId) return
+        val subs = loadSubjects().map { 
+            if (it.id == subjectId) it.copy(parentId = newParentId) else it 
+        }
+        save(subs, loadNotebooks(), loadTags())
+    }
+
     fun deleteSubject(subjectId: String) {
-        val subs = loadSubjects().filterNot { it.id == subjectId }
-        val nbs = loadNotebooks()
+        val subs = loadSubjects().filterNot { it.id == subjectId }.map {
+            if (it.parentId == subjectId) it.copy(parentId = null) else it
+        }
+        val defaultSubjectId = subs.firstOrNull { it.parentId == null }?.id ?: subs.firstOrNull()?.id ?: ""
+        val nbs = loadNotebooks().map {
+            if (it.subjectId == subjectId) it.copy(subjectId = defaultSubjectId) else it
+        }
         save(subs, nbs, loadTags())
     }
 

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -71,8 +72,8 @@ fun LibraryScreen(
     onOpenNotebook: (Notebook) -> Unit,
     onSettings: () -> Unit
 ) {
-    val activity = LocalContext.current as? Activity
-    BackHandler { activity?.finish() }
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     var subjects by remember { mutableStateOf(store.loadSubjects()) }
     var tags by remember { mutableStateOf(store.loadTags()) }
@@ -85,6 +86,17 @@ fun LibraryScreen(
     var sortOption by remember { mutableStateOf(NotebookSortOption.RECENT_DESC) }
     var viewMode by remember { mutableStateOf(LibraryViewMode.GRID) }
 
+    val currentSubject = remember(subjects, selectedSubjectId) {
+        subjects.firstOrNull { it.id == selectedSubjectId }
+    }
+    BackHandler {
+        if (selectedSubjectId != null) {
+            selectedSubjectId = currentSubject?.parentId
+        } else {
+            activity?.finish()
+        }
+    }
+
     // Dialog states
     var showCreateNotebookDialog by remember { mutableStateOf(false) }
     var showSubjectDialog by remember { mutableStateOf(false) }
@@ -95,7 +107,6 @@ fun LibraryScreen(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showCloudSyncDialog by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val backupManager = remember { BackupManager(context.filesDir) }
     val syncEngine = remember { SyncEngine(store.notebooksDir) }
 
@@ -255,79 +266,213 @@ fun LibraryScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Filter Pills
-                            item {
-                                FilterChip(
-                                    selected = selectedFilter == LibraryFilter.ALL && selectedSubjectId == null && selectedTagId == null,
-                                    onClick = { selectedFilter = LibraryFilter.ALL; selectedSubjectId = null; selectedTagId = null },
-                                    label = { Text("Todos") },
-                                    leadingIcon = { Icon(Icons.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                )
-                            }
-                            item {
-                                FilterChip(
-                                    selected = selectedFilter == LibraryFilter.RECENT && selectedSubjectId == null && selectedTagId == null,
-                                    onClick = { selectedFilter = LibraryFilter.RECENT; selectedSubjectId = null; selectedTagId = null },
-                                    label = { Text("Recientes") },
-                                    leadingIcon = { Icon(Icons.Filled.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                )
-                            }
-                            item {
-                                FilterChip(
-                                    selected = selectedFilter == LibraryFilter.FAVORITES,
-                                    onClick = { selectedFilter = LibraryFilter.FAVORITES; selectedSubjectId = null; selectedTagId = null },
-                                    label = { Text("Favoritos") },
-                                    leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp)) }
-                                )
-                            }
+                        // 1. Folder Breadcrumb Bar or Root Filter Bar
+                        if (selectedSubjectId != null && currentSubject != null) {
+                            val chain = currentSubject.getParentChain(subjects)
+                            val subfolders = subjects.filter { it.parentId == currentSubject.id }
 
-                            item {
-                                VerticalDivider(Modifier.height(24.dp).padding(horizontal = 4.dp))
-                            }
-
-                            // Subject chips
-                            items(subjects) { subject ->
-                                val isSelected = selectedSubjectId == subject.id
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedSubjectId = if (isSelected) null else subject.id
-                                        selectedFilter = LibraryFilter.ALL
-                                    },
-                                    label = { Text(subject.name) },
-                                    leadingIcon = {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(10.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(subject.color))
-                                        )
-                                    },
-                                    trailingIcon = {
-                                        val count = notebooks.count { it.subjectId == subject.id }
-                                        Text(
-                                            "$count",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    IconButton(
+                                        onClick = { selectedSubjectId = currentSubject.parentId },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Volver",
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
-                                )
+
+                                    Spacer(Modifier.width(4.dp))
+
+                                    Text(
+                                        "Biblioteca",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.clickable { selectedSubjectId = null }
+                                    )
+
+                                    chain.forEach { node ->
+                                        Text(
+                                            " / ",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        val isLeaf = node.id == currentSubject.id
+                                        Text(
+                                            node.name,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = if (isLeaf) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isLeaf) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.clickable { selectedSubjectId = node.id }
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    FilledTonalButton(
+                                        onClick = { showSubjectDialog = true },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(30.dp)
+                                    ) {
+                                        Icon(Icons.Filled.CreateNewFolder, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Subcarpeta", style = MaterialTheme.typography.labelSmall)
+                                    }
+
+                                    IconButton(
+                                        onClick = { editingSubject = currentSubject },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Edit, contentDescription = "Editar carpeta", modifier = Modifier.size(16.dp))
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            val parentId = currentSubject.parentId
+                                            store.deleteSubject(currentSubject.id)
+                                            refresh()
+                                            selectedSubjectId = parentId
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "Eliminar carpeta", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    }
+                                }
                             }
 
-                            // Add Subject Button
-                            item {
-                                AssistChip(
-                                    onClick = { showSubjectDialog = true },
-                                    label = { Text("Nueva Asignatura") },
-                                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                )
+                            // Subfolders chips row
+                            if (subfolders.isNotEmpty()) {
+                                LazyRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    item {
+                                        Text(
+                                            "Subcarpetas:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                    }
+                                    items(subfolders, key = { it.id }) { sub ->
+                                        AssistChip(
+                                            onClick = { selectedSubjectId = sub.id },
+                                            label = { Text(sub.name, style = MaterialTheme.typography.labelMedium) },
+                                            leadingIcon = {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color(sub.color))
+                                                )
+                                            },
+                                            trailingIcon = {
+                                                val count = notebooks.count { it.subjectId == sub.id }
+                                                Text(
+                                                    "$count",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Root level Navigation row
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Filter Pills
+                                item {
+                                    FilterChip(
+                                        selected = selectedFilter == LibraryFilter.ALL && selectedSubjectId == null && selectedTagId == null,
+                                        onClick = { selectedFilter = LibraryFilter.ALL; selectedSubjectId = null; selectedTagId = null },
+                                        label = { Text("Todos") },
+                                        leadingIcon = { Icon(Icons.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    )
+                                }
+                                item {
+                                    FilterChip(
+                                        selected = selectedFilter == LibraryFilter.RECENT && selectedSubjectId == null && selectedTagId == null,
+                                        onClick = { selectedFilter = LibraryFilter.RECENT; selectedSubjectId = null; selectedTagId = null },
+                                        label = { Text("Recientes") },
+                                        leadingIcon = { Icon(Icons.Filled.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    )
+                                }
+                                item {
+                                    FilterChip(
+                                        selected = selectedFilter == LibraryFilter.FAVORITES,
+                                        onClick = { selectedFilter = LibraryFilter.FAVORITES; selectedSubjectId = null; selectedTagId = null },
+                                        label = { Text("Favoritos") },
+                                        leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp)) }
+                                    )
+                                }
+
+                                item {
+                                    VerticalDivider(Modifier.height(24.dp).padding(horizontal = 4.dp))
+                                }
+
+                                // Root subject chips (parentId == null)
+                                val rootSubjects = subjects.filter { it.parentId == null }
+                                items(rootSubjects, key = { it.id }) { subject ->
+                                    val isSelected = selectedSubjectId == subject.id
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedSubjectId = if (isSelected) null else subject.id
+                                            selectedFilter = LibraryFilter.ALL
+                                        },
+                                        label = { Text(subject.name) },
+                                        leadingIcon = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(10.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(subject.color))
+                                            )
+                                        },
+                                        trailingIcon = {
+                                            val count = notebooks.count { it.subjectId == subject.id }
+                                            Text(
+                                                "$count",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    )
+                                }
+
+                                // Add Subject Button
+                                item {
+                                    AssistChip(
+                                        onClick = { showSubjectDialog = true },
+                                        label = { Text("Nueva Carpeta") },
+                                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    )
+                                }
                             }
                         }
 
@@ -513,12 +658,14 @@ fun LibraryScreen(
     if (showSubjectDialog || editingSubject != null) {
         CreateSubjectDialog(
             subjectToEdit = editingSubject,
+            parentSubjectId = selectedSubjectId,
+            allSubjects = subjects,
             onDismiss = { showSubjectDialog = false; editingSubject = null },
-            onSave = { name, color ->
+            onSave = { name, color, parentId ->
                 if (editingSubject != null) {
-                    store.updateSubject(editingSubject!!.copy(name = name, color = color))
+                    store.updateSubject(editingSubject!!.copy(name = name, color = color, parentId = parentId))
                 } else {
-                    store.addSubject(Subject(name = name, color = color, order = subjects.size))
+                    store.addSubject(Subject(name = name, color = color, parentId = parentId, order = subjects.size))
                 }
                 refresh()
                 showSubjectDialog = false
@@ -1186,11 +1333,14 @@ fun CreateNotebookDialog(
 @Composable
 fun CreateSubjectDialog(
     subjectToEdit: Subject? = null,
+    parentSubjectId: String? = null,
+    allSubjects: List<Subject> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (name: String, color: Long) -> Unit
+    onSave: (name: String, color: Long, parentId: String?) -> Unit
 ) {
     var name by remember { mutableStateOf(subjectToEdit?.name ?: "") }
     var selectedColor by remember { mutableStateOf(subjectToEdit?.color ?: 0xFF1E88E5) }
+    var selectedParentId by remember { mutableStateOf(subjectToEdit?.parentId ?: parentSubjectId) }
 
     val subjectColors = listOf(
         0xFF1E88E5, // Blue
@@ -1205,22 +1355,44 @@ fun CreateSubjectDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (subjectToEdit == null) "Nueva Asignatura" else "Editar Asignatura", fontWeight = FontWeight.Bold) },
+        title = { Text(if (subjectToEdit == null) "Nueva Carpeta / Asignatura" else "Editar Carpeta", fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nombre de la asignatura") },
-                    placeholder = { Text("Ej. Álgebra Lineal") },
+                    label = { Text("Nombre de la carpeta o asignatura") },
+                    placeholder = { Text("Ej. Álgebra Lineal, Laboratorio...") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (allSubjects.isNotEmpty() && subjectToEdit == null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Ubicación:", style = MaterialTheme.typography.labelMedium)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            item {
+                                FilterChip(
+                                    selected = selectedParentId == null,
+                                    onClick = { selectedParentId = null },
+                                    label = { Text("Raíz (Principal)", style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                            items(allSubjects.filter { it.id != subjectToEdit?.id }) { s ->
+                                FilterChip(
+                                    selected = selectedParentId == s.id,
+                                    onClick = { selectedParentId = s.id },
+                                    label = { Text(s.name, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Color distintivo", style = MaterialTheme.typography.labelMedium)
@@ -1251,7 +1423,7 @@ fun CreateSubjectDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotBlank()) onSave(name.trim(), selectedColor)
+                    if (name.isNotBlank()) onSave(name.trim(), selectedColor, selectedParentId)
                 },
                 enabled = name.isNotBlank()
             ) {

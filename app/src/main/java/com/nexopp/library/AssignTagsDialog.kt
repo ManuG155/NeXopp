@@ -190,7 +190,8 @@ fun MoveNotebookDialog(
                                             .background(Color(subject.color))
                                     )
                                     Spacer(Modifier.width(12.dp))
-                                    Text(subject.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                                    val path = buildSubjectPath(subject, subjects)
+                                    Text(path, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                                 }
 
                                 if (isSelected) {
@@ -217,4 +218,17 @@ fun MoveNotebookDialog(
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
+}
+
+fun buildSubjectPath(subject: Subject, allSubjects: List<Subject>): String {
+    val names = mutableListOf<String>()
+    var cur: Subject? = subject
+    val visited = mutableSetOf<String>()
+    while (cur != null && cur.id !in visited) {
+        visited.add(cur.id)
+        names.add(0, cur.name)
+        val pId = cur.parentId
+        cur = if (pId != null) allSubjects.firstOrNull { it.id == pId } else null
+    }
+    return names.joinToString(" / ")
 }
