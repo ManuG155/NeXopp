@@ -5,9 +5,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-class LibraryStore(private val context: Context) {
-    private val file = File(context.filesDir, "library_registry.json")
-    val notebooksDir: File = File(context.filesDir, "notebooks").apply { mkdirs() }
+class LibraryStore(val baseDir: File) {
+    constructor(context: Context) : this(context.filesDir)
+
+    private val file = File(baseDir, "library_registry.json")
+    val notebooksDir: File = File(baseDir, "notebooks").apply { mkdirs() }
 
     fun loadSubjects(): List<Subject> {
         if (!file.exists()) return emptyList()
@@ -161,8 +163,8 @@ class LibraryStore(private val context: Context) {
         save(subs, nbs, tags)
     }
 
-    private val trashFile = File(context.filesDir, "trash_registry.json")
-    val trashDir: File = File(context.filesDir, "trash").apply { mkdirs() }
+    private val trashFile = File(baseDir, "trash_registry.json")
+    val trashDir: File = File(baseDir, "trash").apply { mkdirs() }
 
     fun updateNotebook(updated: Notebook) {
         val subs = loadSubjects()

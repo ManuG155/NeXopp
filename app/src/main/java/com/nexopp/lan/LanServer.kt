@@ -38,8 +38,21 @@ sealed class LanServerStatus {
 }
 
 class LanServer(
-    val pairingTokenManager: PairingTokenManager = PairingTokenManager()
+    val pairingTokenManager: PairingTokenManager = PairingTokenManager(),
+    var syncBridge: LanSyncBridge? = null
 ) {
+    init {
+        syncBridge?.onBroadcastMessage = { type, payload ->
+            sendMessage(type, payload)
+        }
+    }
+
+    fun setBridge(bridge: LanSyncBridge) {
+        syncBridge = bridge
+        bridge.onBroadcastMessage = { type, payload ->
+            sendMessage(type, payload)
+        }
+    }
     private var serverSocket: ServerSocket? = null
     private var scope: CoroutineScope? = null
     private var serverJob: Job? = null
@@ -265,6 +278,14 @@ class LanServer(
             }.toString()
         )
 
+        // Immediately send library data if syncBridge is available
+        syncBridge?.let { bridge ->
+            try {
+                val libJson = bridge.getLibraryJson()
+                LanWebSocketFrame.writeServerTextFrame(outputStream, libJson.toString())
+            } catch (_: Exception) {}
+        }
+
         // Listen for WebSocket frames
         try {
             while (true) {
@@ -274,6 +295,7 @@ class LanServer(
                         val text = frame.text
                         val msg = parseIncomingJson(text)
                         _incomingMessages.emit(msg)
+                        handleProtocolMessage(socket, outputStream, text)
                     }
                     LanWebSocketFrame.OPCODE_PING -> {
                         LanWebSocketFrame.writeServerPongFrame(outputStream, frame.payload)
@@ -288,6 +310,142 @@ class LanServer(
         } finally {
             activeWsClients.remove(socket)
             try { socket.close() } catch (_: Exception) {}
+            updateConnectionStatusAfterClientLeave()
+        }
+    }
+
+    private suspend fun handleProtocolMessage(
+        senderSocket: Socket,
+        outputStream: OutputStream,
+        text: String
+    ) {
+        val bridge = syncBridge ?: return
+        try {
+            val json = JSONObject(text)
+            val type = json.optString("type", "")
+
+            when (type) {
+                LanProtocol.TYPE_GET_LIBRARY -> {
+                    val libJson = bridge.getLibraryJson()
+                    LanWebSocketFrame.writeServerTextFrame(outputStream, libJson.toString())
+                }
+
+                LanProtocol.TYPE_CREATE_SUBJECT -> {
+                    val name = json.getString("name")
+                    val color = json.optLong("color", 0xFF1976D2)
+                    val parentId = json.optString("parentId").takeIf { it.isNotEmpty() }
+                    val libJson = bridge.createSubject(name, color, parentId)
+                    broadcastRaw(libJson.toString())
+                }
+
+                LanProtocol.TYPE_CREATE_NOTEBOOK -> {
+                    val name = json.optString("name", "Sin título")
+                    val subjectId = json.optString("subjectId", "")
+                    val coverColor = json.optLong("coverColor", 0xFF1E3A8A)
+                    val template = json.optString("template", "ruled")
+                    val libJson = bridge.createNotebook(name, subjectId, coverColor, template)
+                    broadcastRaw(libJson.toString())
+                }
+
+                LanProtocol.TYPE_RENAME_NOTEBOOK -> {
+                    val notebookId = json.getString("notebookId")
+                    val newName = json.getString("newName")
+                    val libJson = bridge.renameNotebook(notebookId, newName)
+                    broadcastRaw(libJson.toString())
+                }
+
+                LanProtocol.TYPE_DELETE_NOTEBOOK -> {
+                    val notebookId = json.getString("notebookId")
+                    val libJson = bridge.deleteNotebook(notebookId)
+                    broadcastRaw(libJson.toString())
+                }
+
+                LanProtocol.TYPE_OPEN_DOCUMENT -> {
+                    val notebookId = json.optString("notebookId", "")
+                    val fileName = json.optString("fileName", "").takeIf { it.isNotEmpty() }
+                    val docJson = bridge.openDocument(notebookId, fileName)
+                    if (docJson != null) {
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, docJson.toString())
+                    } else {
+                        val err = JSONObject().apply {
+                            put("type", LanProtocol.TYPE_ERROR)
+                            put("message", "No se pudo abrir el documento")
+                        }
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, err.toString())
+                    }
+                }
+
+                LanProtocol.TYPE_ADD_STROKE -> {
+                    val notebookId = json.getString("notebookId")
+                    val pageIndex = json.getInt("pageIndex")
+                    val strokeObj = json.getJSONObject("stroke")
+                    val stroke = LanProtocol.strokeFromJson(strokeObj)
+                    bridge.addStroke(notebookId, pageIndex, stroke)
+
+                    // Forward stroke to any other connected clients
+                    val strokeBroadcast = JSONObject().apply {
+                        put("type", LanProtocol.TYPE_STROKE_ADDED)
+                        put("notebookId", notebookId)
+                        put("pageIndex", pageIndex)
+                        put("stroke", strokeObj)
+                    }.toString()
+                    broadcastRawExcept(senderSocket, strokeBroadcast)
+                }
+
+                LanProtocol.TYPE_ADD_PAGE -> {
+                    val notebookId = json.getString("notebookId")
+                    val width = json.optDouble("width", 595.276)
+                    val height = json.optDouble("height", 841.890)
+                    val template = json.optString("template", "ruled")
+                    val updatedDocJson = bridge.addPage(notebookId, width, height, template)
+                    if (updatedDocJson != null) {
+                        broadcastRaw(updatedDocJson.toString())
+                    }
+                }
+
+                LanProtocol.TYPE_SAVE_DOCUMENT -> {
+                    val notebookId = json.getString("notebookId")
+                    val success = bridge.saveDocument(notebookId)
+                    val savedJson = JSONObject().apply {
+                        put("type", LanProtocol.TYPE_DOCUMENT_SAVED)
+                        put("notebookId", notebookId)
+                        put("success", success)
+                        put("timestamp", System.currentTimeMillis())
+                    }.toString()
+                    LanWebSocketFrame.writeServerTextFrame(outputStream, savedJson)
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun broadcastRaw(rawText: String) {
+        val deadClients = mutableListOf<Socket>()
+        for (client in activeWsClients) {
+            try {
+                LanWebSocketFrame.writeServerTextFrame(client.getOutputStream(), rawText)
+            } catch (_: Exception) {
+                deadClients.add(client)
+            }
+        }
+        if (deadClients.isNotEmpty()) {
+            activeWsClients.removeAll(deadClients)
+            updateConnectionStatusAfterClientLeave()
+        }
+    }
+
+    private fun broadcastRawExcept(sender: Socket, rawText: String) {
+        val deadClients = mutableListOf<Socket>()
+        for (client in activeWsClients) {
+            if (client === sender) continue
+            try {
+                LanWebSocketFrame.writeServerTextFrame(client.getOutputStream(), rawText)
+            } catch (_: Exception) {
+                deadClients.add(client)
+            }
+        }
+        if (deadClients.isNotEmpty()) {
+            activeWsClients.removeAll(deadClients)
             updateConnectionStatusAfterClientLeave()
         }
     }

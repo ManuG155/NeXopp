@@ -71,6 +71,22 @@ class MainActivity : ComponentActivity() {
     internal val structureStore by lazy { DocumentStructureStore(File(filesDir, "notebooks")) }
     internal val attachmentStore by lazy { AttachmentStore(File(filesDir, "notebooks")) }
 
+    internal val lanSyncBridge by lazy {
+        val repo = com.nexopp.repository.LocalDocumentRepository(libraryStore.notebooksDir, libraryStore)
+        com.nexopp.lan.LanSyncBridge(
+            libraryStore = libraryStore,
+            documentRepository = repo,
+            activeSurfaceProvider = {
+                val tab = pane.tabs.active
+                val doc = pane.surface?.toDocument()
+                Pair(tab?.uri ?: tab?.title, doc)
+            },
+            onApplyDocumentToSurface = { updatedDoc ->
+                pane.surface?.applyMirroredDocument(updatedDoc)
+            }
+        )
+    }
+
     internal val panes: List<EditorPane> by lazy {
         TABS_DIRS.map { EditorPane(TabStore(File(filesDir, it))) }
     }
@@ -388,6 +404,7 @@ class MainActivity : ComponentActivity() {
                                 mirrors.propagate(p, doc)
                                 val tab = p.tabs.active
                                 if (tab != null) {
+                                    lanSyncBridge.onTabletDocumentEdited(tab.uri ?: tab.title, doc)
                                     crashRecoveryManager.checkpoint(tab.id, doc, view.pdfSourceFile(), view.imageSources())
                                     val targetUri = tab.uri?.let(Uri::parse)
                                     if (targetUri != null && targetUri.scheme == "file") {

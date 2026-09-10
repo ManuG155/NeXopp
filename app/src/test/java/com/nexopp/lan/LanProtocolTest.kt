@@ -1,0 +1,120 @@
+package com.nexopp.lan
+
+import com.nexopp.format.model.*
+import com.nexopp.library.Notebook
+import com.nexopp.library.Subject
+import com.nexopp.library.Tag
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Test
+
+class LanProtocolTest {
+
+    @Test
+    fun libraryToJson_serializesCorrectly() {
+        val subjects = listOf(
+            Subject(id = "sub1", name = "Matemáticas", color = 0xFF1976D2, parentId = null),
+            Subject(id = "sub2", name = "Álgebra", color = 0xFF38BDF8, parentId = "sub1")
+        )
+        val notebooks = listOf(
+            Notebook(
+                id = "nb1",
+                subjectId = "sub2",
+                name = "Álgebra Lineal",
+                fileName = "algebra.xopp",
+                coverColor = 0xFF1E3A8A,
+                initialTemplate = "ruled",
+                pageCount = 3
+            )
+        )
+        val tags = listOf(
+            Tag(id = "tag1", name = "Examen", color = 0xFFDC2626)
+        )
+
+        val json = LanProtocol.libraryToJson(subjects, notebooks, tags)
+
+        assertEquals(LanProtocol.TYPE_LIBRARY_DATA, json.getString("type"))
+        val subs = json.getJSONArray("subjects")
+        assertEquals(2, subs.length())
+        assertEquals("Matemáticas", subs.getJSONObject(0).getString("name"))
+        assertEquals("sub1", subs.getJSONObject(1).getString("parentId"))
+
+        val nbs = json.getJSONArray("notebooks")
+        assertEquals(1, nbs.length())
+        assertEquals("Álgebra Lineal", nbs.getJSONObject(0).getString("name"))
+        assertEquals(3, nbs.getJSONObject(0).getInt("pageCount"))
+    }
+
+    @Test
+    fun strokeRoundtrip_preservesAllProperties() {
+        val stroke = Stroke(
+            tool = Tool.HIGHLIGHTER,
+            color = 0x55F59E0B,
+            capStyle = "round",
+            points = listOf(
+                StrokePoint(x = 10.0, y = 20.0, width = 5.0),
+                StrokePoint(x = 30.0, y = 40.0, width = 8.0)
+            ),
+            uniformWidth = false,
+            lineStyle = LineStyle.PLAIN
+        )
+
+        val json = LanProtocol.strokeToJson(stroke)
+        val roundtrip = LanProtocol.strokeFromJson(json)
+
+        assertEquals(Tool.HIGHLIGHTER, roundtrip.tool)
+        assertEquals(0x55F59E0B, roundtrip.color)
+        assertEquals("round", roundtrip.capStyle)
+        assertEquals(2, roundtrip.points.size)
+        assertEquals(10.0, roundtrip.points[0].x, 0.001)
+        assertEquals(20.0, roundtrip.points[0].y, 0.001)
+        assertEquals(5.0, roundtrip.points[0].width, 0.001)
+        assertEquals(30.0, roundtrip.points[1].x, 0.001)
+        assertEquals(40.0, roundtrip.points[1].y, 0.001)
+        assertEquals(8.0, roundtrip.points[1].width, 0.001)
+    }
+
+    @Test
+    fun documentToJson_serializesPagesAndStrokes() {
+        val stroke = Stroke(
+            tool = Tool.PEN,
+            color = 0xFF000000.toInt(),
+            capStyle = "round",
+            points = listOf(StrokePoint(0.0, 0.0, 1.5), StrokePoint(50.0, 50.0, 1.5)),
+            uniformWidth = true
+        )
+        val page = Page(
+            width = 595.276,
+            height = 841.890,
+            background = Background.Solid(0xFFFFFFFF.toInt(), "ruled"),
+            layers = listOf(Layer(elements = listOf(stroke)))
+        )
+        val doc = Document(pages = listOf(page))
+
+        val json = LanProtocol.documentToJson(
+            notebookId = "nb-123",
+            fileName = "notes.xopp",
+            title = "Mis Notas",
+            document = doc,
+            version = 42L
+        )
+
+        assertEquals(LanProtocol.TYPE_DOCUMENT_DATA, json.getString("type"))
+        assertEquals("nb-123", json.getString("notebookId"))
+        assertEquals("Mis Notas", json.getString("title"))
+        assertEquals(42L, json.getLong("version"))
+
+        val pages = json.getJSONArray("pages")
+        assertEquals(1, pages.length())
+        val p0 = pages.getJSONObject(0)
+        assertEquals(595.276, p0.getDouble("width"), 0.001)
+        assertEquals("ruled", p0.getJSONObject("background").getString("style"))
+
+        val layers = p0.getJSONArray("layers")
+        assertEquals(1, layers.length())
+        val elements = layers.getJSONObject(0).getJSONArray("elements")
+        assertEquals(1, elements.length())
+        assertEquals("stroke", elements.getJSONObject(0).getString("type"))
+        assertEquals("pen", elements.getJSONObject(0).getString("tool"))
+    }
+}

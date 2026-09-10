@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import com.nexopp.MainActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,7 +41,8 @@ fun ConnectPcDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val lanServer = remember { LanServer() }
+    val syncBridge = remember(context) { (context as? MainActivity)?.lanSyncBridge }
+    val lanServer = remember { LanServer(syncBridge = syncBridge) }
     val nsdHelper = remember { NsdHelper(context) }
 
     val serverStatus by lanServer.status.collectAsState()

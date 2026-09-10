@@ -11,113 +11,105 @@ object LanWebClientHtml {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeXopp Connect — Conexión Local Wi-Fi</title>
+    <title>NeXopp — Biblioteca y Editor Web Local</title>
     <style>
         :root {
-            --bg-primary: #0b0f19;
-            --bg-secondary: #131b2e;
-            --bg-card: #1e293b;
-            --border-color: #334155;
-            --accent-blue: #38bdf8;
-            --accent-green: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-red: #ef4444;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
+            --bg-base: #090d16;
+            --bg-surface: #111827;
+            --bg-card: #1f293d;
+            --bg-card-hover: #27354f;
+            --border: #374151;
+            --border-light: #4b5563;
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
 
         body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+            background-color: var(--bg-base);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 24px 16px;
+            overflow-x: hidden;
         }
 
-        .container {
-            width: 100%;
-            max-width: 680px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
+        /* Top Header Bar */
         header {
+            height: 60px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px 20px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .logo-area {
+        .header-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .logo-badge {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+        .brand-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
             background: linear-gradient(135deg, #2563eb, #38bdf8);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 18px;
-            color: #ffffff;
-            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+            font-size: 16px;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
         }
 
         .brand-title {
-            font-size: 19px;
+            font-size: 18px;
             font-weight: 700;
             letter-spacing: -0.3px;
         }
 
-        .brand-subtitle {
-            font-size: 12px;
-            color: var(--text-secondary);
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
 
-        .status-pill {
+        .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 9999px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            background: rgba(148, 163, 184, 0.1);
-            border: 1px solid var(--border-color);
+            background: rgba(156, 163, 175, 0.1);
+            border: 1px solid var(--border);
             color: var(--text-secondary);
-            transition: all 0.3s ease;
         }
 
-        .status-pill.connected {
+        .status-badge.connected {
             background: rgba(16, 185, 129, 0.15);
             border-color: rgba(16, 185, 129, 0.4);
-            color: var(--accent-green);
-        }
-
-        .status-pill.connecting {
-            background: rgba(245, 158, 11, 0.15);
-            border-color: rgba(245, 158, 11, 0.4);
-            color: var(--accent-amber);
+            color: var(--success);
         }
 
         .status-dot {
@@ -129,482 +121,1281 @@ object LanWebClientHtml {
         }
 
         .connected .status-dot {
-            box-shadow: 0 0 10px var(--accent-green);
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 8px var(--success);
         }
 
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
-        }
-
-        .card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        h2 {
-            font-size: 17px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .pairing-box {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            margin-top: 12px;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus {
-            border-color: var(--accent-blue);
-        }
-
-        .code-input {
-            text-transform: uppercase;
-            font-family: monospace;
-            font-weight: 700;
-            font-size: 18px !important;
-            letter-spacing: 2px;
-            text-align: center;
-        }
-
+        /* Buttons */
         button {
             cursor: pointer;
-            padding: 12px 20px;
-            border-radius: 10px;
             border: none;
-            font-size: 14px;
-            font-weight: 600;
+            outline: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            transition: all 0.2s ease;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 14px;
+            transition: all 0.15s ease;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #2563eb, #0284c7);
-            color: white;
-            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+            background: var(--primary);
+            color: #0b1120;
         }
 
         .btn-primary:hover {
-            opacity: 0.95;
-            transform: translateY(-1px);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #059669, #10b981);
-            color: white;
-            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-success:hover {
-            opacity: 0.95;
-            transform: translateY(-1px);
+            background: var(--primary-hover);
         }
 
         .btn-secondary {
             background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
+            border: 1px solid var(--border);
+            color: var(--text);
         }
 
         .btn-secondary:hover {
-            background: #27354f;
+            background: var(--bg-card-hover);
+            border-color: var(--border-light);
+        }
+
+        .btn-icon {
+            padding: 7px;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
         }
 
         .btn-danger {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            color: var(--accent-red);
+            color: var(--danger);
         }
 
         .btn-danger:hover {
             background: rgba(239, 68, 68, 0.25);
         }
 
-        .action-row {
+        /* Main Containers */
+        .view-container {
+            flex: 1;
             display: flex;
+            flex-direction: column;
+        }
+
+        /* --- LIBRARY VIEW --- */
+        .library-content {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .library-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 14px;
+            gap: 12px;
         }
 
-        .log-container {
-            background: #0b0f19;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 14px;
-            margin-top: 14px;
-            max-height: 260px;
-            overflow-y: auto;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        .search-box {
+            position: relative;
+            width: 280px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 34px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-surface);
+            color: var(--text);
             font-size: 13px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            outline: none;
         }
 
-        .log-entry {
-            padding: 8px 12px;
-            border-radius: 6px;
-            background: rgba(30, 41, 59, 0.5);
-            border-left: 3px solid var(--text-muted);
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            word-break: break-word;
+        .search-box input:focus {
+            border-color: var(--primary);
         }
 
-        .log-entry.from-tablet {
-            border-left-color: var(--accent-blue);
-            background: rgba(56, 189, 248, 0.08);
-        }
-
-        .log-entry.from-pc {
-            border-left-color: var(--accent-green);
-            background: rgba(16, 185, 129, 0.08);
-        }
-
-        .log-entry.system {
-            border-left-color: var(--accent-amber);
-            background: rgba(245, 158, 11, 0.08);
-        }
-
-        .log-meta {
-            font-size: 11px;
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
             color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Breadcrumbs & Folder Pills */
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .crumb-link {
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .crumb-link:hover {
+            text-decoration: underline;
+        }
+
+        .folders-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .folder-chip {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .folder-chip:hover {
+            background: var(--bg-card);
+            border-color: var(--border-light);
+        }
+
+        .folder-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Notebook Grid */
+        .notebook-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .notebook-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .notebook-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-light);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-cover {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+        }
+
+        .card-body {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
             display: flex;
             justify-content: space-between;
         }
 
-        .log-text {
-            font-size: 13px;
-            font-weight: 500;
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-            margin-top: 12px;
+        .card-actions button {
+            flex: 1;
+            padding: 5px 8px;
+            font-size: 12px;
         }
 
-        .info-item {
-            background: var(--bg-card);
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .info-label {
-            font-size: 11px;
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
             color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
 
-        .info-value {
+        /* --- EDITOR VIEW --- */
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        .editor-topbar {
+            height: 52px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .editor-topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .doc-title-badge {
             font-size: 14px;
             font-weight: 600;
-            color: var(--text-primary);
-            margin-top: 2px;
+            color: var(--text);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .save-indicator {
+            font-size: 11px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .editor-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+        }
+
+        .tool-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.4);
+            color: var(--primary);
+        }
+
+        .color-swatches {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0 6px;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        .swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+
+        .swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .swatch.selected {
+            border-color: #ffffff;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+        }
+
+        .width-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .width-control input[type="range"] {
+            width: 70px;
+            cursor: pointer;
+        }
+
+        .editor-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 6px;
+        }
+
+        .page-indicator {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0 6px;
+            color: var(--text);
+            min-width: 70px;
+            text-align: center;
+        }
+
+        /* Canvas Scroll Area */
+        .canvas-viewport {
+            flex: 1;
+            overflow: auto;
+            background: #060910;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #ffffff;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 8px;
         }
 
         .hidden {
             display: none !important;
         }
-
-        footer {
-            margin-top: auto;
-            padding-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo-area">
-                <div class="logo-badge">N</div>
-                <div>
-                    <div class="brand-title">NeXopp Connect</div>
-                    <div class="brand-subtitle">Conexión Directa Wi-Fi Local (PoC)</div>
-                </div>
+    <header>
+        <div class="header-left">
+            <div class="brand-badge">N</div>
+            <div>
+                <div class="brand-title">NeXopp</div>
             </div>
-            <div id="statusPill" class="status-pill">
+        </div>
+        <div class="header-right">
+            <div id="statusPill" class="status-badge">
                 <span class="status-dot"></span>
-                <span id="statusText">Desconectado</span>
-            </div>
-        </header>
-
-        <!-- CARD 1: EMPAREJAMIENTO MANUAL (Si no se entra por QR con token) -->
-        <div id="pairingCard" class="card">
-            <h2>🔑 Emparejamiento con Tablet</h2>
-            <p>Introduce el código de 8 caracteres que aparece en la pantalla de NeXopp en tu tablet para autorizar la conexión local.</p>
-            <div class="pairing-box">
-                <div class="input-row">
-                    <input type="text" id="pairingCodeInput" class="code-input" placeholder="XXXX-XXX" maxlength="9" autofocus>
-                    <button class="btn-primary" onclick="submitPairingCode()">Conectar</button>
-                </div>
-                <div id="pairingError" style="color: var(--accent-red); font-size: 13px;" class="hidden"></div>
+                <span id="statusText">Conectando...</span>
             </div>
         </div>
+    </header>
 
-        <!-- CARD 2: ESTADO Y COMUNICACIÓN EN TIEMPO REAL -->
-        <div id="connectedCard" class="card hidden">
-            <h2>⚡ Sesión Activa NeXopp</h2>
-            <p>Conexión directa establecida entre el navegador y la tablet a través de la red local Wi-Fi.</p>
+    <!-- VIEW 1: PAIRING VIEW (If opened without token) -->
+    <div id="pairingView" class="view-container hidden" style="align-items: center; justify-content: center; padding: 20px;">
+        <div class="modal-card" style="max-width: 400px; text-align: center;">
+            <div class="modal-title">Conectar con NeXopp Tablet</div>
+            <p style="font-size: 13px; color: var(--text-secondary);">
+                Introduce el código de 8 caracteres que aparece en la pantalla de NeXopp en tu tablet.
+            </p>
+            <div class="form-group" style="margin-top: 8px;">
+                <input type="text" id="pairingCodeInput" placeholder="XXXX-XXX" style="font-family: monospace; font-size: 20px; font-weight: 700; letter-spacing: 2px; text-align: center; text-transform: uppercase;" maxlength="9">
+            </div>
+            <div id="pairingError" style="color: var(--danger); font-size: 12px;" class="hidden"></div>
+            <button class="btn-primary" style="margin-top: 10px;" onclick="submitPairingCode()">Entrar a Biblioteca</button>
+        </div>
+    </div>
 
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Dispositivo</div>
-                    <div class="info-value">Tablet Android</div>
+    <!-- VIEW 2: LIBRARY VIEW -->
+    <div id="libraryView" class="view-container">
+        <div class="library-content">
+            <div class="library-toolbar">
+                <div class="breadcrumbs" id="breadcrumbs">
+                    <span class="crumb-link" onclick="navigateToFolder(null)">Biblioteca</span>
                 </div>
-                <div class="info-item">
-                    <div class="info-label">Canal</div>
-                    <div class="info-value">WebSocket (LAN)</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Internet en PC</div>
-                    <div class="info-value" id="internetStatusVal" style="color: var(--accent-green);">Activo ✓</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Buscar cuadernos..." oninput="filterNotebooks()">
+                    </div>
+                    <button class="btn-secondary" onclick="openCreateSubjectModal()">+ Carpeta</button>
+                    <button class="btn-primary" onclick="openCreateNotebookModal()">+ Cuaderno</button>
                 </div>
             </div>
 
-            <div style="margin-top: 20px;">
-                <h2 style="font-size: 15px;">🧪 Pruebas de Comunicación Bidireccional</h2>
-                <p>Envía mensajes de prueba a la tablet para comprobar la respuesta en tiempo real.</p>
-                <div class="action-row">
-                    <button class="btn-success" onclick="sendHelloFromPc()">
-                        📤 Enviar HELLO_FROM_PC
+            <!-- Subfolders row -->
+            <div id="foldersRow" class="folders-row"></div>
+
+            <!-- Notebooks Grid -->
+            <div id="notebookGrid" class="notebook-grid"></div>
+
+            <div id="emptyState" class="empty-state hidden">
+                <span style="font-size: 40px;">📓</span>
+                <p>No hay cuadernos en esta carpeta.</p>
+                <button class="btn-primary" onclick="openCreateNotebookModal()">Crear primer cuaderno</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 3: EDITOR VIEW -->
+    <div id="editorView" class="view-container hidden">
+        <div class="editor-container">
+            <div class="editor-topbar">
+                <div class="editor-topbar-left">
+                    <button class="btn-secondary" style="padding: 5px 10px;" onclick="closeDocumentAndReturn()">
+                        ← Biblioteca
                     </button>
+                    <span id="editorDocTitle" class="doc-title-badge">Cuaderno</span>
+                    <span id="saveStatus" class="save-indicator">✓ Sincronizado</span>
                 </div>
 
-                <div class="input-row" style="margin-top: 12px;">
-                    <input type="text" id="customMessageInput" placeholder="Escribe un mensaje personalizado para la tablet..." onkeydown="if(event.key==='Enter') sendCustomMessage()">
-                    <button class="btn-secondary" onclick="sendCustomMessage()">Enviar</button>
+                <div class="editor-tools">
+                    <button id="toolPen" class="tool-btn active" onclick="setTool('pen')">✏️ Pluma</button>
+                    <button id="toolHighlighter" class="tool-btn" onclick="setTool('highlighter')">🖍️ Subrayador</button>
+                    <button id="toolEraser" class="tool-btn" onclick="setTool('eraser')">🧹 Borrador</button>
+
+                    <div class="color-swatches" id="colorSwatches">
+                        <div class="swatch selected" style="background-color: #1e293b;" onclick="setColor(0xFF1E293B, this)"></div>
+                        <div class="swatch" style="background-color: #2563eb;" onclick="setColor(0xFF2563EB, this)"></div>
+                        <div class="swatch" style="background-color: #dc2626;" onclick="setColor(0xFFDC2626, this)"></div>
+                        <div class="swatch" style="background-color: #16a34a;" onclick="setColor(0xFF16A34A, this)"></div>
+                        <div class="swatch" style="background-color: #9333ea;" onclick="setColor(0xFF9333EA, this)"></div>
+                        <div class="swatch" style="background-color: #ea580c;" onclick="setColor(0xFFEA580C, this)"></div>
+                    </div>
+
+                    <div class="width-control">
+                        <span>Grosor:</span>
+                        <input type="range" id="widthSlider" min="0.5" max="8.0" step="0.5" value="1.5" oninput="updateWidth(this.value)">
+                        <span id="widthValue" style="min-width: 24px;">1.5</span>
+                    </div>
+                </div>
+
+                <div class="editor-topbar-right">
+                    <div class="page-nav">
+                        <button class="btn-icon" onclick="prevPage()">‹</button>
+                        <span id="pageIndicator" class="page-indicator">1 / 1</span>
+                        <button class="btn-icon" onclick="nextPage()">›</button>
+                    </div>
+                    <button class="btn-secondary" style="padding: 5px 8px; font-size: 12px;" onclick="addPagePrompt()">+ Pág</button>
+                    <button class="btn-primary" style="padding: 5px 12px;" onclick="saveDocumentExplicit()">Guardar</button>
                 </div>
             </div>
 
-            <div style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2 style="font-size: 15px; margin-bottom: 0;">📜 Registro de Mensajes en Vivo</h2>
-                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="clearLogs()">Limpiar</button>
+            <div class="canvas-viewport" id="canvasViewport">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="pageCanvas"></canvas>
                 </div>
-                <div id="logList" class="log-container">
-                    <!-- Logs dynamically added here -->
-                </div>
-            </div>
-
-            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                <button class="btn-danger" onclick="disconnect()">Desconectar</button>
             </div>
         </div>
+    </div>
 
-        <footer>
-            NeXopp &bull; Red Local Directa &bull; Sin Cloud &bull; Sin Servidores Externos &bull; Coste 0 €
-        </footer>
+    <!-- MODAL: CREAR CUADERNO -->
+    <div id="createNotebookModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-title">Nuevo Cuaderno</div>
+            <div class="form-group">
+                <label>Nombre del cuaderno</label>
+                <input type="text" id="newNotebookName" placeholder="Ej. Álgebra Lineal" autofocus>
+            </div>
+            <div class="form-group">
+                <label>Plantilla de página</label>
+                <select id="newNotebookTemplate">
+                    <option value="ruled" selected>Rayado</option>
+                    <option value="graph">Cuadriculado</option>
+                    <option value="dotted">Puntos</option>
+                    <option value="plain">Liso / Blanco</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Color de portada</label>
+                <select id="newNotebookColor">
+                    <option value="2005034" selected>Azul Marino</option>
+                    <option value="417606">Verde Esmeralda</option>
+                    <option value="8591427">Vino Tinto</option>
+                    <option value="8138002">Ámbar / Óxido</option>
+                    <option value="3621201">Gris Pizarra</option>
+                    <option value="4988245">Púrpura Profundo</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModals()">Cancelar</button>
+                <button class="btn-primary" onclick="submitCreateNotebook()">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR CARPETA -->
+    <div id="createSubjectModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-title">Nueva Carpeta</div>
+            <div class="form-group">
+                <label>Nombre de la carpeta</label>
+                <input type="text" id="newSubjectName" placeholder="Ej. Semestre 1">
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <select id="newSubjectColor">
+                    <option value="4280391410" selected>Azul</option>
+                    <option value="4283215696">Verde</option>
+                    <option value="4293467747">Ámbar</option>
+                    <option value="4290772986">Rojo</option>
+                    <option value="4288424424">Púrpura</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModals()">Cancelar</button>
+                <button class="btn-primary" onclick="submitCreateSubject()">Crear</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let ws = null;
         let currentToken = "$safeInitialToken";
 
+        // Application State
+        let subjects = [];
+        let notebooks = [];
+        let tags = [];
+        let currentSubjectId = null;
+
+        // Current open document state
+        let currentDoc = null;
+        let currentPageIndex = 0;
+
+        // Editor Drawing State
+        let currentTool = 'pen'; // 'pen', 'highlighter', 'eraser'
+        let currentColor = 0xFF1E293B; // ARGB
+        let currentWidthPt = 1.5;
+        let isDrawing = false;
+        let currentStrokePoints = [];
+
+        // DOM elements
+        const pairingView = document.getElementById('pairingView');
+        const libraryView = document.getElementById('libraryView');
+        const editorView = document.getElementById('editorView');
         const statusPill = document.getElementById('statusPill');
         const statusText = document.getElementById('statusText');
-        const pairingCard = document.getElementById('pairingCard');
-        const connectedCard = document.getElementById('connectedCard');
-        const pairingCodeInput = document.getElementById('pairingCodeInput');
-        const pairingError = document.getElementById('pairingError');
-        const logList = document.getElementById('logList');
-        const customMessageInput = document.getElementById('customMessageInput');
+        const breadcrumbs = document.getElementById('breadcrumbs');
+        const foldersRow = document.getElementById('foldersRow');
+        const notebookGrid = document.getElementById('notebookGrid');
+        const emptyState = document.getElementById('emptyState');
+        const searchInput = document.getElementById('searchInput');
 
-        function setStatus(state, text) {
-            statusPill.className = 'status-pill ' + state;
-            statusText.textContent = text;
-        }
+        const canvas = document.getElementById('pageCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const editorDocTitle = document.getElementById('editorDocTitle');
+        const saveStatus = document.getElementById('saveStatus');
 
-        function appendLog(type, sender, message) {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry ' + type;
-            const time = new Date().toLocaleTimeString();
-            entry.innerHTML = 
-                '<div class="log-meta">' +
-                    '<span>' + escapeHtml(sender) + '</span>' +
-                    '<span>' + time + '</span>' +
-                '</div>' +
-                '<div class="log-text">' + escapeHtml(message) + '</div>';
-            logList.appendChild(entry);
-            logList.scrollTop = logList.scrollHeight;
-        }
-
-        function clearLogs() {
-            logList.innerHTML = '';
-        }
-
-        function escapeHtml(str) {
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        async function submitPairingCode() {
-            const code = pairingCodeInput.value.trim();
-            if (!code) {
-                showPairingError('Por favor introduce el código de emparejamiento.');
-                return;
-            }
-            pairingError.classList.add('hidden');
-            setStatus('connecting', 'Validando código...');
-
-            try {
-                const response = await fetch('/api/pair?code=' + encodeURIComponent(code));
-                const data = await response.json();
-                if (data.success && data.sessionToken) {
-                    currentToken = data.sessionToken;
-                    connectWebSocket(currentToken);
-                } else {
-                    showPairingError('Código de emparejamiento incorrecto o expirado.');
-                    setStatus('', 'Desconectado');
-                }
-            } catch (err) {
-                showPairingError('No se pudo contactar con la tablet: ' + err.message);
-                setStatus('', 'Desconectado');
+        function setStatus(connected, text) {
+            if (connected) {
+                statusPill.className = 'status-badge connected';
+                statusText.textContent = text || 'Conectado a Tablet ●';
+            } else {
+                statusPill.className = 'status-badge';
+                statusText.textContent = text || 'Desconectado';
             }
         }
 
-        function showPairingError(msg) {
-            pairingError.textContent = msg;
-            pairingError.classList.remove('hidden');
-        }
-
+        // --- WebSocket Connection ---
         function connectWebSocket(token) {
             if (ws) {
                 try { ws.close(); } catch(e) {}
             }
-
-            setStatus('connecting', 'Conectando...');
+            setStatus(false, 'Conectando...');
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = protocol + '//' + window.location.host + '/ws?token=' + encodeURIComponent(token);
 
             ws = new WebSocket(wsUrl);
 
             ws.onopen = function() {
-                setStatus('connected', 'NeXopp Conectado');
-                pairingCard.classList.add('hidden');
-                connectedCard.classList.remove('hidden');
-                appendLog('system', 'Sistema', 'Conexión WebSocket establecida con éxito con la Tablet.');
+                setStatus(true, 'Conectado a Tablet ●');
+                pairingView.classList.add('hidden');
+                libraryView.classList.remove('hidden');
+                ws.send(JSON.stringify({ type: 'GET_LIBRARY' }));
             };
 
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'HELLO_FROM_TABLET') {
-                        appendLog('from-tablet', '📱 Tablet NeXopp', data.payload || 'HELLO_FROM_TABLET');
-                    } else if (data.type === 'MESSAGE_FROM_TABLET') {
-                        appendLog('from-tablet', '📱 Tablet NeXopp', data.payload);
-                    } else if (data.type === 'STATUS') {
-                        appendLog('system', 'Sistema', 'Estado: ' + data.payload);
-                    } else {
-                        appendLog('from-tablet', '📱 Tablet', event.data);
-                    }
+                    handleIncomingMessage(data);
                 } catch(e) {
-                    appendLog('from-tablet', '📱 Tablet', event.data);
+                    console.error('Error parseando mensaje:', e);
                 }
             };
 
-            ws.onclose = function(event) {
-                setStatus('', 'Desconectado');
-                appendLog('system', 'Sistema', 'Conexión cerrada por la tablet o red local.');
+            ws.onclose = function() {
+                setStatus(false, 'Desconectado de Tablet');
+                saveStatus.textContent = '⚠️ Desconectado';
+                saveStatus.style.color = 'var(--danger)';
             };
 
-            ws.onerror = function(error) {
-                setStatus('', 'Error de conexión');
-                appendLog('system', 'Error', 'Error en el socket de red local.');
+            ws.onerror = function() {
+                setStatus(false, 'Error de conexión');
             };
         }
 
-        function sendHelloFromPc() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                alert('No hay conexión activa con la tablet.');
+        async function submitPairingCode() {
+            const input = document.getElementById('pairingCodeInput');
+            const code = input.value.trim();
+            const err = document.getElementById('pairingError');
+            if (!code) return;
+            err.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/pair?code=' + encodeURIComponent(code));
+                const data = await res.json();
+                if (data.success && data.sessionToken) {
+                    currentToken = data.sessionToken;
+                    connectWebSocket(currentToken);
+                } else {
+                    err.textContent = 'Código incorrecto o expirado.';
+                    err.classList.remove('hidden');
+                }
+            } catch(e) {
+                err.textContent = 'Error de red local: ' + e.message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        function handleIncomingMessage(msg) {
+            switch(msg.type) {
+                case 'LIBRARY_DATA':
+                    subjects = msg.subjects || [];
+                    notebooks = msg.notebooks || [];
+                    tags = msg.tags || [];
+                    renderLibrary();
+                    break;
+
+                case 'DOCUMENT_DATA':
+                    loadDocumentIntoEditor(msg);
+                    break;
+
+                case 'STROKE_ADDED':
+                    if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
+                        appendStrokeToCurrentPage(msg.stroke);
+                    }
+                    break;
+
+                case 'TABLET_DOCUMENT_CHANGED':
+                    if (currentDoc && msg.notebookId === currentDoc.notebookId) {
+                        currentDoc.pages = msg.pages;
+                        currentDoc.version = msg.version;
+                        renderCurrentPage();
+                        showSavedStatus('Sincronizado desde Tablet ✓');
+                    }
+                    break;
+
+                case 'DOCUMENT_SAVED':
+                    showSavedStatus('Guardado en Tablet ✓');
+                    break;
+
+                case 'ERROR':
+                    alert('Aviso de NeXopp: ' + msg.message);
+                    break;
+            }
+        }
+
+        // --- Library UI Logic ---
+        function renderLibrary() {
+            renderBreadcrumbs();
+            renderFolders();
+            renderNotebookGrid();
+        }
+
+        function renderBreadcrumbs() {
+            let html = '<span class="crumb-link" onclick="navigateToFolder(null)">Biblioteca</span>';
+            if (currentSubjectId) {
+                const chain = [];
+                let curr = subjects.find(s => s.id === currentSubjectId);
+                while (curr) {
+                    chain.unshift(curr);
+                    curr = curr.parentId ? subjects.find(s => s.id === curr.parentId) : null;
+                }
+                chain.forEach(folder => {
+                    html += ' <span>/</span> <span class="crumb-link" onclick="navigateToFolder(\'' + folder.id + '\')">' + escapeHtml(folder.name) + '</span>';
+                });
+            }
+            breadcrumbs.innerHTML = html;
+        }
+
+        function renderFolders() {
+            const subfolders = subjects.filter(s => (s.parentId || null) === (currentSubjectId || null));
+            if (subfolders.length === 0) {
+                foldersRow.innerHTML = '';
                 return;
             }
-            const msg = {
-                type: 'HELLO_FROM_PC',
-                payload: 'HELLO_FROM_PC',
-                timestamp: Date.now()
-            };
-            ws.send(JSON.stringify(msg));
-            appendLog('from-pc', '💻 PC Navegador', 'HELLO_FROM_PC');
+            let html = '';
+            subfolders.forEach(s => {
+                const count = notebooks.filter(n => n.subjectId === s.id).length;
+                const hexColor = '#' + (s.color & 0xFFFFFF).toString(16).padStart(6, '0');
+                html += '<div class="folder-chip" onclick="navigateToFolder(\'' + s.id + '\')">' +
+                    '<span class="folder-dot" style="background-color:' + hexColor + '"></span>' +
+                    '<span>' + escapeHtml(s.name) + '</span>' +
+                    '<span style="font-size:11px;color:var(--text-muted);">' + count + '</span>' +
+                '</div>';
+            });
+            foldersRow.innerHTML = html;
         }
 
-        function sendCustomMessage() {
-            const input = customMessageInput;
-            const text = input.value.trim();
-            if (!text) return;
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                alert('No hay conexión activa con la tablet.');
+        function renderNotebookGrid() {
+            const query = (searchInput.value || '').trim().toLowerCase();
+            const filtered = notebooks.filter(n => {
+                const matchFolder = currentSubjectId ? n.subjectId === currentSubjectId : true;
+                const matchQuery = query ? n.name.toLowerCase().includes(query) : true;
+                return matchFolder && matchQuery;
+            });
+
+            if (filtered.length === 0) {
+                notebookGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
                 return;
             }
-            const msg = {
-                type: 'MESSAGE_FROM_PC',
-                payload: text,
-                timestamp: Date.now()
-            };
-            ws.send(JSON.stringify(msg));
-            appendLog('from-pc', '💻 PC Navegador', text);
-            input.value = '';
+
+            emptyState.classList.add('hidden');
+            let html = '';
+            filtered.forEach(nb => {
+                const coverColor = '#' + (nb.coverColor & 0xFFFFFF).toString(16).padStart(6, '0');
+                const dateStr = nb.lastModified ? new Date(nb.lastModified).toLocaleDateString() : '';
+                html += '<div class="notebook-card" onclick="openNotebook(\'' + nb.id + '\', \'' + nb.fileName + '\')">' +
+                    '<div class="card-cover" style="background-color:' + coverColor + ';">' +
+                        '📓' +
+                    '</div>' +
+                    '<div class="card-body">' +
+                        '<div class="card-title">' + escapeHtml(nb.name) + '</div>' +
+                        '<div class="card-meta">' +
+                            '<span>' + (nb.pageCount || 1) + ' págs</span>' +
+                            '<span>' + dateStr + '</span>' +
+                        '</div>' +
+                        '<div class="card-actions" onclick="event.stopPropagation()">' +
+                            '<button class="btn-secondary" onclick="openNotebook(\'' + nb.id + '\', \'' + nb.fileName + '\')">Abrir</button>' +
+                            '<button class="btn-secondary" onclick="renameNotebookPrompt(\'' + nb.id + '\', \'' + escapeHtml(nb.name) + '\')">Renombrar</button>' +
+                            '<button class="btn-danger" onclick="deleteNotebookPrompt(\'' + nb.id + '\')">✕</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            notebookGrid.innerHTML = html;
         }
 
-        function disconnect() {
-            if (ws) {
-                try { ws.close(); } catch(e) {}
-                ws = null;
+        function navigateToFolder(id) {
+            currentSubjectId = id;
+            renderLibrary();
+        }
+
+        function filterNotebooks() {
+            renderNotebookGrid();
+        }
+
+        function openNotebook(notebookId, fileName) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            setStatus(true, 'Abriendo cuaderno...');
+            ws.send(JSON.stringify({
+                type: 'OPEN_DOCUMENT',
+                notebookId: notebookId,
+                fileName: fileName
+            }));
+        }
+
+        function renameNotebookPrompt(id, oldName) {
+            const newName = prompt('Nuevo nombre del cuaderno:', oldName);
+            if (newName && newName.trim() && newName.trim() !== oldName) {
+                ws.send(JSON.stringify({
+                    type: 'RENAME_NOTEBOOK',
+                    notebookId: id,
+                    newName: newName.trim()
+                }));
             }
-            setStatus('', 'Desconectado');
-            connectedCard.classList.add('hidden');
-            pairingCard.classList.remove('hidden');
-            pairingCodeInput.value = '';
         }
 
-        // Auto-connect if initialToken is provided in the URL
+        function deleteNotebookPrompt(id) {
+            if (confirm('¿Mover cuaderno a la papelera? Podrás restaurarlo en la tablet.')) {
+                ws.send(JSON.stringify({
+                    type: 'DELETE_NOTEBOOK',
+                    notebookId: id
+                }));
+            }
+        }
+
+        function openCreateNotebookModal() {
+            document.getElementById('newNotebookName').value = '';
+            document.getElementById('createNotebookModal').classList.remove('hidden');
+        }
+
+        function openCreateSubjectModal() {
+            document.getElementById('newSubjectName').value = '';
+            document.getElementById('createSubjectModal').classList.remove('hidden');
+        }
+
+        function closeModals() {
+            document.getElementById('createNotebookModal').classList.add('hidden');
+            document.getElementById('createSubjectModal').classList.add('hidden');
+        }
+
+        function submitCreateNotebook() {
+            const name = document.getElementById('newNotebookName').value.trim();
+            const template = document.getElementById('newNotebookTemplate').value;
+            const color = parseInt(document.getElementById('newNotebookColor').value);
+            closeModals();
+
+            ws.send(JSON.stringify({
+                type: 'CREATE_NOTEBOOK',
+                name: name || 'Sin título',
+                subjectId: currentSubjectId || '',
+                coverColor: color,
+                template: template
+            }));
+        }
+
+        function submitCreateSubject() {
+            const name = document.getElementById('newSubjectName').value.trim();
+            const color = parseInt(document.getElementById('newSubjectColor').value);
+            if (!name) return;
+            closeModals();
+
+            ws.send(JSON.stringify({
+                type: 'CREATE_SUBJECT',
+                name: name,
+                color: color,
+                parentId: currentSubjectId || null
+            }));
+        }
+
+        // --- Editor Canvas & Drawing Engine ---
+        function loadDocumentIntoEditor(docData) {
+            currentDoc = docData;
+            currentPageIndex = 0;
+
+            editorDocTitle.textContent = docData.title || 'Cuaderno';
+            showSavedStatus('Sincronizado ✓');
+
+            libraryView.classList.add('hidden');
+            editorView.classList.remove('hidden');
+
+            renderCurrentPage();
+        }
+
+        function closeDocumentAndReturn() {
+            editorView.classList.add('hidden');
+            libraryView.classList.remove('hidden');
+            currentDoc = null;
+        }
+
+        function renderCurrentPage() {
+            if (!currentDoc || !currentDoc.pages || currentDoc.pages.length === 0) return;
+            const page = currentDoc.pages[currentPageIndex];
+            if (!page) return;
+
+            pageIndicator.textContent = (currentPageIndex + 1) + ' / ' + currentDoc.pages.length;
+
+            const ptWidth = page.width || 595.276;
+            const ptHeight = page.height || 841.890;
+
+            // Scale to physical pixels on canvas
+            const scale = 1.4; // 1.4x scale for crisp reading on PC
+            const pixelRatio = window.devicePixelRatio || 1;
+
+            canvas.width = ptWidth * scale * pixelRatio;
+            canvas.height = ptHeight * scale * pixelRatio;
+
+            canvas.style.width = (ptWidth * scale) + 'px';
+            canvas.style.height = (ptHeight * scale) + 'px';
+
+            ctx.save();
+            ctx.scale(scale * pixelRatio, scale * pixelRatio);
+
+            // 1. Draw Page Background
+            drawPageBackground(ctx, page, ptWidth, ptHeight);
+
+            // 2. Draw Existing Layers and Strokes
+            if (page.layers) {
+                page.layers.forEach(layer => {
+                    if (layer.elements) {
+                        layer.elements.forEach(elem => {
+                            if (elem.type === 'stroke') {
+                                drawStroke(ctx, elem);
+                            }
+                        });
+                    }
+                });
+            }
+
+            ctx.restore();
+        }
+
+        function drawPageBackground(ctx, page, w, h) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+
+            const bg = page.background || { style: 'ruled' };
+            const style = bg.style || 'ruled';
+
+            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = '#dbeafe'; // Light blue lines
+
+            if (style === 'ruled') {
+                const lineSpacing = 24.0;
+                for (let y = lineSpacing * 2; y < h - lineSpacing; y += lineSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(w, y);
+                    ctx.stroke();
+                }
+                // Vertical margin
+                ctx.strokeStyle = '#fecdd3'; // Faint pink margin
+                ctx.beginPath();
+                ctx.moveTo(72.0, 0);
+                ctx.lineTo(72.0, h);
+                ctx.stroke();
+            } else if (style === 'graph') {
+                const gridSize = 14.17; // ~5mm
+                ctx.strokeStyle = '#e2e8f0';
+                for (let x = 0; x < w; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, h);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < h; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(w, y);
+                    ctx.stroke();
+                }
+            } else if (style === 'dotted') {
+                const dotSize = 18.0;
+                ctx.fillStyle = '#cbd5e1';
+                for (let x = dotSize; x < w; x += dotSize) {
+                    for (let y = dotSize; y < h; y += dotSize) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, 0.7, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        function drawStroke(ctx, stroke) {
+            if (!stroke.points || stroke.points.length < 2) return;
+
+            const isHighlighter = stroke.tool === 'highlighter';
+            const color = stroke.color;
+            const alpha = isHighlighter ? 0.35 : (((color >> 24) & 0xFF) / 255.0 || 1.0);
+            const r = (color >> 16) & 0xFF;
+            const g = (color >> 8) & 0xFF;
+            const b = color & 0xFF;
+
+            ctx.strokeStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const pts = stroke.points;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineWidth = pts[i].w || 1.5;
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+        }
+
+        function appendStrokeToCurrentPage(stroke) {
+            const page = currentDoc.pages[currentPageIndex];
+            if (!page) return;
+            if (!page.layers || page.layers.length === 0) {
+                page.layers = [{ elements: [] }];
+            }
+            page.layers[page.layers.length - 1].elements.push(stroke);
+
+            // Re-render
+            renderCurrentPage();
+        }
+
+        // Pointer / Mouse events on Canvas
+        function getCanvasPoint(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scale = 1.4;
+            const x = (event.clientX - rect.left) / scale;
+            const y = (event.clientY - rect.top) / scale;
+            return { x: x, y: y };
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            isDrawing = true;
+            canvas.setPointerCapture(e.pointerId);
+            const pt = getCanvasPoint(e);
+            currentStrokePoints = [{ x: pt.x, y: pt.y, w: currentWidthPt }];
+
+            const scale = 1.4;
+            const pixelRatio = window.devicePixelRatio || 1;
+            ctx.save();
+            ctx.scale(scale * pixelRatio, scale * pixelRatio);
+
+            const isHighlighter = currentTool === 'highlighter';
+            const alpha = isHighlighter ? 0.35 : 1.0;
+            const r = (currentColor >> 16) & 0xFF;
+            const g = (currentColor >> 8) & 0xFF;
+            const b = currentColor & 0xFF;
+            ctx.strokeStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+            ctx.lineWidth = currentWidthPt;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing) return;
+            const pt = getCanvasPoint(e);
+            currentStrokePoints.push({ x: pt.x, y: pt.y, w: currentWidthPt });
+
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            ctx.restore();
+
+            if (currentStrokePoints.length < 2) return;
+
+            const strokeData = {
+                type: 'stroke',
+                tool: currentTool,
+                color: currentColor,
+                capStyle: 'round',
+                uniformWidth: true,
+                lineStyle: 'plain',
+                points: currentStrokePoints
+            };
+
+            appendStrokeToCurrentPage(strokeData);
+
+            // Send to tablet via WebSocket
+            if (ws && ws.readyState === WebSocket.OPEN && currentDoc) {
+                showSavedStatus('Sincronizando...');
+                ws.send(JSON.stringify({
+                    type: 'ADD_STROKE',
+                    notebookId: currentDoc.notebookId,
+                    pageIndex: currentPageIndex,
+                    stroke: strokeData
+                }));
+            }
+        });
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            if (tool === 'pen') {
+                document.getElementById('toolPen').classList.add('active');
+                currentWidthPt = 1.5;
+            } else if (tool === 'highlighter') {
+                document.getElementById('toolHighlighter').classList.add('active');
+                currentWidthPt = 8.0;
+            } else if (tool === 'eraser') {
+                document.getElementById('toolEraser').classList.add('active');
+                currentWidthPt = 12.0;
+            }
+            document.getElementById('widthSlider').value = currentWidthPt;
+            document.getElementById('widthValue').textContent = currentWidthPt;
+        }
+
+        function setColor(argb, elem) {
+            currentColor = argb;
+            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+            if (elem) elem.classList.add('selected');
+        }
+
+        function updateWidth(val) {
+            currentWidthPt = parseFloat(val);
+            document.getElementById('widthValue').textContent = currentWidthPt;
+        }
+
+        function prevPage() {
+            if (currentPageIndex > 0) {
+                currentPageIndex--;
+                renderCurrentPage();
+            }
+        }
+
+        function nextPage() {
+            if (currentDoc && currentPageIndex < currentDoc.pages.length - 1) {
+                currentPageIndex++;
+                renderCurrentPage();
+            }
+        }
+
+        function addPagePrompt() {
+            if (!ws || !currentDoc) return;
+            showSavedStatus('Añadiendo página...');
+            ws.send(JSON.stringify({
+                type: 'ADD_PAGE',
+                notebookId: currentDoc.notebookId,
+                width: 595.276,
+                height: 841.890,
+                template: 'ruled'
+            }));
+        }
+
+        function saveDocumentExplicit() {
+            if (!ws || !currentDoc) return;
+            showSavedStatus('Guardando...');
+            ws.send(JSON.stringify({
+                type: 'SAVE_DOCUMENT',
+                notebookId: currentDoc.notebookId
+            }));
+        }
+
+        function showSavedStatus(text) {
+            saveStatus.textContent = text;
+            saveStatus.style.color = 'var(--success)';
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Auto-connect if initialToken is provided
         window.addEventListener('DOMContentLoaded', () => {
             if (currentToken && currentToken.length > 0) {
                 connectWebSocket(currentToken);
+            } else {
+                libraryView.classList.add('hidden');
+                pairingView.classList.remove('hidden');
+                setStatus(false, 'Esperando código');
             }
         });
     </script>
