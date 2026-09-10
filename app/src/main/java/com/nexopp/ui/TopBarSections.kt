@@ -6,6 +6,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -79,11 +80,27 @@ fun CategorizedTopBar(
 
     val styleCallbacks = ToolbarStyleCallbacks(
         color = ui.color,
-        onColor = { ui.color = it; surface?.colorArgb = it; onSettingsChange(settings.withColorUsed(it)) },
+        onColor = {
+            ui.color = it
+            surface?.colorArgb = it
+            if (ui.tool == EditorTool.HIGHLIGHTER) {
+                onSettingsChange(settings.copy(lastHighlighterColor = it))
+            } else {
+                onSettingsChange(settings.withColorUsed(it).copy(lastColor = it))
+            }
+        },
         palette = rememberColorPaletteState(settings, onSettingsChange),
         onRedefineCustom = { newColor -> redefineCustomColor(newColor, ui, surface, settings, onSettingsChange) },
         width = ui.width,
-        onWidth = { ui.width = it; surface?.baseWidthPt = it; onSettingsChange(settings.copy(lastWidth = it)) },
+        onWidth = {
+            ui.width = it
+            surface?.baseWidthPt = it
+            when (ui.tool) {
+                EditorTool.HIGHLIGHTER -> onSettingsChange(settings.copy(lastHighlighterWidth = it))
+                EditorTool.ERASER, EditorTool.ERASER_WHOLE -> onSettingsChange(settings.copy(lastEraserWidth = it))
+                else -> onSettingsChange(settings.copy(lastWidth = it))
+            }
+        },
         widthSlots = settings.penWidths,
         onRedefineSlot = { i, newPt -> redefineWidthSlot(i, newPt, ui, surface, settings, onSettingsChange) },
         lineStyle = ui.lineStyle,
@@ -359,26 +376,132 @@ private fun EscrituraSectionContent(
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit
 ) {
+    var showPenMenu by remember { mutableStateOf(false) }
+    var showHighlighterMenu by remember { mutableStateOf(false) }
+    var showEraserMenu by remember { mutableStateOf(false) }
+
     // 1. Herramientas: Pluma, Subrayador, Borrador, Lazo
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        SectionToolChip(
-            label = "Pluma",
-            icon = Icons.Filled.Create,
-            selected = ui.tool == EditorTool.PEN,
-            onClick = { ui.tool = EditorTool.PEN; surface?.applyTool(EditorTool.PEN) }
-        )
-        SectionToolChip(
-            label = "Subrayador",
-            icon = Icons.Filled.Brush,
-            selected = ui.tool == EditorTool.HIGHLIGHTER,
-            onClick = { ui.tool = EditorTool.HIGHLIGHTER; surface?.applyTool(EditorTool.HIGHLIGHTER) }
-        )
-        SectionToolChip(
-            label = "Borrador",
-            icon = Icons.Filled.Delete,
-            selected = ui.tool == EditorTool.ERASER || ui.tool == EditorTool.ERASER_WHOLE,
-            onClick = { ui.tool = EditorTool.ERASER; surface?.applyTool(EditorTool.ERASER) }
-        )
+        // Pluma
+        Box {
+            SectionToolChip(
+                label = "Pluma",
+                icon = Icons.Filled.Create,
+                selected = ui.tool == EditorTool.PEN,
+                onClick = {
+                    ui.tool = EditorTool.PEN
+                    surface?.applyTool(EditorTool.PEN)
+                    surface?.colorArgb = ui.penColor
+                    surface?.baseWidthPt = ui.penWidth
+                },
+                onLongClick = {
+                    ui.tool = EditorTool.PEN
+                    surface?.applyTool(EditorTool.PEN)
+                    surface?.colorArgb = ui.penColor
+                    surface?.baseWidthPt = ui.penWidth
+                    showPenMenu = true
+                }
+            )
+            ToolMiniContextMenu(
+                expanded = showPenMenu,
+                onDismissRequest = { showPenMenu = false },
+                tool = EditorTool.PEN,
+                currentColor = ui.penColor,
+                currentWidth = ui.penWidth,
+                palette = styleCallbacks.palette,
+                onColorChange = { col ->
+                    ui.penColor = col
+                    ui.color = col
+                    surface?.colorArgb = col
+                    onSettingsChange(settings.withColorUsed(col).copy(lastColor = col))
+                },
+                onWidthChange = { w ->
+                    ui.penWidth = w
+                    ui.width = w
+                    surface?.baseWidthPt = w
+                    onSettingsChange(settings.copy(lastWidth = w))
+                }
+            )
+        }
+
+        // Subrayador
+        Box {
+            SectionToolChip(
+                label = "Subrayador",
+                icon = Icons.Filled.Brush,
+                selected = ui.tool == EditorTool.HIGHLIGHTER,
+                onClick = {
+                    ui.tool = EditorTool.HIGHLIGHTER
+                    surface?.applyTool(EditorTool.HIGHLIGHTER)
+                    surface?.colorArgb = ui.highlighterColor
+                    surface?.baseWidthPt = ui.highlighterWidth
+                },
+                onLongClick = {
+                    ui.tool = EditorTool.HIGHLIGHTER
+                    surface?.applyTool(EditorTool.HIGHLIGHTER)
+                    surface?.colorArgb = ui.highlighterColor
+                    surface?.baseWidthPt = ui.highlighterWidth
+                    showHighlighterMenu = true
+                }
+            )
+            ToolMiniContextMenu(
+                expanded = showHighlighterMenu,
+                onDismissRequest = { showHighlighterMenu = false },
+                tool = EditorTool.HIGHLIGHTER,
+                currentColor = ui.highlighterColor,
+                currentWidth = ui.highlighterWidth,
+                palette = styleCallbacks.palette,
+                onColorChange = { col ->
+                    ui.highlighterColor = col
+                    ui.color = col
+                    surface?.colorArgb = col
+                    onSettingsChange(settings.copy(lastHighlighterColor = col))
+                },
+                onWidthChange = { w ->
+                    ui.highlighterWidth = w
+                    ui.width = w
+                    surface?.baseWidthPt = w
+                    onSettingsChange(settings.copy(lastHighlighterWidth = w))
+                }
+            )
+        }
+
+        // Borrador
+        Box {
+            SectionToolChip(
+                label = "Borrador",
+                icon = Icons.Filled.Delete,
+                selected = ui.tool == EditorTool.ERASER || ui.tool == EditorTool.ERASER_WHOLE,
+                onClick = {
+                    ui.tool = EditorTool.ERASER
+                    surface?.applyTool(EditorTool.ERASER)
+                    surface?.baseWidthPt = ui.eraserWidth
+                },
+                onLongClick = {
+                    ui.tool = EditorTool.ERASER
+                    surface?.applyTool(EditorTool.ERASER)
+                    surface?.baseWidthPt = ui.eraserWidth
+                    showEraserMenu = true
+                }
+            )
+            ToolMiniContextMenu(
+                expanded = showEraserMenu,
+                onDismissRequest = { showEraserMenu = false },
+                tool = EditorTool.ERASER,
+                currentColor = 0,
+                currentWidth = ui.eraserWidth,
+                palette = styleCallbacks.palette,
+                onColorChange = {},
+                onWidthChange = { w ->
+                    ui.eraserWidth = w
+                    ui.width = w
+                    surface?.baseWidthPt = w
+                    onSettingsChange(settings.copy(lastEraserWidth = w))
+                }
+            )
+        }
+
+        // Lazo
         SectionToolChip(
             label = "Lazo",
             icon = Icons.Filled.HighlightAlt,
@@ -859,19 +982,24 @@ private fun AjustesSectionContent(
     )
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SectionToolChip(
     label: String,
     icon: ImageVector,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),

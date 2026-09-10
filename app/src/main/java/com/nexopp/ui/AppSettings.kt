@@ -58,7 +58,9 @@ data class AppSettings(
     val favoriteColors: List<Int> = DEFAULT_FAVORITE_COLORS,
     val lastColor: Int = DEFAULT_LAST_COLOR,
     val lastWidth: Float = DEFAULT_PEN_WIDTHS[1],
-    val lastEraserWidth: Float = 14f,
+    val lastHighlighterColor: Int = 0xFFFFF176.toInt(),
+    val lastHighlighterWidth: Float = 12f,
+    val lastEraserWidth: Float = 5f,
     val fillEnabled: Boolean = false,
     val fillAlpha: Int = DEFAULT_FILL_ALPHA,
     val toolGroupSelections: Map<String, EditorTool> = emptyMap(),
@@ -88,6 +90,7 @@ data class AppSettings(
     fun sanitized(): AppSettings = copy(
         penWidths = penWidths.map { it.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX) },
         lastWidth = lastWidth.coerceIn(PEN_WIDTH_MIN, PEN_WIDTH_MAX),
+        lastHighlighterWidth = lastHighlighterWidth.coerceIn(1f, 60f),
         lastEraserWidth = lastEraserWidth.coerceIn(1f, 60f),
         pageColumns = pageColumns.coerceIn(1, PageStacker.COLUMN_CHOICES.last()),
     )

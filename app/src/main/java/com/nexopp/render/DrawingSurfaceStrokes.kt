@@ -275,7 +275,7 @@ internal fun DrawingSurfaceView.addSamples(event: MotionEvent, pointerIndex: Int
  * and splines call this once per gesture so they match a pen stroke drawn at the same size.
  */
 internal fun DrawingSurfaceView.widthForPressure(pressure: Float): Double = if (tool == Tool.HIGHLIGHTER) {
-    (baseWidthPt * DrawingSurfaceDefaults.HIGHLIGHTER_WIDTH_FACTOR).toDouble()
+    baseWidthPt.toDouble()
 } else {
     val p = if (pressure <= 0f) 1f else pressure
     (baseWidthPt * PressureCurve.factor(p, pressureGamma)).toDouble()

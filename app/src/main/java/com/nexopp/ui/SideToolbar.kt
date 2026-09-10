@@ -142,19 +142,24 @@ fun PrimaryToolSegment(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ToolPillButton(
     icon: ImageVector,
     label: String,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         contentAlignment = Alignment.Center
     ) {
         Icon(

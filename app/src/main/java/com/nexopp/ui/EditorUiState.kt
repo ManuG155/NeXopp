@@ -22,10 +22,87 @@ class TextDefaults {
     var color by mutableStateOf(PEN_COLORS.first())
 }
 
-class EditorUiState(tool: EditorTool, color: Int, width: Float) {
-    var tool by mutableStateOf(tool)
-    var color by mutableStateOf(color)
-    var width by mutableStateOf(width)
+private fun isShapeTool(t: EditorTool): Boolean = when (t) {
+    EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW,
+    EditorTool.RECTANGLE, EditorTool.ELLIPSE, EditorTool.COORDINATE_AXIS,
+    EditorTool.SPLINE -> true
+    else -> false
+}
+
+class EditorUiState(
+    tool: EditorTool = EditorTool.PEN,
+    color: Int = AppSettings.DEFAULT_LAST_COLOR,
+    width: Float = 1.5f,
+    penColor: Int = if (tool == EditorTool.HIGHLIGHTER) AppSettings.DEFAULT_LAST_COLOR else color,
+    penWidth: Float = if (tool == EditorTool.HIGHLIGHTER) 1.5f else width,
+    highlighterColor: Int = if (tool == EditorTool.HIGHLIGHTER) color else 0xFFFFF176.toInt(),
+    highlighterWidth: Float = if (tool == EditorTool.HIGHLIGHTER) width else 12.0f,
+    eraserWidth: Float = if (tool == EditorTool.ERASER || tool == EditorTool.ERASER_WHOLE) width else 5.0f,
+) {
+    var penColor by mutableStateOf(penColor)
+    var penWidth by mutableStateOf(penWidth)
+
+    var highlighterColor by mutableStateOf(highlighterColor)
+    var highlighterWidth by mutableStateOf(highlighterWidth)
+
+    var eraserWidth by mutableStateOf(eraserWidth)
+
+    private var _tool by mutableStateOf(tool)
+    var tool: EditorTool
+        get() = _tool
+        set(value) {
+            _tool = value
+            when (value) {
+                EditorTool.HIGHLIGHTER -> {
+                    _color = highlighterColor
+                    _width = highlighterWidth
+                }
+                EditorTool.ERASER, EditorTool.ERASER_WHOLE -> {
+                    _width = eraserWidth
+                }
+                EditorTool.PEN -> {
+                    _color = penColor
+                    _width = penWidth
+                }
+                else -> Unit
+            }
+        }
+
+    private var _color by mutableStateOf(
+        when (tool) {
+            EditorTool.HIGHLIGHTER -> highlighterColor
+            else -> penColor
+        }
+    )
+    var color: Int
+        get() = _color
+        set(value) {
+            _color = value
+            if (_tool == EditorTool.HIGHLIGHTER) {
+                highlighterColor = value
+            } else if (_tool == EditorTool.PEN || isShapeTool(_tool)) {
+                penColor = value
+            }
+        }
+
+    private var _width by mutableStateOf(
+        when (tool) {
+            EditorTool.HIGHLIGHTER -> highlighterWidth
+            EditorTool.ERASER, EditorTool.ERASER_WHOLE -> eraserWidth
+            else -> penWidth
+        }
+    )
+    var width: Float
+        get() = _width
+        set(value) {
+            _width = value
+            when (_tool) {
+                EditorTool.HIGHLIGHTER -> highlighterWidth = value
+                EditorTool.ERASER, EditorTool.ERASER_WHOLE -> eraserWidth = value
+                else -> penWidth = value
+            }
+        }
+
     var lineStyle by mutableStateOf(LineStyle.PLAIN)
 
     var showSettings by mutableStateOf(false)
@@ -65,9 +142,15 @@ class EditorUiState(tool: EditorTool, color: Int, width: Float) {
 
 @Composable
 fun rememberEditorUiState(settings: AppSettings): EditorUiState = remember {
+    val initialTool = startingTool(settings.defaultTool, settings.toolGroupSelections)
     EditorUiState(
-        tool = startingTool(settings.defaultTool, settings.toolGroupSelections),
+        tool = initialTool,
         color = settings.lastColor,
         width = settings.lastWidth,
+        penColor = settings.lastColor,
+        penWidth = settings.lastWidth,
+        highlighterColor = settings.lastHighlighterColor,
+        highlighterWidth = settings.lastHighlighterWidth,
+        eraserWidth = settings.lastEraserWidth,
     )
 }
