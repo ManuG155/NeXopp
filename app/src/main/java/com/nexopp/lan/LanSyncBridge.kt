@@ -7,11 +7,14 @@ import com.nexopp.library.LibraryStore
 import com.nexopp.library.Notebook
 import com.nexopp.library.Subject
 import com.nexopp.render.DrawingSurfaceDefaults
+import com.nexopp.render.EraserMode
+import com.nexopp.render.PageEraser
 import com.nexopp.repository.LocalDocumentRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -23,6 +26,12 @@ data class ActiveWebDocument(
     val notebook: Notebook,
     var document: Document,
     val version: AtomicLong = AtomicLong(1L)
+)
+
+data class EraseResult(
+    val changed: Boolean,
+    val version: Long,
+    val page: Page
 )
 
 /**
@@ -41,6 +50,17 @@ class LanSyncBridge(
 
     // Listener invoked when the bridge wants to broadcast a message to connected PC clients
     var onBroadcastMessage: ((String, String) -> Unit)? = null
+
+    init {
+        scope.launch {
+            libraryStore.version.collect { ver ->
+                if (ver > 0L) {
+                    val libJson = getLibraryJson()
+                    onBroadcastMessage?.invoke(LanProtocol.TYPE_LIBRARY_DATA, libJson.toString())
+                }
+            }
+        }
+    }
 
     // --- Library Operations ---
 
@@ -88,8 +108,8 @@ class LanSyncBridge(
         )
         openWebDocuments[notebook.id] = ActiveWebDocument(notebook, initialDoc)
 
-        // Save asynchronously to repository
-        scope.launch {
+        // Save initial document synchronously to ensure .xopp exists and avoid background race conditions
+        runBlocking(Dispatchers.IO) {
             documentRepository.saveDocument(fileName, initialDoc)
         }
 
@@ -226,6 +246,73 @@ class LanSyncBridge(
         )
 
         true
+    }
+
+    suspend fun eraseStrokes(
+        notebookId: String,
+        pageIndex: Int,
+        points: List<LanProtocol.PointPayload>
+    ): EraseResult? = withContext(Dispatchers.IO) {
+        var active = openWebDocuments[notebookId]
+        if (active == null) {
+            openDocument(notebookId, null)
+            active = openWebDocuments[notebookId] ?: return@withContext null
+        }
+
+        val doc = active.document
+        val pages = doc.pages.toMutableList()
+        if (pageIndex !in pages.indices) return@withContext null
+
+        var currentPage = pages[pageIndex]
+        var docChanged = false
+
+        for (pt in points) {
+            val erased = PageEraser.erase(
+                page = currentPage,
+                px = pt.x,
+                py = pt.y,
+                radius = pt.radius,
+                mode = EraserMode.WHOLE_STROKE
+            )
+            if (erased != null) {
+                currentPage = erased
+                docChanged = true
+            }
+        }
+
+        var newVersion = active.version.get()
+        if (docChanged) {
+            pages[pageIndex] = currentPage
+            val updatedDoc = doc.copy(pages = pages)
+            active.document = updatedDoc
+            newVersion = active.version.incrementAndGet()
+
+            // 1. If currently open on tablet surface, reflect changes on tablet screen immediately
+            val activeTabletInfo = activeSurfaceProvider?.invoke()
+            if (activeTabletInfo != null &&
+                (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
+            ) {
+                mainHandler.post {
+                    onApplyDocumentToSurface?.invoke(updatedDoc)
+                }
+            }
+
+            // 2. Persist to .xopp file via repository
+            documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
+
+            // 3. Update notebook metadata
+            libraryStore.updateNotebook(
+                active.notebook.copy(
+                    lastModified = System.currentTimeMillis()
+                )
+            )
+        }
+
+        EraseResult(
+            changed = docChanged,
+            version = newVersion,
+            page = currentPage
+        )
     }
 
     suspend fun addText(notebookId: String, pageIndex: Int, text: TextElement): Boolean = withContext(Dispatchers.IO) {

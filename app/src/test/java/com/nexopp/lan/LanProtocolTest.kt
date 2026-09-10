@@ -174,4 +174,46 @@ class LanProtocolTest {
         assertEquals("Texto en documento", textObj.getString("content"))
         assertEquals(14.0, textObj.getDouble("size"), 0.001)
     }
+
+    @Test
+    fun pointPayloadRoundtrip_preservesCoordinatesAndRadius() {
+        val points = listOf(
+            LanProtocol.PointPayload(10.5, 20.7, 12.0),
+            LanProtocol.PointPayload(35.2, 88.9, 15.0)
+        )
+        val jsonArray = LanProtocol.pointPayloadsToJson(points)
+        val roundtrip = LanProtocol.pointPayloadsFromJson(jsonArray)
+
+        assertEquals(2, roundtrip.size)
+        assertEquals(10.5, roundtrip[0].x, 0.001)
+        assertEquals(20.7, roundtrip[0].y, 0.001)
+        assertEquals(12.0, roundtrip[0].radius, 0.001)
+        assertEquals(35.2, roundtrip[1].x, 0.001)
+        assertEquals(88.9, roundtrip[1].y, 0.001)
+        assertEquals(15.0, roundtrip[1].radius, 0.001)
+    }
+
+    @Test
+    fun pageToJson_serializesSinglePageCorrectly() {
+        val stroke = Stroke(
+            tool = Tool.PEN,
+            color = 0xFF000000.toInt(),
+            capStyle = "round",
+            points = listOf(StrokePoint(10.0, 10.0, 2.0)),
+            uniformWidth = true
+        )
+        val page = Page(
+            width = 500.0,
+            height = 700.0,
+            background = Background.Solid(0xFFFFFFFF.toInt(), "graph"),
+            layers = listOf(Layer(elements = listOf(stroke)))
+        )
+        val pageJson = LanProtocol.pageToJson(page, pageIdx = 2)
+
+        assertEquals(2, pageJson.getInt("index"))
+        assertEquals(500.0, pageJson.getDouble("width"), 0.001)
+        assertEquals(700.0, pageJson.getDouble("height"), 0.001)
+        assertEquals("graph", pageJson.getJSONObject("background").getString("style"))
+        assertEquals(1, pageJson.getJSONArray("layers").length())
+    }
 }

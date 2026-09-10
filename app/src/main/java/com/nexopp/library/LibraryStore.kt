@@ -1,6 +1,10 @@
 package com.nexopp.library
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -10,6 +14,13 @@ class LibraryStore(val baseDir: File) {
 
     private val file = File(baseDir, "library_registry.json")
     val notebooksDir: File = File(baseDir, "notebooks").apply { mkdirs() }
+
+    private val _version = MutableStateFlow(0L)
+    val version: StateFlow<Long> = _version.asStateFlow()
+
+    fun notifyChanged() {
+        _version.update { it + 1 }
+    }
 
     fun loadSubjects(): List<Subject> {
         if (!file.exists()) return emptyList()
@@ -153,6 +164,7 @@ class LibraryStore(val baseDir: File) {
         json.put("tags", tagArray)
         json.put("notebooks", notArray)
         file.writeText(json.toString())
+        notifyChanged()
     }
 
     fun addNotebook(notebook: Notebook) {
@@ -308,6 +320,7 @@ class LibraryStore(val baseDir: File) {
         }
         json.put("trash", array)
         trashFile.writeText(json.toString())
+        notifyChanged()
     }
 
     fun restoreFromTrash(trashId: String): Notebook? {

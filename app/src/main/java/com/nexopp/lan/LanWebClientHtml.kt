@@ -954,6 +954,13 @@ object LanWebClientHtml {
         }
 
         function handleIncomingMessage(msg) {
+            if (msg.payload && typeof msg.payload === 'string' && msg.payload.startsWith('{')) {
+                try {
+                    const inner = JSON.parse(msg.payload);
+                    if (inner.type) msg = inner;
+                } catch(e) {}
+            }
+
             switch(msg.type) {
                 case 'LIBRARY_DATA':
                     subjects = msg.subjects || [];
@@ -969,6 +976,17 @@ object LanWebClientHtml {
                 case 'STROKE_ADDED':
                     if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
                         appendStrokeToCurrentPage(msg.stroke);
+                    }
+                    break;
+
+                case 'STROKES_ERASED':
+                    if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
+                        if (msg.page) {
+                            currentDoc.pages[currentPageIndex] = msg.page;
+                            if (msg.version !== undefined) currentDoc.version = msg.version;
+                            renderCurrentPage();
+                            showSavedStatus('Sincronizado ✓');
+                        }
                     }
                     break;
 
@@ -1463,6 +1481,110 @@ object LanWebClientHtml {
             renderCurrentPage();
         }
 
+        // --- Eraser Geometry & Hit Testing ---
+        let isErasing = false;
+        let erasedPoints = [];
+        let didEraseAny = false;
+
+        function pointSegmentDist(px, py, ax, ay, bx, by) {
+            const dx = bx - ax;
+            const dy = by - ay;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) {
+                const dxx = px - ax;
+                const dyy = py - ay;
+                return Math.sqrt(dxx * dxx + dyy * dyy);
+            }
+            let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+            if (t < 0) t = 0;
+            if (t > 1) t = 1;
+            const nx = ax + t * dx;
+            const ny = ay + t * dy;
+            const dxx = px - nx;
+            const dyy = py - ny;
+            return Math.sqrt(dxx * dxx + dyy * dyy);
+        }
+
+        function strokeHitsEraser(stroke, px, py, radius) {
+            const pts = stroke.points || [];
+            if (pts.length === 0) return false;
+            if (pts.length === 1) {
+                const p = pts[0];
+                const w = p.w !== undefined ? p.w : (p.width !== undefined ? p.width : 1.5);
+                const reach = radius + w / 2.0;
+                const dx = px - p.x;
+                const dy = py - p.y;
+                return Math.sqrt(dx * dx + dy * dy) <= reach;
+            }
+            for (let i = 1; i < pts.length; i++) {
+                const a = pts[i - 1];
+                const b = pts[i];
+                const wa = a.w !== undefined ? a.w : (a.width !== undefined ? a.width : 1.5);
+                const wb = b.w !== undefined ? b.w : (b.width !== undefined ? b.width : 1.5);
+                const reach = radius + Math.max(wa, wb) / 2.0;
+                if (pointSegmentDist(px, py, a.x, a.y, b.x, b.y) <= reach) return true;
+            }
+            return false;
+        }
+
+        function textHitsEraser(textElem, px, py, radius) {
+            if (!textElem) return false;
+            const x = textElem.x || 0;
+            const y = textElem.y || 0;
+            const lines = String(textElem.content || '').split('\n');
+            let maxLineLen = 0;
+            for (let k = 0; k < lines.length; k++) {
+                if (lines[k].length > maxLineLen) maxLineLen = lines[k].length;
+            }
+            const size = textElem.size || 14.0;
+            const w = Math.max(50, maxLineLen * size * 0.65);
+            const h = Math.max(size * 1.5, lines.length * size * 1.3);
+
+            const minX = x;
+            const maxX = x + w;
+            const minY = y - 4;
+            const maxY = y + h;
+
+            const closestX = Math.max(minX, Math.min(px, maxX));
+            const closestY = Math.max(minY, Math.min(py, maxY));
+            const dx = px - closestX;
+            const dy = py - closestY;
+            return (dx * dx + dy * dy) <= (radius * radius);
+        }
+
+        function performEraseAt(px, py, radius) {
+            if (!currentDoc || !currentDoc.pages) return false;
+            const page = currentDoc.pages[currentPageIndex];
+            if (!page || !page.layers) return false;
+
+            let pageChanged = false;
+            page.layers.forEach(layer => {
+                if (!layer.elements || layer.elements.length === 0) return;
+                const remaining = [];
+                for (let i = 0; i < layer.elements.length; i++) {
+                    const el = layer.elements[i];
+                    let hit = false;
+                    if (el.type === 'stroke') {
+                        hit = strokeHitsEraser(el, px, py, radius);
+                    } else if (el.type === 'text') {
+                        hit = textHitsEraser(el, px, py, radius);
+                    }
+                    if (hit) {
+                        pageChanged = true;
+                    } else {
+                        remaining.push(el);
+                    }
+                }
+                layer.elements = remaining;
+            });
+
+            if (pageChanged) {
+                didEraseAny = true;
+                renderCurrentPage();
+            }
+            return pageChanged;
+        }
+
         // Pointer / Mouse events on Canvas
         function getCanvasPoint(event) {
             const rect = canvas.getBoundingClientRect();
@@ -1488,6 +1610,16 @@ object LanWebClientHtml {
                 commitTextEditor();
             }
 
+            if (currentTool === 'eraser') {
+                isErasing = true;
+                didEraseAny = false;
+                const radius = Math.max(1.0, currentWidthPt);
+                erasedPoints = [{ x: pt.x, y: pt.y, radius: radius }];
+                canvas.setPointerCapture(e.pointerId);
+                performEraseAt(pt.x, pt.y, radius);
+                return;
+            }
+
             isDrawing = true;
             canvas.setPointerCapture(e.pointerId);
             currentStrokePoints = [{ x: pt.x, y: pt.y, w: currentWidthPt }];
@@ -1511,6 +1643,14 @@ object LanWebClientHtml {
         });
 
         canvas.addEventListener('pointermove', (e) => {
+            if (isErasing) {
+                const pt = getCanvasPoint(e);
+                const radius = Math.max(1.0, currentWidthPt);
+                erasedPoints.push({ x: pt.x, y: pt.y, radius: radius });
+                performEraseAt(pt.x, pt.y, radius);
+                return;
+            }
+
             if (!isDrawing) return;
             const pt = getCanvasPoint(e);
             currentStrokePoints.push({ x: pt.x, y: pt.y, w: currentWidthPt });
@@ -1520,6 +1660,23 @@ object LanWebClientHtml {
         });
 
         canvas.addEventListener('pointerup', (e) => {
+            if (isErasing) {
+                isErasing = false;
+                if (erasedPoints.length > 0 && currentDoc) {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        showSavedStatus('Sincronizando borrado...');
+                        ws.send(JSON.stringify({
+                            type: 'ERASE_STROKES',
+                            notebookId: currentDoc.notebookId,
+                            pageIndex: currentPageIndex,
+                            points: erasedPoints
+                        }));
+                    }
+                }
+                erasedPoints = [];
+                return;
+            }
+
             if (!isDrawing) return;
             isDrawing = false;
             ctx.restore();

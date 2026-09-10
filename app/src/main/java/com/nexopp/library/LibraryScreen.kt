@@ -126,6 +126,13 @@ fun LibraryScreen(
         notebooks = store.loadNotebooks()
     }
 
+    val storeVersion by store.version.collectAsState()
+    LaunchedEffect(storeVersion) {
+        if (storeVersion > 0L) {
+            refresh()
+        }
+    }
+
     // Filtered & Sorted notebooks logic
     val filteredNotebooks = remember(notebooks, subjects, tags, searchQuery, selectedFilter, selectedSubjectId, selectedTagId, sortOption) {
         val searchResults = searchEngine.search(

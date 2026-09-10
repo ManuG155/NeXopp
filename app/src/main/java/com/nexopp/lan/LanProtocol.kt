@@ -24,6 +24,8 @@ object LanProtocol {
     const val TYPE_DOCUMENT_DATA = "DOCUMENT_DATA"
     const val TYPE_ADD_STROKE = "ADD_STROKE"
     const val TYPE_STROKE_ADDED = "STROKE_ADDED"
+    const val TYPE_ERASE_STROKES = "ERASE_STROKES"
+    const val TYPE_STROKES_ERASED = "STROKES_ERASED"
     const val TYPE_ADD_TEXT = "ADD_TEXT"
     const val TYPE_TEXT_ADDED = "TEXT_ADDED"
     const val TYPE_ADD_PAGE = "ADD_PAGE"
@@ -34,6 +36,8 @@ object LanProtocol {
 
     const val TYPE_STATUS = "STATUS"
     const val TYPE_ERROR = "ERROR"
+
+    data class PointPayload(val x: Double, val y: Double, val radius: Double = 12.0)
 
     // --- Serialization Helpers ---
 
@@ -102,60 +106,82 @@ object LanProtocol {
 
         val pagesArray = JSONArray()
         document.pages.forEachIndexed { pageIdx, page ->
-            val pageObj = JSONObject()
-            pageObj.put("index", pageIdx)
-            pageObj.put("width", page.width)
-            pageObj.put("height", page.height)
-
-            // Background
-            val bgObj = JSONObject()
-            when (val bg = page.background) {
-                is Background.Solid -> {
-                    bgObj.put("type", "solid")
-                    bgObj.put("color", bg.color)
-                    bgObj.put("style", bg.style)
-                }
-                is Background.Pdf -> {
-                    bgObj.put("type", "pdf")
-                    bgObj.put("page", bg.pageNo)
-                }
-                is Background.Pixmap -> {
-                    bgObj.put("type", "pixmap")
-                    bgObj.put("file", bg.filename)
-                }
-            }
-            pageObj.put("background", bgObj)
-
-            // Layers and Elements
-            val layersArray = JSONArray()
-            page.layers.forEach { layer ->
-                val layerObj = JSONObject()
-                val elementsArray = JSONArray()
-                layer.elements.forEach { elem ->
-                    if (elem is Stroke) {
-                        elementsArray.put(strokeToJson(elem))
-                    } else if (elem is TextElement) {
-                        elementsArray.put(JSONObject().apply {
-                            put("type", "text")
-                            put("x", elem.x)
-                            put("y", elem.y)
-                            put("font", elem.font)
-                            put("size", elem.size)
-                            put("color", elem.color)
-                            put("content", elem.content)
-                        })
-                    }
-                }
-                layerObj.put("elements", elementsArray)
-                layersArray.put(layerObj)
-            }
-            pageObj.put("layers", layersArray)
-
-            pagesArray.put(pageObj)
+            pagesArray.put(pageToJson(page, pageIdx))
         }
         root.put("pages", pagesArray)
 
         return root
+    }
+
+    fun pageToJson(page: Page, pageIdx: Int = 0): JSONObject {
+        val pageObj = JSONObject()
+        pageObj.put("index", pageIdx)
+        pageObj.put("width", page.width)
+        pageObj.put("height", page.height)
+
+        // Background
+        val bgObj = JSONObject()
+        when (val bg = page.background) {
+            is Background.Solid -> {
+                bgObj.put("type", "solid")
+                bgObj.put("color", bg.color)
+                bgObj.put("style", bg.style)
+            }
+            is Background.Pdf -> {
+                bgObj.put("type", "pdf")
+                bgObj.put("page", bg.pageNo)
+            }
+            is Background.Pixmap -> {
+                bgObj.put("type", "pixmap")
+                bgObj.put("file", bg.filename)
+            }
+        }
+        pageObj.put("background", bgObj)
+
+        // Layers and Elements
+        val layersArray = JSONArray()
+        page.layers.forEach { layer ->
+            val layerObj = JSONObject()
+            val elementsArray = JSONArray()
+            layer.elements.forEach { elem ->
+                if (elem is Stroke) {
+                    elementsArray.put(strokeToJson(elem))
+                } else if (elem is TextElement) {
+                    elementsArray.put(textToJson(elem))
+                }
+            }
+            layerObj.put("elements", elementsArray)
+            layersArray.put(layerObj)
+        }
+        pageObj.put("layers", layersArray)
+        return pageObj
+    }
+
+    fun pointPayloadsFromJson(array: JSONArray): List<PointPayload> {
+        val list = mutableListOf<PointPayload>()
+        for (i in 0 until array.length()) {
+            val p = array.getJSONObject(i)
+            list.add(
+                PointPayload(
+                    x = p.getDouble("x"),
+                    y = p.getDouble("y"),
+                    radius = p.optDouble("radius", p.optDouble("r", 12.0))
+                )
+            )
+        }
+        return list
+    }
+
+    fun pointPayloadsToJson(points: List<PointPayload>): JSONArray {
+        val array = JSONArray()
+        points.forEach { pt ->
+            val obj = JSONObject()
+            obj.put("x", pt.x)
+            obj.put("y", pt.y)
+            obj.put("radius", pt.radius)
+            array.put(obj)
+        }
+        return array
     }
 
     fun strokeToJson(stroke: Stroke): JSONObject {

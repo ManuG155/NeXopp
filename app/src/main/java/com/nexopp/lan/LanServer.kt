@@ -43,14 +43,22 @@ class LanServer(
 ) {
     init {
         syncBridge?.onBroadcastMessage = { type, payload ->
-            sendMessage(type, payload)
+            if (payload.startsWith("{")) {
+                broadcastRaw(payload)
+            } else {
+                sendMessage(type, payload)
+            }
         }
     }
 
     fun setBridge(bridge: LanSyncBridge) {
         syncBridge = bridge
         bridge.onBroadcastMessage = { type, payload ->
-            sendMessage(type, payload)
+            if (payload.startsWith("{")) {
+                broadcastRaw(payload)
+            } else {
+                sendMessage(type, payload)
+            }
         }
     }
     private var serverSocket: ServerSocket? = null
@@ -390,6 +398,36 @@ class LanServer(
                         put("stroke", strokeObj)
                     }.toString()
                     broadcastRawExcept(senderSocket, strokeBroadcast)
+                }
+
+                LanProtocol.TYPE_ERASE_STROKES -> {
+                    val notebookId = json.getString("notebookId")
+                    val pageIndex = json.getInt("pageIndex")
+                    val pointsArray = json.getJSONArray("points")
+                    val points = LanProtocol.pointPayloadsFromJson(pointsArray)
+                    val result = bridge.eraseStrokes(notebookId, pageIndex, points)
+
+                    if (result != null) {
+                        val ackJson = JSONObject().apply {
+                            put("type", LanProtocol.TYPE_STROKES_ERASED)
+                            put("notebookId", notebookId)
+                            put("pageIndex", pageIndex)
+                            put("version", result.version)
+                            put("page", LanProtocol.pageToJson(result.page, pageIndex))
+                            put("success", true)
+                        }.toString()
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, ackJson)
+
+                        if (result.changed) {
+                            broadcastRawExcept(senderSocket, ackJson)
+                        }
+                    } else {
+                        val err = JSONObject().apply {
+                            put("type", LanProtocol.TYPE_ERROR)
+                            put("message", "No se pudo procesar el borrado en la tablet")
+                        }.toString()
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, err)
+                    }
                 }
 
                 LanProtocol.TYPE_ADD_TEXT -> {
