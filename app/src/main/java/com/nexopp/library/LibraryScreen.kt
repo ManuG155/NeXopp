@@ -107,6 +107,7 @@ fun LibraryScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
     var showCloudSyncDialog by remember { mutableStateOf(false) }
+    var showConnectPcDialog by remember { mutableStateOf(false) }
 
     val backupManager = remember { BackupManager(context.filesDir) }
     val syncEngine = remember { SyncEngine(store.notebooksDir) }
@@ -248,6 +249,10 @@ fun LibraryScreen(
 
                         IconButton(onClick = { showCloudSyncDialog = true }) {
                             Icon(Icons.Filled.CloudSync, contentDescription = "Sincronización")
+                        }
+
+                        IconButton(onClick = { showConnectPcDialog = true }) {
+                            Icon(Icons.Filled.Laptop, contentDescription = "Conectar ordenador")
                         }
 
                         IconButton(onClick = { showBackupDialog = true }) {
@@ -823,6 +828,13 @@ fun LibraryScreen(
             onSaveConfig = { /* Configuration saved */ },
             onDismiss = { showCloudSyncDialog = false },
             onSyncCompleted = { refresh() }
+        )
+    }
+
+    // 12. Direct Wi-Fi LAN Connect PC Dialog (PoC)
+    if (showConnectPcDialog) {
+        com.nexopp.ui.ConnectPcDialog(
+            onDismiss = { showConnectPcDialog = false }
         )
     }
 }
