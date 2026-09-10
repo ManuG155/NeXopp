@@ -69,19 +69,10 @@ class OfflineHeuristicRecognitionEngine : RecognitionEngine {
         }
 
         val totalBounds = computeTotalBounds(strokes)
-        val glyphClusters = clusterStrokesIntoGlyphs(strokes)
-        val recognizedGlyphs = glyphClusters.map { cluster ->
-            recognizeMathGlyph(cluster)
-        }
-
-        // Spatial math parsing (fractions, exponents, roots, subscripts)
-        val mathAst = parseMathSpatialLayout(recognizedGlyphs)
-        val latex = mathAst.toLatex()
-        val plainText = mathAst.toPlainText()
-
-        val avgConfidence = if (recognizedGlyphs.isNotEmpty()) {
-            recognizedGlyphs.map { it.confidence }.average().toFloat()
-        } else 1.0f
+        val mathResult = com.nexopp.stem.MathHandwritingEngine.recognize(strokes)
+        val latex = mathResult.latex
+        val plainText = mathResult.unicodeText.ifEmpty { latex }
+        val avgConfidence = mathResult.confidence.toFloat()
 
         val candidateList = listOf(
             RecognitionCandidate(text = plainText, latex = latex, confidence = avgConfidence, isMath = true),

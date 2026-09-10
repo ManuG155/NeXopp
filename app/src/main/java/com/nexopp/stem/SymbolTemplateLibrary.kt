@@ -304,7 +304,7 @@ object SymbolTemplateLibrary {
     private val LETTER_i = SymbolTemplate("i", "i", 1..2, mapOf(
         "aspect"   to r(0.25, 0.20),
         "linearity" to r(0.85, 0.15),
-    ), strokeCount = 1..2)
+    ))
 
     private val LETTER_j = SymbolTemplate("j", "j", 1..2, mapOf(
         "aspect"   to r(0.30, 0.25),
@@ -371,7 +371,7 @@ object SymbolTemplateLibrary {
     private val LETTER_t = SymbolTemplate("t", "t", 1..2, mapOf(
         "aspect"   to r(0.50, 0.25),
         "linearity" to r(0.60, 0.25),
-    ), strokeCount = 1..2)
+    ))
 
     private val LETTER_u = SymbolTemplate("u", "u", 1..2, mapOf(
         "aspect"   to r(0.80, 0.25),

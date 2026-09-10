@@ -1,16 +1,20 @@
 package com.nexopp.stem
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,11 +26,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.nexopp.ui.TabletDimensions
 
 enum class ElementCategory(val label: String, val colorHex: Long) {
     ALKALI_METAL("Metales alcalinos", 0xFFE53935),
@@ -54,49 +60,7 @@ data class ChemicalElement(
 )
 
 object PeriodicTableRegistry {
-    val elements: List<ChemicalElement> = listOf(
-        ChemicalElement(1, "H", "Hidrógeno", 1.008, ElementCategory.NON_METAL, 1, 1, 2.20, "1s¹"),
-        ChemicalElement(2, "He", "Helio", 4.0026, ElementCategory.NOBLE_GAS, 18, 1, null, "1s²"),
-        ChemicalElement(3, "Li", "Litio", 6.94, ElementCategory.ALKALI_METAL, 1, 2, 0.98, "[He] 2s¹"),
-        ChemicalElement(4, "Be", "Berilio", 9.0122, ElementCategory.ALKALINE_EARTH, 2, 2, 1.57, "[He] 2s²"),
-        ChemicalElement(5, "B", "Boro", 10.81, ElementCategory.METALLOID, 13, 2, 2.04, "[He] 2s² 2p¹"),
-        ChemicalElement(6, "C", "Carbono", 12.011, ElementCategory.NON_METAL, 14, 2, 2.55, "[He] 2s² 2p²"),
-        ChemicalElement(7, "N", "Nitrógeno", 14.007, ElementCategory.NON_METAL, 15, 2, 3.04, "[He] 2s² 2p³"),
-        ChemicalElement(8, "O", "Oxígeno", 15.999, ElementCategory.NON_METAL, 16, 2, 3.44, "[He] 2s² 2p⁴"),
-        ChemicalElement(9, "F", "Flúor", 18.998, ElementCategory.HALOGEN, 17, 2, 3.98, "[He] 2s² 2p⁵"),
-        ChemicalElement(10, "Ne", "Neón", 20.180, ElementCategory.NOBLE_GAS, 18, 2, null, "[He] 2s² 2p⁶"),
-        ChemicalElement(11, "Na", "Sodio", 22.990, ElementCategory.ALKALI_METAL, 1, 3, 0.93, "[Ne] 3s¹"),
-        ChemicalElement(12, "Mg", "Magnesio", 24.305, ElementCategory.ALKALINE_EARTH, 2, 3, 1.31, "[Ne] 3s²"),
-        ChemicalElement(13, "Al", "Aluminio", 26.982, ElementCategory.POST_TRANSITION, 13, 3, 1.61, "[Ne] 3s² 3p¹"),
-        ChemicalElement(14, "Si", "Silicio", 28.085, ElementCategory.METALLOID, 14, 3, 1.90, "[Ne] 3s² 3p²"),
-        ChemicalElement(15, "P", "Fósforo", 30.974, ElementCategory.NON_METAL, 15, 3, 2.19, "[Ne] 3s² 3p³"),
-        ChemicalElement(16, "S", "Azufre", 32.06, ElementCategory.NON_METAL, 16, 3, 2.58, "[Ne] 3s² 3p⁴"),
-        ChemicalElement(17, "Cl", "Cloro", 35.45, ElementCategory.HALOGEN, 17, 3, 3.16, "[Ne] 3s² 3p⁵"),
-        ChemicalElement(18, "Ar", "Argón", 39.948, ElementCategory.NOBLE_GAS, 18, 3, null, "[Ne] 3s² 3p⁶"),
-        ChemicalElement(19, "K", "Potasio", 39.098, ElementCategory.ALKALI_METAL, 1, 4, 0.82, "[Ar] 4s¹"),
-        ChemicalElement(20, "Ca", "Calcio", 40.078, ElementCategory.ALKALINE_EARTH, 2, 4, 1.00, "[Ar] 4s²"),
-        ChemicalElement(21, "Sc", "Escandio", 44.956, ElementCategory.TRANSITION_METAL, 3, 4, 1.36, "[Ar] 3d¹ 4s²"),
-        ChemicalElement(22, "Ti", "Titanio", 47.867, ElementCategory.TRANSITION_METAL, 4, 4, 1.54, "[Ar] 3d² 4s²"),
-        ChemicalElement(23, "V", "Vanadio", 50.942, ElementCategory.TRANSITION_METAL, 5, 4, 1.63, "[Ar] 3d³ 4s²"),
-        ChemicalElement(24, "Cr", "Cromo", 51.996, ElementCategory.TRANSITION_METAL, 6, 4, 1.66, "[Ar] 3d⁵ 4s¹"),
-        ChemicalElement(25, "Mn", "Manganeso", 54.938, ElementCategory.TRANSITION_METAL, 7, 4, 1.55, "[Ar] 3d⁵ 4s²"),
-        ChemicalElement(26, "Fe", "Hierro", 55.845, ElementCategory.TRANSITION_METAL, 8, 4, 1.83, "[Ar] 3d⁶ 4s²"),
-        ChemicalElement(27, "Co", "Cobalto", 58.933, ElementCategory.TRANSITION_METAL, 9, 4, 1.88, "[Ar] 3d⁷ 4s²"),
-        ChemicalElement(28, "Ni", "Níquel", 58.693, ElementCategory.TRANSITION_METAL, 10, 4, 1.91, "[Ar] 3d⁸ 4s²"),
-        ChemicalElement(29, "Cu", "Cobre", 63.546, ElementCategory.TRANSITION_METAL, 11, 4, 1.90, "[Ar] 3d¹⁰ 4s¹"),
-        ChemicalElement(30, "Zn", "Cinc", 65.38, ElementCategory.TRANSITION_METAL, 12, 4, 1.65, "[Ar] 3d¹⁰ 4s²"),
-        ChemicalElement(31, "Ga", "Galio", 69.723, ElementCategory.POST_TRANSITION, 13, 4, 1.81, "[Ar] 3d¹⁰ 4s² 4p¹"),
-        ChemicalElement(32, "Ge", "Germanio", 72.630, ElementCategory.METALLOID, 14, 4, 2.01, "[Ar] 3d¹⁰ 4s² 4p²"),
-        ChemicalElement(33, "As", "Arsénico", 74.922, ElementCategory.METALLOID, 15, 4, 2.18, "[Ar] 3d¹⁰ 4s² 4p³"),
-        ChemicalElement(34, "Se", "Selenio", 78.971, ElementCategory.NON_METAL, 16, 4, 2.55, "[Ar] 3d¹⁰ 4s² 4p⁴"),
-        ChemicalElement(35, "Br", "Bromo", 79.904, ElementCategory.HALOGEN, 17, 4, 2.96, "[Ar] 3d¹⁰ 4s² 4p⁵"),
-        ChemicalElement(36, "Kr", "Kriptón", 83.798, ElementCategory.NOBLE_GAS, 18, 4, 3.00, "[Ar] 3d¹⁰ 4s² 4p⁶"),
-        ChemicalElement(47, "Ag", "Plata", 107.87, ElementCategory.TRANSITION_METAL, 11, 5, 1.93, "[Kr] 4d¹⁰ 5s¹"),
-        ChemicalElement(79, "Au", "Oro", 196.97, ElementCategory.TRANSITION_METAL, 11, 6, 2.54, "[Xe] 4f¹⁴ 5d¹⁰ 6s¹"),
-        ChemicalElement(80, "Hg", "Mercurio", 200.59, ElementCategory.TRANSITION_METAL, 12, 6, 2.00, "[Xe] 4f¹⁴ 5d¹⁰ 6s²"),
-        ChemicalElement(82, "Pb", "Plomo", 207.2, ElementCategory.POST_TRANSITION, 14, 6, 2.33, "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²"),
-        ChemicalElement(92, "U", "Uranio", 238.03, ElementCategory.ACTINIDE, 3, 7, 1.38, "[Rn] 5f³ 6d¹ 7s²")
-    )
+    val elements: List<ChemicalElement> get() = PeriodicTableData.allElements
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,9 +72,34 @@ fun PeriodicTableDialog(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ElementCategory?>(null) }
     var selectedElement by remember { mutableStateOf<ChemicalElement?>(PeriodicTableRegistry.elements.first()) }
+    var isGridView by remember { mutableStateOf(false) }
+
+    val allElements = remember { PeriodicTableRegistry.elements }
+
+    // Lookup table for the 18-col x 7-row main periodic grid
+    val elementGridMap = remember(allElements) {
+        val map = mutableMapOf<Pair<Int, Int>, ChemicalElement>()
+        for (el in allElements) {
+            // Main grid contains elements that are not separate lanthanides/actinides
+            if (el.atomicNumber in 57..71 || el.atomicNumber in 89..103) {
+                // Separate rows below
+            } else {
+                map[el.period to el.group] = el
+            }
+        }
+        map
+    }
+
+    val lanthanides = remember(allElements) {
+        allElements.filter { it.atomicNumber in 57..71 }.sortedBy { it.atomicNumber }
+    }
+
+    val actinides = remember(allElements) {
+        allElements.filter { it.atomicNumber in 89..103 }.sortedBy { it.atomicNumber }
+    }
 
     val filteredElements = remember(searchQuery, selectedCategory) {
-        PeriodicTableRegistry.elements.filter { el ->
+        allElements.filter { el ->
             val matchesQuery = searchQuery.isBlank() ||
                     el.name.contains(searchQuery, ignoreCase = true) ||
                     el.symbol.contains(searchQuery, ignoreCase = true) ||
@@ -120,25 +109,47 @@ fun PeriodicTableDialog(
         }
     }
 
+    fun isElementMatch(el: ChemicalElement): Boolean {
+        val matchesQuery = searchQuery.isBlank() ||
+                el.name.contains(searchQuery, ignoreCase = true) ||
+                el.symbol.contains(searchQuery, ignoreCase = true) ||
+                el.atomicNumber.toString() == searchQuery.trim()
+        val matchesCat = selectedCategory == null || el.category == selectedCategory
+        return matchesQuery && matchesCat
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.88f),
-            shape = RoundedCornerShape(24.dp),
+                .fillMaxWidth(TabletDimensions.DialogMaxWidthFraction)
+                .fillMaxHeight(TabletDimensions.DialogMaxHeightFraction),
+            shape = RoundedCornerShape(TabletDimensions.DialogCornerRadius),
             tonalElevation = 6.dp,
             shadowElevation = 16.dp
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Top Bar
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Science, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Filled.Science,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(TabletDimensions.TopBarIconSize)
+                            )
                             Spacer(Modifier.width(10.dp))
-                            Text("Tabla Periódica Interactiva", fontWeight = FontWeight.Bold)
+                            Column {
+                                Text("Tabla Periódica Completa (118 Elementos)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                Text(
+                                    if (isGridView) "Vista lista y búsqueda rápida" else "Disposición visual IUPAC (18 columnas × 7 períodos)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     },
                     navigationIcon = {
@@ -147,10 +158,24 @@ fun PeriodicTableDialog(
                         }
                     },
                     actions = {
+                        // Toggle View Button
+                        FilterChip(
+                            selected = isGridView,
+                            onClick = { isGridView = !isGridView },
+                            label = { Text(if (isGridView) "Ver Tabla 18x7" else "Ver Cuadrícula") },
+                            leadingIcon = {
+                                Icon(
+                                    if (isGridView) Icons.Filled.TableChart else Icons.Filled.GridView,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        )
+                        Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
                                 selectedElement?.let { el ->
-                                    val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Config: ${el.electronConfig}"
+                                    val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Grupo: ${el.group}, Periodo: ${el.period}, Config: ${el.electronConfig}"
                                     onInsertText(summary)
                                     onDismiss()
                                 }
@@ -181,7 +206,7 @@ fun PeriodicTableDialog(
                         singleLine = true,
                         modifier = Modifier
                             .width(280.dp)
-                            .height(44.dp)
+                            .height(48.dp)
                     )
 
                     LazyRow(
@@ -206,7 +231,7 @@ fun PeriodicTableDialog(
                                 leadingIcon = {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .size(10.dp)
                                             .clip(CircleShape)
                                             .background(Color(cat.colorHex))
                                     )
@@ -218,75 +243,211 @@ fun PeriodicTableDialog(
 
                 HorizontalDivider()
 
-                // Main Layout: Elements Grid + Detail Panel
+                // Main Content Area: Visual Periodic Table + Detail Panel
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(16.dp)
+                        .padding(12.dp)
                 ) {
-                    // Elements Grid
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 72.dp),
-                        contentPadding = PaddingValues(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    // Left area: Interactive Periodic Table or Grid
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     ) {
-                        items(filteredElements, key = { it.atomicNumber }) { el ->
-                            val isSelected = selectedElement?.atomicNumber == el.atomicNumber
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(el.category.colorHex).copy(alpha = if (isSelected) 0.35f else 0.12f),
-                                tonalElevation = if (isSelected) 4.dp else 1.dp,
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .then(
-                                        if (isSelected) Modifier.border(2.5.dp, Color(el.category.colorHex), RoundedCornerShape(10.dp))
-                                        else Modifier.border(1.dp, Color(el.category.colorHex).copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                                    )
-                                    .clickable { selectedElement = el }
+                        if (isGridView) {
+                            // Quick Filtered Grid
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 76.dp),
+                                contentPadding = PaddingValues(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(4.dp),
-                                    verticalArrangement = Arrangement.SpaceBetween
+                                items(filteredElements, key = { it.atomicNumber }) { el ->
+                                    val isSelected = selectedElement?.atomicNumber == el.atomicNumber
+                                    PeriodicElementCell(
+                                        element = el,
+                                        isSelected = isSelected,
+                                        isDimmed = false,
+                                        onClick = { selectedElement = el }
+                                    )
+                                }
+                            }
+                        } else {
+                            // True 18-column x 7-row Visual Periodic Table layout
+                            val hScroll = rememberScrollState()
+                            val vScroll = rememberScrollState()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .horizontalScroll(hScroll)
+                                    .verticalScroll(vScroll)
+                                    .padding(4.dp)
+                            ) {
+                                // Group Header numbers (1 to 18)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Box(modifier = Modifier.width(22.dp)) // period label gutter
+                                    for (g in 1..18) {
+                                        Box(
+                                            modifier = Modifier.width(58.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                "$g",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(4.dp))
+
+                                // Main 7 Periods
+                                for (p in 1..7) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Period number label
+                                        Box(
+                                            modifier = Modifier
+                                                .width(22.dp)
+                                                .height(58.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                "$p",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            )
+                                        }
+
+                                        for (g in 1..18) {
+                                            // Special placeholder slots in Group 3 for Lanthanides & Actinides
+                                            if (p == 6 && g == 3) {
+                                                PlaceholderGroupCell(
+                                                    range = "57-71",
+                                                    symbol = "La-Lu",
+                                                    category = ElementCategory.LANTHANIDE,
+                                                    onClick = {
+                                                        selectedElement = lanthanides.firstOrNull()
+                                                    }
+                                                )
+                                            } else if (p == 7 && g == 3) {
+                                                PlaceholderGroupCell(
+                                                    range = "89-103",
+                                                    symbol = "Ac-Lr",
+                                                    category = ElementCategory.ACTINIDE,
+                                                    onClick = {
+                                                        selectedElement = actinides.firstOrNull()
+                                                    }
+                                                )
+                                            } else {
+                                                val el = elementGridMap[p to g]
+                                                if (el != null) {
+                                                    val isSelected = selectedElement?.atomicNumber == el.atomicNumber
+                                                    val isMatch = isElementMatch(el)
+                                                    PeriodicElementCell(
+                                                        element = el,
+                                                        isSelected = isSelected,
+                                                        isDimmed = (searchQuery.isNotBlank() || selectedCategory != null) && !isMatch,
+                                                        onClick = { selectedElement = el }
+                                                    )
+                                                } else {
+                                                    Spacer(modifier = Modifier.size(58.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                }
+
+                                Spacer(Modifier.height(14.dp))
+
+                                // Lanthanides Row (57-71)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Spacing to align with Group 3 (gutter 22dp + 2 cols * (58dp + 4dp))
+                                    Box(
+                                        modifier = Modifier.width(22.dp + (58.dp + 4.dp) * 2),
+                                        contentAlignment = Alignment.CenterEnd
                                     ) {
                                         Text(
-                                            "${el.atomicNumber}",
-                                            style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            "Lantánidos *",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(ElementCategory.LANTHANIDE.colorHex),
+                                            modifier = Modifier.padding(end = 8.dp)
                                         )
                                     }
-                                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+
+                                    lanthanides.forEach { el ->
+                                        val isSelected = selectedElement?.atomicNumber == el.atomicNumber
+                                        val isMatch = isElementMatch(el)
+                                        PeriodicElementCell(
+                                            element = el,
+                                            isSelected = isSelected,
+                                            isDimmed = (searchQuery.isNotBlank() || selectedCategory != null) && !isMatch,
+                                            onClick = { selectedElement = el }
+                                        )
+                                    }
+                                }
+
+                                Spacer(Modifier.height(4.dp))
+
+                                // Actinides Row (89-103)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Spacing to align with Group 3
+                                    Box(
+                                        modifier = Modifier.width(22.dp + (58.dp + 4.dp) * 2),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
                                         Text(
-                                            el.symbol,
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                            "Actínidos **",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(ElementCategory.ACTINIDE.colorHex),
+                                            modifier = Modifier.padding(end = 8.dp)
                                         )
                                     }
-                                    Text(
-                                        el.name,
-                                        style = TextStyle(fontSize = 9.sp),
-                                        maxLines = 1,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+
+                                    actinides.forEach { el ->
+                                        val isSelected = selectedElement?.atomicNumber == el.atomicNumber
+                                        val isMatch = isElementMatch(el)
+                                        PeriodicElementCell(
+                                            element = el,
+                                            isSelected = isSelected,
+                                            isDimmed = (searchQuery.isNotBlank() || selectedCategory != null) && !isMatch,
+                                            onClick = { selectedElement = el }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Detail Panel
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(14.dp))
+
+                    // Right Detail Panel
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 2.dp,
+                        shape = RoundedCornerShape(18.dp),
+                        tonalElevation = 3.dp,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
-                            .width(280.dp)
+                            .width(300.dp)
                             .fillMaxHeight()
                     ) {
                         Column(
@@ -297,51 +458,130 @@ fun PeriodicTableDialog(
                         ) {
                             if (selectedElement != null) {
                                 val el = selectedElement!!
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                                     // Big Element Badge
                                     Surface(
-                                        shape = RoundedCornerShape(14.dp),
-                                        color = Color(el.category.colorHex).copy(alpha = 0.18f),
-                                        border = androidx.compose.foundation.BorderStroke(2.dp, Color(el.category.colorHex)),
-                                        modifier = Modifier.fillMaxWidth().height(110.dp)
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color(el.category.colorHex).copy(alpha = 0.20f),
+                                        border = BorderStroke(2.5.dp, Color(el.category.colorHex)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(130.dp)
                                     ) {
                                         Column(
-                                            modifier = Modifier.fillMaxSize().padding(10.dp),
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(12.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("Z = ${el.atomicNumber}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                Text("${el.atomicMass} u", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(
+                                                    "Z = ${el.atomicNumber}",
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 13.sp
+                                                )
+                                                Text(
+                                                    String.format(java.util.Locale.US, "%.3f u", el.atomicMass),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                                Text(el.symbol, style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold))
+                                                Text(
+                                                    el.symbol,
+                                                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black)
+                                                )
                                             }
-                                            Text(el.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                            Text(
+                                                el.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
                                         }
                                     }
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text("Categoría: ${el.category.label}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                                        Text("Grupo: ${el.group}  •  Periodo: ${el.period}", style = MaterialTheme.typography.bodySmall)
-                                        if (el.electronegativity != null) {
-                                            Text("Electronegatividad (Pauling): ${el.electronegativity}", style = MaterialTheme.typography.bodySmall)
+                                    // Category Tag
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(el.category.colorHex).copy(alpha = 0.15f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(el.category.colorHex))
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                el.category.label,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(el.category.colorHex)
+                                            )
                                         }
-                                        Text("Configuración electrónica: ${el.electronConfig}", style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+                                    }
+
+                                    // Element Properties
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        PropertyRow("Grupo / Periodo:", "Grupo ${el.group}  •  Periodo ${el.period}")
+                                        PropertyRow(
+                                            "Electronegatividad:",
+                                            el.electronegativity?.let { "$it (Pauling)" } ?: "No disponible"
+                                        )
+                                        PropertyRow(
+                                            "Configuración:",
+                                            el.electronConfig.ifBlank { "N/A" },
+                                            isMonospace = true
+                                        )
                                     }
                                 }
 
-                                Button(
-                                    onClick = {
-                                        val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Config: ${el.electronConfig}"
-                                        onInsertText(summary)
-                                        onDismiss()
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            onInsertText(el.symbol)
+                                            onDismiss()
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Insertar solo Símbolo (${el.symbol})")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Config: ${el.electronConfig}"
+                                            onInsertText(summary)
+                                            onDismiss()
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Filled.PostAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Insertar Ficha Completa")
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text("Insertar en Nota")
+                                    Text(
+                                        "Selecciona un elemento para ver sus propiedades",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }
@@ -349,5 +589,120 @@ fun PeriodicTableDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PeriodicElementCell(
+    element: ChemicalElement,
+    isSelected: Boolean,
+    isDimmed: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(element.category.colorHex).copy(
+            alpha = when {
+                isSelected -> 0.55f
+                isDimmed -> 0.07f
+                else -> 0.22f
+            }
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 2.5.dp else 1.dp,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color(element.category.colorHex).copy(alpha = if (isDimmed) 0.25f else 0.85f)
+        ),
+        modifier = Modifier
+            .size(58.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 3.dp, vertical = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${element.atomicNumber}",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDimmed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    String.format(java.util.Locale.US, "%.1f", element.atomicMass),
+                    fontSize = 7.5.sp,
+                    color = if (isDimmed) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    element.symbol,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (isDimmed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                element.name,
+                fontSize = 7.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                color = if (isDimmed) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaceholderGroupCell(
+    range: String,
+    symbol: String,
+    category: ElementCategory,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(category.colorHex).copy(alpha = 0.18f),
+        border = BorderStroke(1.dp, Color(category.colorHex).copy(alpha = 0.6f)),
+        modifier = Modifier
+            .size(58.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(range, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(category.colorHex))
+            Text(symbol, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(category.colorHex))
+            Text(category.label.take(8) + "…", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun PropertyRow(label: String, value: String, isMonospace: Boolean = false) {
+    Column {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = if (isMonospace) FontFamily.Monospace else FontFamily.Default
+            )
+        )
     }
 }

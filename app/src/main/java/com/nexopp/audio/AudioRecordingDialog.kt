@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,6 +29,8 @@ import java.util.*
 fun AudioRecordingDialog(
     notebookTitle: String,
     isRecording: Boolean,
+    folderChosen: Boolean = false,
+    onChooseFolder: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onStartRecording: (customName: String, recordAndTranscribe: Boolean) -> Unit,
     onStopRecording: () -> Unit
@@ -35,6 +41,15 @@ fun AudioRecordingDialog(
     }
     var recordingName by remember { mutableStateOf(defaultName) }
     var transcribeOffline by remember { mutableStateOf(false) }
+    var selectedCustomUri by remember { mutableStateOf<Uri?>(null) }
+
+    val safFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            selectedCustomUri = uri
+        }
+    }
 
     Dialog(
         onDismissRequest = {
@@ -118,6 +133,65 @@ fun AudioRecordingDialog(
                                 Icon(Icons.Filled.AudioFile, contentDescription = null)
                             }
                         )
+
+                        // Storage Location Picker (SAF)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Folder,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            "Ubicación de almacenamiento",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            when {
+                                                selectedCustomUri != null -> "Carpeta: ${selectedCustomUri?.lastPathSegment ?: "Seleccionada"}"
+                                                folderChosen -> "Carpeta del cuaderno configurada"
+                                                else -> "Carpeta interna del cuaderno (por defecto)"
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        if (onChooseFolder != null) {
+                                            onChooseFolder()
+                                        } else {
+                                            safFolderLauncher.launch(null)
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Filled.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Explorar…")
+                                }
+                            }
+                        }
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),

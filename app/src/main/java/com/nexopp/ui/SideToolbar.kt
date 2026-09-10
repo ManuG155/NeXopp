@@ -159,8 +159,8 @@ private fun ToolPillButton(
 ) {
     Box(
         modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .size(44.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -169,7 +169,7 @@ private fun ToolPillButton(
             icon,
             contentDescription = label,
             tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -190,8 +190,8 @@ private fun ToolGroupDropdownButton(
     Box {
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent)
                 .combinedClickable(
                     onClick = { onSelectTool(activeMember) },
@@ -203,7 +203,7 @@ private fun ToolGroupDropdownButton(
                 activeMember.icon,
                 contentDescription = activeMember.label,
                 tint = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
 

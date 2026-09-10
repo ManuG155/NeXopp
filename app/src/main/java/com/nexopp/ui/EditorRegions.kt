@@ -282,6 +282,8 @@ fun UnifiedTopBar(
         AudioRecordingDialog(
             notebookTitle = currentNotebookName,
             isRecording = audio.recording,
+            folderChosen = audio.folderChosen,
+            onChooseFolder = audio.onChooseFolder,
             onDismiss = { showAudioDialog = false },
             onStartRecording = { _, _ ->
                 audio.onToggleRecord()
@@ -399,13 +401,9 @@ internal fun redefineCustomColor(
     settings: AppSettings,
     onSettingsChange: (AppSettings) -> Unit,
 ) {
-    val old = settings.customColor
-    onSettingsChange(settings.copy(customColor = newColor))
-    if (ui.color == old) {
-        ui.color = newColor
-        surface?.colorArgb = newColor
-        onSettingsChange(settings.copy(customColor = newColor).withColorUsed(newColor))
-    }
+    ui.color = newColor
+    surface?.colorArgb = newColor
+    onSettingsChange(settings.copy(customColor = newColor).withColorUsed(newColor))
 }
 
 internal fun redefineWidthSlot(

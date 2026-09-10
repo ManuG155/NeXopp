@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.nexopp.format.model.Element
 import com.nexopp.render.TableBuilder
 import com.nexopp.ui.CleanColorSwatch
@@ -42,7 +43,10 @@ fun TableDialog(
     val cellValues = remember { mutableStateMapOf<Pair<Int, Int>, String>() }
     var selectedColor by remember { mutableStateOf(0xFF000000.toInt()) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 6.dp,

@@ -67,9 +67,9 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
     ) { dismiss ->
         Column(
             modifier = Modifier
-                .width(320.dp)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .width(TabletDimensions.ColorPopupWidth)
+                .padding(TabletDimensions.DialogPadding),
+            verticalArrangement = Arrangement.spacedBy(TabletDimensions.SpacingMedium)
         ) {
             // Section 1: Color Header & Painter Palette
             Row(
@@ -81,16 +81,27 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                     "Color de trazo",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-                IconButton(
-                    onClick = { editing = true; dismiss() },
-                    modifier = Modifier.size(36.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        Icons.Filled.ColorLens,
-                        contentDescription = "Paleta de pintor completa",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                    CleanColorSwatch(
+                        color = callbacks.palette.custom,
+                        selected = callbacks.color == callbacks.palette.custom,
+                        onClick = { callbacks.onColor(callbacks.palette.custom); dismiss() },
+                        size = TabletDimensions.SwatchSizeSmall
                     )
+                    IconButton(
+                        onClick = { editing = true; dismiss() },
+                        modifier = Modifier.size(TabletDimensions.IconButtonSizeCompact)
+                    ) {
+                        Icon(
+                            Icons.Filled.ColorLens,
+                            contentDescription = "Paleta de pintor completa",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(TabletDimensions.TopBarIconSize)
+                        )
+                    }
                 }
             }
 
@@ -104,7 +115,7 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                         color = col,
                         selected = callbacks.color == col,
                         onClick = { callbacks.onColor(col); dismiss() },
-                        size = 40.dp
+                        size = TabletDimensions.SwatchSizeMedium
                     )
                 }
             }
@@ -117,7 +128,7 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
                         color = col,
                         selected = callbacks.color == col,
                         onClick = { callbacks.onColor(col); dismiss() },
-                        size = 40.dp
+                        size = TabletDimensions.SwatchSizeMedium
                     )
                 }
             }
@@ -176,7 +187,10 @@ internal fun ColorSizePopupButton(callbacks: ToolbarStyleCallbacks) {
         visible = editing,
         palette = callbacks.palette,
         onDismiss = { editing = false },
-        onRedefine = callbacks.onRedefineCustom,
+        onRedefine = {
+            callbacks.onRedefineCustom(it)
+            callbacks.onColor(it)
+        },
     )
 }
 

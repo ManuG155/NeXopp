@@ -170,6 +170,21 @@ object MathHandwritingEngine {
         return hasDrop && hasRise && (bounds.width > 10.0) && hasOverbar
     }
 
+    private fun isAngleStroke(stroke: Stroke): Boolean {
+        val pts = stroke.points
+        if (pts.size < 3) return false
+        val pStart = pts.first()
+        val pEnd = pts.last()
+        val b = strokeBounds(stroke)
+        val diag = hypot(b.width, b.height)
+        val startEndDist = hypot(pEnd.x - pStart.x, pEnd.y - pStart.y)
+        if (startEndDist / max(1.0, diag) < 0.40) return false // Closed loop or circle is NOT an angle
+        val minX = pts.minOf { it.x }
+        val maxX = pts.maxOf { it.x }
+        return (minX < pStart.x - 3.0 && minX < pEnd.x - 3.0) ||
+               (maxX > pStart.x + 3.0 && maxX > pEnd.x + 3.0)
+    }
+
     private fun clusterStrokes(strokes: List<Stroke>): List<StrokeCluster> {
         if (strokes.isEmpty()) return emptyList()
         val items = strokes.map { it to strokeBounds(it) }.sortedBy { it.second.left }
@@ -180,17 +195,30 @@ object MathHandwritingEngine {
             val itemStroke = item.first
             val itemBounds = item.second
             val isItemRadical = isRadicalStroke(itemStroke, itemBounds)
+            val isItemAngle = isAngleStroke(itemStroke)
+            val isItemH = itemBounds.width / max(1.0, itemBounds.height) > 1.2 && itemBounds.height < 15.0
 
             var merged = false
 
             for (c in clusters) {
                 val cBounds = computeClusterBounds(c)
                 val isCRadical = c.size == 1 && isRadicalStroke(c.first().first, cBounds)
+                val isCAngle = c.size == 1 && isAngleStroke(c.first().first)
+                val isCH = cBounds.width / max(1.0, cBounds.height) > 1.2 && cBounds.height < 15.0
+
+                // Inequality '<=' or '>=': angle + horizontal line underneath
+                if ((isCAngle && isItemH) || (isItemAngle && isCH)) {
+                    val angleB = if (isCAngle) cBounds else itemBounds
+                    val lineB = if (isCAngle) itemBounds else cBounds
+                    if (lineB.top >= angleB.centerY - 2.0) {
+                        c.add(item)
+                        merged = true
+                        break
+                    }
+                }
 
                 // Parallel horizontal strokes for '=' (equals sign)
-                val isItemH = itemBounds.width / max(1.0, itemBounds.height) > 1.2 && itemBounds.height < 15.0
-                val isCH = cBounds.width / max(1.0, cBounds.height) > 1.2 && cBounds.height < 15.0
-                if (isItemH && isCH && c.size == 1) {
+                if (isItemH && isCH && c.size == 1 && !isCAngle && !isItemAngle) {
                     val horizOverlap = min(cBounds.right, itemBounds.right) - max(cBounds.left, itemBounds.left)
                     val maxW = max(cBounds.width, itemBounds.width)
                     val vertGap = abs(itemBounds.centerY - cBounds.centerY)
@@ -202,9 +230,9 @@ object MathHandwritingEngine {
                 }
 
                 // Fraction bar protection
-                val isFrac1 = itemBounds.width > 14.0 && itemBounds.height < 10.0 &&
+                val isFrac1 = !isCAngle && !isItemAngle && itemBounds.width > 14.0 && itemBounds.height < 10.0 &&
                               (cBounds.bottom < itemBounds.centerY || cBounds.top > itemBounds.centerY)
-                val isFrac2 = cBounds.width > 14.0 && cBounds.height < 10.0 &&
+                val isFrac2 = !isCAngle && !isItemAngle && cBounds.width > 14.0 && cBounds.height < 10.0 &&
                               (itemBounds.bottom < cBounds.centerY || itemBounds.top > cBounds.centerY)
 
                 if (isFrac1 || isFrac2) continue
@@ -213,7 +241,11 @@ object MathHandwritingEngine {
                 if (isCRadical || isItemRadical) continue
 
                 // Overlap check for multi-stroke characters (+, x, t, i, =, <=, >=)
-                if (cBounds.overlaps(itemBounds, padX = 2.0, padY = 2.0)) {
+                val isTinyDot = min(cBounds.height, itemBounds.height) < 7.0
+                val actualYOverlap = min(cBounds.bottom, itemBounds.bottom) >= max(cBounds.top, itemBounds.top) - 2.0
+                if (cBounds.overlaps(itemBounds, padX = 3.0, padY = if (isTinyDot) 6.0 else 2.0)) {
+                    // Two substantial strokes stacked vertically without Y overlap (like num and den) should not merge
+                    if (!isTinyDot && !actualYOverlap) continue
                     c.add(item)
                     merged = true
                     break
@@ -251,344 +283,233 @@ object MathHandwritingEngine {
         val bounds = cluster.bounds
         val aspect = bounds.width / max(1.0, bounds.height)
 
-        // SINGLE STROKE CLASSIFICATION
-        if (strokes.size == 1) {
-            val stroke = strokes.first()
-            val pts = stroke.points
-            if (pts.isEmpty()) {
-                return MathSymbol("\\Box", "▢", 0.2, bounds, isUnknown = true, candidates = listOf("?", "x", "1"), originalStrokes = strokes)
-            }
+        if (strokes.isEmpty()) {
+            return MathSymbol("\\Box", "▢", 0.2, bounds, isUnknown = true, candidates = listOf("?", "1", "x"), originalStrokes = strokes)
+        }
 
-            val pStart = pts.first()
-            val pEnd = pts.last()
-            val startEndDist = hypot(pEnd.x - pStart.x, pEnd.y - pStart.y)
-            val pathLen = (1 until pts.size).sumOf { hypot(pts[it].x - pts[it - 1].x, pts[it].y - pts[it - 1].y) }.coerceAtLeast(1.0)
-            val linearity = startEndDist / pathLen
-            val diag = hypot(bounds.width, bounds.height)
+        val allPts = strokes.flatMap { it.points }
+        if (allPts.isEmpty()) {
+            return MathSymbol("\\Box", "▢", 0.2, bounds, isUnknown = true, candidates = listOf("?", "1", "x"), originalStrokes = strokes)
+        }
 
-            val maxDevFromChord = pts.maxOfOrNull { pt ->
-                val lineDx = pEnd.x - pStart.x
-                val lineDy = pEnd.y - pStart.y
-                val l2 = lineDx * lineDx + lineDy * lineDy
-                if (l2 == 0.0) hypot(pt.x - pStart.x, pt.y - pStart.y)
-                else abs((pt.x - pStart.x) * lineDy - (pt.y - pStart.y) * lineDx) / sqrt(l2)
-            } ?: 0.0
+        val pStart = allPts.first()
+        val pEnd = allPts.last()
+        val startEndDist = hypot(pEnd.x - pStart.x, pEnd.y - pStart.y)
+        val diag = hypot(bounds.width, bounds.height)
 
-            // Compute inflections and directional peaks
-            var xInflections = 0
-            var yInflections = 0
-            for (i in 2 until pts.size) {
-                val dx1 = pts[i - 1].x - pts[i - 2].x
-                val dx2 = pts[i].x - pts[i - 1].x
-                if (dx1 * dx2 < -1.0) xInflections++
-                val dy1 = pts[i - 1].y - pts[i - 2].y
-                val dy2 = pts[i].y - pts[i - 1].y
-                if (dy1 * dy2 < -1.0) yInflections++
-            }
+        val features = SymbolFeatureExtractor.extract(strokes)
+        val pathLen = features.rawPathLength
 
-            // 0. High curvature chaotic scribble detection
-            val pathRatio = pathLen / max(1.0, diag)
-            if (pathRatio > 2.5 && (xInflections + yInflections) >= 3) {
-                return MathSymbol("\\Box", "▢", 0.25, bounds, isUnknown = true, candidates = listOf("?", "x", "y", "\\alpha"), originalStrokes = strokes)
-            }
+        // 0. High curvature chaotic scribble detection
+        val pathRatio = pathLen / max(1.0, diag)
+        if (pathRatio > 2.5 && (features.xInflections + features.yInflections) >= 3) {
+            return MathSymbol("\\Box", "▢", 0.25, bounds, isUnknown = true, candidates = listOf("?", "x", "y", "\\alpha"), originalStrokes = strokes)
+        }
 
-            // 1. Small Dot / Multiplication Dot
-            if (diag < 10.0 || (pathLen < 12.0 && diag < 12.0)) {
-                return MathSymbol("\\cdot", "·", 0.95, bounds, isOperator = true, candidates = listOf("·", ".", "1"), originalStrokes = strokes)
-            }
+        // 1. Small Dot / Multiplication Dot (fast structural anchor)
+        if (diag < 10.0 || (pathLen < 12.0 && diag < 12.0)) {
+            return MathSymbol("\\cdot", "·", 0.95, bounds, isOperator = true, candidates = listOf("·", ".", "1"), originalStrokes = strokes)
+        }
 
-            // 2. Radical sign \sqrt
-            if (isRadicalStroke(stroke, bounds)) {
-                return MathSymbol("\\sqrt", "√", 0.94, bounds, isOperator = true, isRadical = true, candidates = listOf("\\sqrt", "v"), originalStrokes = strokes)
-            }
+        // 2. Radical sign \sqrt (special stroke structure anchor)
+        if (strokes.size in 1..2 && (isRadicalStroke(strokes.first(), bounds) || (strokes.size == 2 && isRadicalStroke(strokes[0], strokeBounds(strokes[0]))))) {
+            return MathSymbol("\\sqrt", "√", 0.94, bounds, isOperator = true, isRadical = true, candidates = listOf("\\sqrt", "v"), originalStrokes = strokes)
+        }
 
-            // 3. Fraction Bar (horizontal line)
-            if (aspect > 2.0 && bounds.height < 14.0 && linearity > 0.82) {
-                return MathSymbol("-", "-", 0.96, bounds, isOperator = true, isFractionBar = true, candidates = listOf("-", "_", "\\frac{}{}"), originalStrokes = strokes)
-            }
-
-            // 4. Horizontal Minus sign
-            if (aspect > 1.6 && bounds.height < 16.0 && linearity > 0.80) {
-                return MathSymbol("-", "-", 0.95, bounds, isOperator = true, candidates = listOf("-", "_"), originalStrokes = strokes)
-            }
-
-            // 5. Integral sign \int (tall S-shaped curve with curvature)
-            if (aspect < 0.50 && bounds.height > 18.0 && maxDevFromChord > 2.0) {
-                var yDescending = 0
-                for (i in 1 until pts.size) {
-                    if (pts[i].y > pts[i - 1].y) yDescending++
-                }
-                if (yDescending > pts.size * 0.50) {
-                    return MathSymbol("\\int", "∫", 0.94, bounds, isOperator = true, isIntegral = true, candidates = listOf("\\int", "S", "1"), originalStrokes = strokes)
-                }
-            }
-
-            // 6. Vertical line: 1, |, l
-            if (aspect < 0.35 && bounds.height > 10.0 && linearity > 0.82 && maxDevFromChord <= 2.5) {
-                return MathSymbol("1", "1", 0.94, bounds, candidates = listOf("1", "|", "l", "/"), originalStrokes = strokes)
-            }
-
-            // 7. Diagonal Slash / division sign /
-            if (aspect in 0.35..1.6 && linearity > 0.85) {
-                val isSlashDirection = (pStart.x < pEnd.x && pStart.y > pEnd.y) || (pStart.x > pEnd.x && pStart.y < pEnd.y)
-                if (isSlashDirection) {
-                    return MathSymbol("/", "/", 0.95, bounds, isOperator = true, isSlash = true, candidates = listOf("/", "1", "\\div"), originalStrokes = strokes)
-                }
-            }
-
-            // 8. Closed Loop: 0, O, \theta, \infty, 8, \sigma
-            if (diag > 8.0 && (startEndDist / max(1.0, diag)) < 0.35) {
-                if (aspect > 1.4) {
-                    return MathSymbol("\\infty", "∞", 0.92, bounds, candidates = listOf("∞", "\\alpha", "0"), originalStrokes = strokes)
-                }
-                if (aspect in 0.6..1.3) {
-                    return MathSymbol("0", "0", 0.94, bounds, candidates = listOf("0", "O", "\\theta", "\\sigma"), originalStrokes = strokes)
-                }
-            }
-
-            // 9. Greek \alpha / letter a: loop starting top-right, looping down-left, crossing and finishing bottom-right
-            if (aspect in 0.5..1.6 && pts.size > 5) {
-                val pStartRight = pStart.x > bounds.left + bounds.width * 0.40
-                val pEndRight = pEnd.x > bounds.left + bounds.width * 0.40
-                val reachesLeft = pts.any { it.x < bounds.left + bounds.width * 0.35 }
-                val startDescends = pts.size >= 2 && pts[1].y > pStart.y + 2.0
-                if (pStartRight && pEndRight && reachesLeft && startDescends && startEndDist > 4.0) {
-                    return MathSymbol("\\alpha", "α", 0.92, bounds, candidates = listOf("\\alpha", "a", "\\sigma", "x"), originalStrokes = strokes)
-                }
-            }
-
-            // 10. Greek \Sigma / \sum: zig-zag with 2+ inflections, starting top-right and ending bot-right
-            if (xInflections >= 2 && aspect in 0.4..1.4 && pStart.x > bounds.left + bounds.width * 0.35 && pEnd.x > bounds.left + bounds.width * 0.35) {
-                return MathSymbol("\\sum", "∑", 0.92, bounds, isOperator = true, candidates = listOf("\\sum", "\\Sigma", "E", "3"), originalStrokes = strokes)
-            }
-
-            // 11. Letter 'd' (calculus derivative d/dx, dx, dy): loop on bottom-left, stem rises on right
-            val minYPt = pts.minByOrNull { it.y } ?: pStart
-            val maxYPt = pts.maxByOrNull { it.y } ?: pEnd
-            if (aspect in 0.4..1.2 && bounds.height > 10.0) {
-                val topPeakX = minYPt.x
-                val isRightAscender = topPeakX > bounds.left + bounds.width * 0.45
-                val loopOnLeft = pts.any { it.x < bounds.left + bounds.width * 0.35 && it.y > bounds.centerY }
-                if (isRightAscender && loopOnLeft && pEnd.y > bounds.centerY && pStart.y > bounds.top + bounds.height * 0.25) {
-                    return MathSymbol("d", "d", 0.92, bounds, candidates = listOf("d", "a", "\\partial", "\\alpha", "6"), originalStrokes = strokes)
-                }
-            }
-
-            // 12. Letter 'b' or Greek \beta: starts top, goes down, then right lobe(s)
-            if (pStart.y < bounds.top + bounds.height * 0.35 && pStart.x < bounds.left + bounds.width * 0.45 && aspect in 0.4..1.1) {
-                if (bounds.height > 14.0) {
-                    return MathSymbol("\\beta", "β", 0.90, bounds, candidates = listOf("\\beta", "b", "B", "13"), originalStrokes = strokes)
-                }
-            }
-
-            // 12. Greek \alpha / letter a: loop with crossing tail on right
-            if (aspect in 0.6..1.5 && pts.size > 5) {
-                val lastQuarterX = pts.takeLast(max(1, pts.size / 4)).map { it.x }.average()
-                if (lastQuarterX > bounds.centerX && startEndDist > 4.0) {
-                    return MathSymbol("\\alpha", "α", 0.90, bounds, candidates = listOf("\\alpha", "a", "\\sigma", "x"), originalStrokes = strokes)
-                }
-            }
-
-            // 13. Greater Than '>' & Less Than '<'
-            if (linearity < 0.75 && xInflections <= 1 && yInflections <= 1) {
-                val maxPt = pts.maxByOrNull { it.x } ?: pStart
-                val minPt = pts.minByOrNull { it.x } ?: pStart
-                if (maxPt.x > pStart.x + 4.0 && maxPt.x > pEnd.x + 4.0 && aspect in 0.4..1.6) {
-                    return MathSymbol(">", ">", 0.92, bounds, isOperator = true, candidates = listOf(">", "7", ")"), originalStrokes = strokes)
-                }
-                if (minPt.x < pStart.x - 4.0 && minPt.x < pEnd.x - 4.0 && aspect in 0.4..1.6) {
-                    return MathSymbol("<", "<", 0.92, bounds, isOperator = true, candidates = listOf("<", "c", "("), originalStrokes = strokes)
-                }
-            }
-
-            // 14. Number '2' / 'z': top curve, diagonal down-left, horizontal base
-            if (pStart.x < pEnd.x && pStart.y < pEnd.y && aspect in 0.5..1.2) {
-                val isBaseHorizontal = abs(pEnd.y - maxYPt.y) < 4.0 && pEnd.x > bounds.left + bounds.width * 0.60
-                if (isBaseHorizontal) {
-                    return MathSymbol("2", "2", 0.90, bounds, candidates = listOf("2", "z", "Z"), originalStrokes = strokes)
-                }
-            }
-
-            // 15. Number '3': two rightward lobes
-            if (xInflections >= 2 && pStart.y < pEnd.y && aspect in 0.4..1.1) {
-                return MathSymbol("3", "3", 0.90, bounds, candidates = listOf("3", "\\beta", "8", "E"), originalStrokes = strokes)
-            }
-
-            // 16. Number '7': top horizontal + diagonal down
-            if (pStart.y < bounds.top + bounds.height * 0.30 && pEnd.y > bounds.bottom - bounds.height * 0.25 && aspect in 0.5..1.1) {
-                return MathSymbol("7", "7", 0.88, bounds, candidates = listOf("7", ">", "1", "z"), originalStrokes = strokes)
-            }
-
-            // 17. Parentheses: (, )
-            if (aspect in 0.18..0.60 && bounds.height > 12.0) {
-                val midPt = pts[pts.size / 2]
-                if (midPt.x < pStart.x - 2.0 && midPt.x < pEnd.x - 2.0) {
-                    return MathSymbol("(", "(", 0.92, bounds, isDelimiter = true, candidates = listOf("(", "[", "c", "1"), originalStrokes = strokes)
-                } else if (midPt.x > pStart.x + 2.0 && midPt.x > pEnd.x + 2.0) {
-                    return MathSymbol(")", ")", 0.92, bounds, isDelimiter = true, candidates = listOf(")", "]", "1"), originalStrokes = strokes)
-                }
-            }
-
-            // 18. Letter 'C' / 'c': open right curve
-            if (pStart.x > bounds.left + bounds.width * 0.40 && pEnd.x > bounds.left + bounds.width * 0.40 && aspect in 0.5..1.3 && xInflections <= 1 && yInflections <= 1) {
-                val isCapital = bounds.height > 16.0
-                val sym = if (isCapital) "C" else "c"
-                return MathSymbol(sym, sym, 0.90, bounds, candidates = listOf(sym, "(", "\\subset"), originalStrokes = strokes)
-            }
-
-            // 19. Letter 's' / 'S'
-            if (xInflections >= 1 && yInflections <= 2 && aspect in 0.4..1.1 && pStart.y < pEnd.y) {
-                return MathSymbol("s", "s", 0.88, bounds, candidates = listOf("s", "5", "8", "\\int"), originalStrokes = strokes)
-            }
-
-            // 20. Letter 'v', 'u', 'w' (smooth valley with no chaotic self-crossing)
-            val midY = pts[pts.size / 2].y
-            if (midY > pStart.y && midY > pEnd.y && aspect in 0.5..1.6 && xInflections <= 1 && yInflections <= 1) {
-                return MathSymbol("v", "v", 0.88, bounds, candidates = listOf("v", "u", "w", "\\nu"), originalStrokes = strokes)
-            }
-
-            // 21. Letter 'y': starts top, ends below baseline on left or right
-            if (pEnd.y > bounds.bottom - 2.0 && aspect in 0.5..1.2 && xInflections <= 2) {
-                return MathSymbol("y", "y", 0.88, bounds, candidates = listOf("y", "g", "v", "u"), originalStrokes = strokes)
-            }
-
-            // 22. Letter 'x' (single cursive stroke)
-            if (aspect in 0.6..1.4 && xInflections in 1..2 && yInflections in 1..2) {
-                return MathSymbol("x", "x", 0.85, bounds, candidates = listOf("x", "\\alpha", "t", "z"), originalStrokes = strokes)
-            }
-
-            // Fallback for single unknown stroke: preserve original strokes, mark low confidence
+        // 3. Fraction Bar / Minus sign anchor for very flat strokes
+        if (strokes.size == 1 && aspect > 1.6 && bounds.height < 16.0 && features.linearity > 0.78) {
+            val isFrac = aspect > 2.0 && bounds.height < 14.0
             return MathSymbol(
-                latex = "\\Box",
-                unicode = "▢",
-                confidence = 0.35,
+                latex = "-",
+                unicode = "-",
+                confidence = 0.96,
                 bounds = bounds,
-                isUnknown = true,
-                candidates = listOf("x", "y", "d", "\\alpha", "1", "z", "+", "t", "C"),
+                isOperator = true,
+                isFractionBar = isFrac,
+                candidates = if (isFrac) listOf("-", "_", "\\frac{}{}") else listOf("-", "_"),
                 originalStrokes = strokes
             )
         }
 
-        // TWO STROKES CLASSIFICATION (+, =, x, t, i, \le, \ge, \pm, \neq, \sqrt)
+        // 4. Parentheses (, ) and Integral \int by Chord Deviation analysis
+        if (strokes.size == 1 && aspect in 0.05..0.60 && bounds.height > 10.0 && allPts.size >= 3) {
+            val chordDx = pEnd.x - pStart.x
+            val chordDy = pEnd.y - pStart.y
+            val chordLen = hypot(chordDx, chordDy)
+            if (chordLen > 1.0) {
+                // Signed deviation (positive = right, negative = left)
+                val devs = allPts.map { p ->
+                    ((p.x - pStart.x) * chordDy - (p.y - pStart.y) * chordDx) / chordLen
+                }
+                val minDev = devs.minOf { it }
+                val maxDev = devs.maxOf { it }
+
+                // S-curve deviating to both left and right: \int
+                if (minDev < -1.5 && maxDev > 1.5 && bounds.height > 18.0) {
+                    return MathSymbol("\\int", "∫", 0.94, bounds, isOperator = true, isIntegral = true, candidates = listOf("\\int", "S", "1"), originalStrokes = strokes)
+                }
+                // Arc purely to the left: open paren '('
+                if (maxDev < 1.0 && minDev < -1.5) {
+                    return MathSymbol("(", "(", 0.94, bounds, isDelimiter = true, candidates = listOf("(", "[", "c", "1"), originalStrokes = strokes)
+                }
+                // Arc purely to the right: close paren ')'
+                if (minDev > -1.0 && maxDev > 1.5) {
+                    return MathSymbol(")", ")", 0.94, bounds, isDelimiter = true, candidates = listOf(")", "]", "1"), originalStrokes = strokes)
+                }
+            }
+        }
+
+        // 5. Vertical line: 1, |, l
+        if (strokes.size == 1 && aspect < 0.30 && bounds.height > 10.0 && features.linearity > 0.82 && features.maxDeviationNorm < 0.06) {
+            return MathSymbol("1", "1", 0.94, bounds, candidates = listOf("1", "|", "l", "/"), originalStrokes = strokes)
+        }
+
+        // 6. Closed Loop: 0, O, \theta, \infty, 8, \sigma
+        if (strokes.size == 1 && diag > 8.0 && (startEndDist / max(1.0, diag)) < 0.35) {
+            if (aspect > 1.35) {
+                return MathSymbol("\\infty", "∞", 0.92, bounds, candidates = listOf("∞", "\\alpha", "0"), originalStrokes = strokes)
+            }
+            if (features.selfCrossings >= 1 && aspect in 0.5..1.0) {
+                return MathSymbol("8", "8", 0.92, bounds, candidates = listOf("8", "0", "\\theta"), originalStrokes = strokes)
+            }
+            if (aspect in 0.55..1.35) {
+                return MathSymbol("0", "0", 0.94, bounds, candidates = listOf("0", "O", "\\theta", "\\sigma"), originalStrokes = strokes)
+            }
+        }
+
+        // 7. Greek \alpha / letter a: loop with crossing tail on right
+        if (strokes.size == 1 && aspect in 0.5..1.6 && allPts.size > 5) {
+            val pStartRight = pStart.x > bounds.left + bounds.width * 0.40
+            val pEndRight = pEnd.x > bounds.left + bounds.width * 0.40
+            val reachesLeft = allPts.any { it.x < bounds.left + bounds.width * 0.35 }
+            val startDescends = allPts.size >= 2 && allPts[1].y > pStart.y + 2.0
+            if (pStartRight && pEndRight && reachesLeft && startDescends && startEndDist > 4.0) {
+                return MathSymbol("\\alpha", "α", 0.92, bounds, candidates = listOf("\\alpha", "a", "\\sigma", "x"), originalStrokes = strokes)
+            }
+        }
+
+        // 8. Two-stroke structural symbols: =, +, <=, >=, \neq, d, x (checked before general templates)
         if (strokes.size == 2) {
             val b1 = strokeBounds(strokes[0])
             val b2 = strokeBounds(strokes[1])
-
             val isH1 = b1.width / max(1.0, b1.height) > 1.2
-            val isV1 = b1.height / max(1.0, b1.width) > 1.2
             val isH2 = b2.width / max(1.0, b2.height) > 1.2
+            val isV1 = b1.height / max(1.0, b1.width) > 1.2
             val isV2 = b2.height / max(1.0, b2.width) > 1.2
-
-            // Plus '+': intersecting horizontal & vertical
-            if ((isH1 && isV2) || (isV1 && isH2)) {
-                return MathSymbol("+", "+", 0.96, bounds, isOperator = true, candidates = listOf("+", "t", "\\dagger"), originalStrokes = strokes)
-            }
 
             // Equals '=': two parallel horizontal strokes
             if (isH1 && isH2) {
                 return MathSymbol("=", "=", 0.96, bounds, isOperator = true, candidates = listOf("=", "\\approx", "\\equiv"), originalStrokes = strokes)
             }
-
-            // Greater or Equal '>=' / Less or Equal '<=': angle + horizontal line underneath
+            // Plus '+': intersecting horizontal & vertical
+            if ((isH1 && isV2) || (isV1 && isH2)) {
+                return MathSymbol("+", "+", 0.96, bounds, isOperator = true, candidates = listOf("+", "t", "\\dagger"), originalStrokes = strokes)
+            }
+            // Letter 'd': left loop/circle + right vertical ascender
+            val hasLeftLoop = (b1.left < b2.left && b1.centerY > b2.top) || (b2.left < b1.left && b2.centerY > b1.top)
+            val hasRightAscender = (b1.right > b2.centerX && isV1 && b1.top < b2.centerY) || (b2.right > b1.centerX && isV2 && b2.top < b1.centerY)
+            if (hasLeftLoop && hasRightAscender) {
+                return MathSymbol("d", "d", 0.94, bounds, candidates = listOf("d", "a", "\\partial"), originalStrokes = strokes)
+            }
+            // Greater/Less Equal >= / <=
             if ((isH1 && !isH2) || (isH2 && !isH1)) {
                 val angleB = if (isH1) b2 else b1
                 val lineB = if (isH1) b1 else b2
-                if (lineB.top >= angleB.centerY) {
-                    val isGreater = angleB.right > angleB.left + angleB.width * 0.70
+                if (lineB.top >= angleB.centerY - 2.0) {
+                    val angleStroke = if (isH1) strokes[1] else strokes[0]
+                    val pts = angleStroke.points
+                    val minAngleX = pts.minOf { it.x }
+                    val maxAngleX = pts.maxOf { it.x }
+                    val isGreater = maxAngleX > pts.first().x + 3.0 && maxAngleX > pts.last().x + 3.0
                     val sym = if (isGreater) "\\ge" else "\\le"
                     val uni = if (isGreater) "≥" else "≤"
-                    return MathSymbol(sym, uni, 0.92, bounds, isOperator = true, candidates = listOf(sym, "=", ">", "<"), originalStrokes = strokes)
+                    return MathSymbol(sym, uni, 0.94, bounds, isOperator = true, candidates = listOf(sym, "=", ">", "<"), originalStrokes = strokes)
                 }
             }
-
-            // Plus-Minus '\pm': plus above minus
+            // Plus-Minus '\pm'
             if ((isH1 && isV1) || (isH2 && isV2)) {
                 return MathSymbol("\\pm", "±", 0.92, bounds, isOperator = true, candidates = listOf("\\pm", "+", "-"), originalStrokes = strokes)
             }
-
-            // Cross 'x' or multiplication \times: two intersecting diagonal strokes
-            if (b1.overlaps(b2, 2.0, 2.0)) {
-                return MathSymbol("x", "x", 0.92, bounds, candidates = listOf("x", "\\times", "X", "+"), originalStrokes = strokes)
+            // Cross 'x' or multiplication \times: two overlapping diagonal strokes
+            if (b1.overlaps(b2, 3.0, 3.0)) {
+                return MathSymbol("x", "x", 0.94, bounds, candidates = listOf("x", "\\times", "X", "+"), originalStrokes = strokes)
             }
-
-            // Radical with separate overbar
-            if (b1.left < b2.left && isH2) {
-                return MathSymbol("\\sqrt", "√", 0.94, bounds, isOperator = true, isRadical = true, candidates = listOf("\\sqrt"), originalStrokes = strokes)
-            }
-
-            // Letter 't'
-            if ((isV1 && isH2) || (isV2 && isH1)) {
-                return MathSymbol("t", "t", 0.90, bounds, candidates = listOf("t", "+", "T"), originalStrokes = strokes)
-            }
-
-            // Letter 'i' or 'j' with dot
-            val topS = if (b1.top < b2.top) b1 else b2
-            val botS = if (b1.top < b2.top) b2 else b1
-            if (topS.height < 12.0 && botS.height > 10.0) {
-                return MathSymbol("i", "i", 0.92, bounds, candidates = listOf("i", "j", ";", "!"), originalStrokes = strokes)
-            }
-
-            // Fallback for 2-stroke cluster
-            return MathSymbol(
-                latex = "\\Box",
-                unicode = "▢",
-                confidence = 0.35,
-                bounds = bounds,
-                isUnknown = true,
-                candidates = listOf("x", "+", "=", "t", "y", "\\le", "\\ge"),
-                originalStrokes = strokes
-            )
         }
 
-        // THREE STROKES CLASSIFICATION (\pi, \sum, \neq, \Delta, A, H)
+        // 9. Greek \Sigma / \sum: zig-zag with 2+ inflections
+        if (features.xInflections >= 2 && aspect in 0.4..1.4 && pStart.x > bounds.left + bounds.width * 0.35 && pEnd.x > bounds.left + bounds.width * 0.35) {
+            return MathSymbol("\\sum", "∑", 0.92, bounds, isOperator = true, isSummation = true, candidates = listOf("\\sum", "\\Sigma", "E", "3"), originalStrokes = strokes)
+        }
+
+        // 9. Three-stroke structural symbols (\pi, \sum, \neq, \Delta)
         if (strokes.size == 3) {
             val bList = strokes.map { strokeBounds(it) }
             val hCount = bList.count { it.width / max(1.0, it.height) > 1.2 }
             val vCount = bList.count { it.height / max(1.0, it.width) > 1.2 }
 
-            // Greek \pi: horizontal top bar + 2 vertical legs
             if (hCount >= 1 && vCount >= 2) {
                 return MathSymbol("\\pi", "π", 0.94, bounds, candidates = listOf("\\pi", "\\Pi", "n", "H"), originalStrokes = strokes)
             }
-
-            // Not equal \neq: equals + diagonal slash
             if (hCount >= 2) {
                 return MathSymbol("\\neq", "≠", 0.94, bounds, isOperator = true, candidates = listOf("\\neq", "="), originalStrokes = strokes)
             }
-
-            // Delta \Delta: triangle shape
-            if (bList.all { it.width > 4.0 }) {
+            if (bList.all { it.width > 4.0 } && aspect in 0.6..1.4) {
                 return MathSymbol("\\Delta", "Δ", 0.90, bounds, candidates = listOf("\\Delta", "A", "\\sum"), originalStrokes = strokes)
             }
-
-            // Summation \sum (Sigma)
-            return MathSymbol("\\sum", "∑", 0.92, bounds, isOperator = true, isSummation = true, candidates = listOf("\\sum", "E", "Z"), originalStrokes = strokes)
         }
 
+        // 10. Multi-candidate classification using SymbolTemplateLibrary
+        val scoredCandidates = SymbolTemplateLibrary.classify(features, topN = 6, minScore = 0.18)
+
+        if (scoredCandidates.isNotEmpty()) {
+            val best = scoredCandidates.first()
+            val candidateStrings = scoredCandidates.map { it.template.latex }
+
+            val t = best.template
+            val conf = best.score.coerceIn(0.20, 0.96)
+            return MathSymbol(
+                latex = t.latex,
+                unicode = t.unicode,
+                confidence = conf,
+                bounds = bounds,
+                isOperator = t.isOperator,
+                isFractionBar = t.isFractionBar,
+                isSlash = t.latex == "/",
+                isRadical = t.isRadical,
+                isIntegral = t.isIntegral,
+                isSummation = t.isSummation,
+                isDelimiter = t.isDelimiter,
+                isUnknown = conf < 0.30,
+                candidates = candidateStrings,
+                originalStrokes = strokes
+            )
+        }
+
+        // Fallback: unknown glyph
         return MathSymbol(
             latex = "\\Box",
             unicode = "▢",
-            confidence = 0.30,
+            confidence = 0.25,
             bounds = bounds,
             isUnknown = true,
-            candidates = listOf("\\sum", "\\pi", "\\Delta", "\\Omega", "M"),
+            candidates = listOf("x", "y", "1", "0", "+", "-"),
             originalStrokes = strokes
         )
     }
 
     // --- Spatial 2D Layout AST Builder ---------------------------------------------------------
 
-    private sealed interface SpatialMathNode {
+    sealed interface SpatialMathNode {
         fun toLatex(): String
         fun toUnicode(): String
     }
 
-    private data class LeafMathNode(val symbol: MathSymbol) : SpatialMathNode {
+    data class LeafMathNode(val symbol: MathSymbol) : SpatialMathNode {
         override fun toLatex(): String = symbol.latex
         override fun toUnicode(): String = symbol.unicode
     }
 
-    private data class FractionMathNode(
+    data class FractionMathNode(
         val numerator: SpatialMathNode,
         val denominator: SpatialMathNode
     ) : SpatialMathNode {
@@ -596,7 +517,7 @@ object MathHandwritingEngine {
         override fun toUnicode(): String = "(${numerator.toUnicode()} / ${denominator.toUnicode()})"
     }
 
-    private data class PowerMathNode(
+    data class PowerMathNode(
         val base: SpatialMathNode,
         val exponent: SpatialMathNode
     ) : SpatialMathNode {
@@ -604,7 +525,7 @@ object MathHandwritingEngine {
         override fun toUnicode(): String = "${base.toUnicode()}^(${exponent.toUnicode()})"
     }
 
-    private data class SubscriptMathNode(
+    data class SubscriptMathNode(
         val base: SpatialMathNode,
         val subscript: SpatialMathNode
     ) : SpatialMathNode {
@@ -612,12 +533,12 @@ object MathHandwritingEngine {
         override fun toUnicode(): String = "${base.toUnicode()}_(${subscript.toUnicode()})"
     }
 
-    private data class RadicalMathNode(val content: SpatialMathNode) : SpatialMathNode {
+    data class RadicalMathNode(val content: SpatialMathNode) : SpatialMathNode {
         override fun toLatex(): String = "\\sqrt{${content.toLatex()}}"
         override fun toUnicode(): String = "√(${content.toUnicode()})"
     }
 
-    private data class IntegralMathNode(
+    data class IntegralMathNode(
         val lowerBound: SpatialMathNode?,
         val upperBound: SpatialMathNode?,
         val integrand: SpatialMathNode
@@ -641,7 +562,87 @@ object MathHandwritingEngine {
         }
     }
 
-    private data class SequenceMathNode(val items: List<SpatialMathNode>) : SpatialMathNode {
+    data class SumMathNode(
+        val lowerBound: SpatialMathNode?,
+        val upperBound: SpatialMathNode?,
+        val summand: SpatialMathNode
+    ) : SpatialMathNode {
+        override fun toLatex(): String {
+            val boundsStr = when {
+                lowerBound != null && upperBound != null -> "_{${lowerBound.toLatex()}}^{${upperBound.toLatex()}}"
+                lowerBound != null -> "_{${lowerBound.toLatex()}}"
+                upperBound != null -> "^{${upperBound.toLatex()}}"
+                else -> ""
+            }
+            return "\\sum$boundsStr ${summand.toLatex()}"
+        }
+
+        override fun toUnicode(): String {
+            val boundsStr = when {
+                lowerBound != null && upperBound != null -> "[${lowerBound.toUnicode()} to ${upperBound.toUnicode()}]"
+                else -> ""
+            }
+            return "∑ $boundsStr ${summand.toUnicode()}"
+        }
+    }
+
+    data class LimitMathNode(
+        val variable: SpatialMathNode?,
+        val target: SpatialMathNode?,
+        val expression: SpatialMathNode
+    ) : SpatialMathNode {
+        override fun toLatex(): String {
+            val subStr = if (variable != null && target != null) "_{${variable.toLatex()} \\to ${target.toLatex()}}" else ""
+            return "\\lim$subStr ${expression.toLatex()}"
+        }
+
+        override fun toUnicode(): String {
+            val subStr = if (variable != null && target != null) "(${variable.toUnicode()} -> ${target.toUnicode()})" else ""
+            return "lim$subStr ${expression.toUnicode()}"
+        }
+    }
+
+    data class DerivativeMathNode(
+        val order: Int = 1,
+        val numVar: String = "",
+        val denVar: String = "x",
+        val isPartial: Boolean = false
+    ) : SpatialMathNode {
+        override fun toLatex(): String {
+            val d = if (isPartial) "\\partial" else "d"
+            val orderExp = if (order > 1) "^$order" else ""
+            val num = if (numVar.isEmpty()) "$d$orderExp" else "$d$orderExp $numVar"
+            val den = "$d ${denVar}$orderExp"
+            return "\\frac{$num}{$den}"
+        }
+
+        override fun toUnicode(): String {
+            val d = if (isPartial) "∂" else "d"
+            val orderExp = if (order > 1) "^$order" else ""
+            val num = if (numVar.isEmpty()) "$d$orderExp" else "$d$orderExp $numVar"
+            val den = "$d $denVar$orderExp"
+            return "($num / $den)"
+        }
+    }
+
+    data class FunctionMathNode(
+        val functionName: String,
+        val argument: SpatialMathNode
+    ) : SpatialMathNode {
+        override fun toLatex(): String = "\\$functionName(${argument.toLatex()})"
+        override fun toUnicode(): String = "$functionName(${argument.toUnicode()})"
+    }
+
+    data class ParenthesizedMathNode(
+        val content: SpatialMathNode,
+        val openChar: String = "(",
+        val closeChar: String = ")"
+    ) : SpatialMathNode {
+        override fun toLatex(): String = "\\left$openChar ${content.toLatex()} \\right$closeChar"
+        override fun toUnicode(): String = "$openChar${content.toUnicode()}$closeChar"
+    }
+
+    data class SequenceMathNode(val items: List<SpatialMathNode>) : SpatialMathNode {
         override fun toLatex(): String = items.joinToString(" ") { it.toLatex() }
         override fun toUnicode(): String = items.joinToString(" ") { it.toUnicode() }
     }
@@ -713,7 +714,46 @@ object MathHandwritingEngine {
             }
         }
 
-        // 4. Sequential Stream with Powers / Superscripts and Subscripts
+        // 4. Detect Summation \sum with Bounds
+        val summation = symbols.firstOrNull { it.isSummation || it.latex == "\\sum" || it.latex == "\\Sigma" }
+        if (summation != null) {
+            val sumB = summation.bounds
+            val lower = symbols.filter { it !== summation && it.bounds.top >= sumB.centerY && it.bounds.left in (sumB.left - 6.0)..(sumB.right + 18.0) }
+            val upper = symbols.filter { it !== summation && it.bounds.bottom <= sumB.centerY && it.bounds.left in (sumB.left - 6.0)..(sumB.right + 18.0) }
+            val summand = symbols.filter { it !== summation && !lower.contains(it) && !upper.contains(it) && it.bounds.left > sumB.right }
+
+            if (summand.isNotEmpty()) {
+                val lowerNode = if (lower.isNotEmpty()) parseSpatialMath(lower) else null
+                val upperNode = if (upper.isNotEmpty()) parseSpatialMath(upper) else null
+                val sumNode = SumMathNode(lowerNode, upperNode, parseSpatialMath(summand))
+
+                val before = symbols.filter { it !== summation && it.bounds.right < sumB.left }
+                val resultList = mutableListOf<SpatialMathNode>()
+                if (before.isNotEmpty()) resultList.add(parseSpatialMath(before))
+                resultList.add(sumNode)
+                return if (resultList.size == 1) resultList.first() else SequenceMathNode(resultList)
+            }
+        }
+
+        // 5. Detect Parentheses Pairs
+        val openParenIdx = symbols.indexOfFirst { it.latex == "(" }
+        if (openParenIdx != -1) {
+            val closeParenIdx = symbols.indexOfLast { it.latex == ")" }
+            if (closeParenIdx > openParenIdx) {
+                val before = symbols.subList(0, openParenIdx)
+                val inside = symbols.subList(openParenIdx + 1, closeParenIdx)
+                val after = symbols.subList(closeParenIdx + 1, symbols.size)
+
+                val parenNode = ParenthesizedMathNode(parseSpatialMath(inside))
+                val resultList = mutableListOf<SpatialMathNode>()
+                if (before.isNotEmpty()) resultList.add(parseSpatialMath(before))
+                resultList.add(parenNode)
+                if (after.isNotEmpty()) resultList.add(parseSpatialMath(after))
+                return if (resultList.size == 1) resultList.first() else SequenceMathNode(resultList)
+            }
+        }
+
+        // 6. Sequential Stream with Powers / Superscripts and Subscripts
         val nodes = mutableListOf<SpatialMathNode>()
         var i = 0
         while (i < symbols.size) {

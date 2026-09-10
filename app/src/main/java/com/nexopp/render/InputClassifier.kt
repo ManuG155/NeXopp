@@ -214,6 +214,9 @@ object InputClassifier {
         }
 
         if (kind == PointerKind.FINGER && !settings.fingerDraws) {
+            // Placement tools (e.g. Text box, Image, TeX) are explicit tap-to-place actions,
+            // so they must still be triggered by finger taps even when finger inking is disabled.
+            if (activeTool == ActiveTool.PLACE) return GestureIntent.PLACE
             return GestureIntent.PAN
         }
 

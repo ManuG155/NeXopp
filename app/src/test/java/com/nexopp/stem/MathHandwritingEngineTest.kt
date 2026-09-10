@@ -180,4 +180,46 @@ class MathHandwritingEngineTest {
         val resSigma = MathHandwritingEngine.recognize(listOf(sigmaStroke))
         assertTrue("Expected \\sum or \\Sigma, got: ${resSigma.latex}", resSigma.latex.contains("\\sum") || resSigma.latex.contains("\\Sigma") || resSigma.latex.contains("\\sigma"))
     }
+
+    @Test
+    fun `recognizes vertical line as digit 1`() {
+        val stroke1 = makeLineStroke(50.0, 10.0, 50.0, 80.0)
+        val result = MathHandwritingEngine.recognize(listOf(stroke1))
+        assertEquals("1", result.latex)
+    }
+
+    @Test
+    fun `recognizes less than or equal to inequality`() {
+        // '<' angle: top-right to left, left to bottom-right
+        val angle = makeStroke(listOf(40.0 to 20.0, 15.0 to 35.0, 40.0 to 50.0))
+        // horizontal line underneath
+        val bar = makeLineStroke(15.0, 58.0, 40.0, 58.0)
+        val result = MathHandwritingEngine.recognize(listOf(angle, bar))
+        assertTrue("Expected \\le or <=, got: ${result.latex}", result.latex.contains("\\le") || result.latex.contains("≤"))
+    }
+
+    @Test
+    fun `recognizes parenthesized expression`() {
+        // ( : arc
+        val openParen = makeStroke(listOf(20.0 to 10.0, 15.0 to 40.0, 20.0 to 70.0))
+        // x : cross
+        val x1 = makeLineStroke(30.0, 25.0, 50.0, 55.0)
+        val x2 = makeLineStroke(30.0, 55.0, 50.0, 25.0)
+        // ) : arc
+        val closeParen = makeStroke(listOf(60.0 to 10.0, 65.0 to 40.0, 60.0 to 70.0))
+
+        val result = MathHandwritingEngine.recognize(listOf(openParen, x1, x2, closeParen))
+        assertTrue("Expected parentheses, got: ${result.latex}", result.latex.contains("(") && result.latex.contains(")"))
+    }
+
+    @Test
+    fun `diagnostics provides detailed cluster and candidate rankings`() {
+        val circle = makeCircleStroke(50.0, 50.0, 20.0)
+        val diag = MathDiagnostics.diagnose(listOf(circle))
+        assertEquals(1, diag.clusterCount)
+        assertTrue(diag.clusters.first().topCandidates.isNotEmpty())
+        val summary = MathDiagnostics.formatDiagnosticSummary(diag)
+        assertTrue(summary.contains("Math Recognition Diagnostic"))
+    }
 }
+

@@ -57,10 +57,11 @@ class InputClassifierTest {
         assertEquals(GestureIntent.PAN, classify(PointerKind.FINGER, ActiveTool.ERASER, settings = s))
     }
 
-    @Test fun fingerDrawOffMakesEveryToolPan() {
+    @Test fun fingerDrawOffMakesDrawingToolsPanExceptPlace() {
         val s = InputSettings(fingerDraws = false)
         for (tool in ActiveTool.values()) {
-            assertEquals("tool=$tool", GestureIntent.PAN, classify(PointerKind.FINGER, tool, settings = s))
+            val expected = if (tool == ActiveTool.PLACE) GestureIntent.PLACE else GestureIntent.PAN
+            assertEquals("tool=$tool", expected, classify(PointerKind.FINGER, tool, settings = s))
         }
     }
 
