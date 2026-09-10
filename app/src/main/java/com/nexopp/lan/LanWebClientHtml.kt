@@ -532,7 +532,63 @@ object LanWebClientHtml {
         canvas {
             display: block;
             touch-action: none;
-            cursor: crosshair;
+            cursor: text;
+        }
+
+        .text-editor-overlay {
+            position: absolute;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.98);
+            border: 2px dashed var(--primary);
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            min-width: 160px;
+        }
+
+        #textEditorInput {
+            width: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            resize: none;
+            font-family: "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.25;
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .text-editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-top: 6px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-text-action {
+            border: none;
+            border-radius: 4px;
+            padding: 3px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-text-action.confirm {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .btn-text-action.cancel {
+            background: #ef4444;
+            color: #ffffff;
         }
 
         /* Modals */
@@ -678,7 +734,8 @@ object LanWebClientHtml {
                 </div>
 
                 <div class="editor-tools">
-                    <button id="toolPen" class="tool-btn active" onclick="setTool('pen')">✏️ Pluma</button>
+                    <button id="toolText" class="tool-btn active" onclick="setTool('text')">🔤 Texto</button>
+                    <button id="toolPen" class="tool-btn" onclick="setTool('pen')">✏️ Pluma</button>
                     <button id="toolHighlighter" class="tool-btn" onclick="setTool('highlighter')">🖍️ Subrayador</button>
                     <button id="toolEraser" class="tool-btn" onclick="setTool('eraser')">🧹 Borrador</button>
 
@@ -712,6 +769,13 @@ object LanWebClientHtml {
             <div class="canvas-viewport" id="canvasViewport">
                 <div class="canvas-wrapper" id="canvasWrapper">
                     <canvas id="pageCanvas"></canvas>
+                    <div id="textEditorOverlay" class="text-editor-overlay hidden">
+                        <textarea id="textEditorInput" placeholder="Escribe con el teclado..." rows="1" spellcheck="false"></textarea>
+                        <div class="text-editor-actions">
+                            <button class="btn-text-action confirm" title="Guardar (Ctrl+Enter o clic fuera)" onclick="commitTextEditor()">✓ Guardar</button>
+                            <button class="btn-text-action cancel" title="Cancelar (Esc)" onclick="cancelTextEditor()">✕ Cancelar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -791,12 +855,13 @@ object LanWebClientHtml {
         let currentDoc = null;
         let currentPageIndex = 0;
 
-        // Editor Drawing State
-        let currentTool = 'pen'; // 'pen', 'highlighter', 'eraser'
+        // Editor Drawing / Text State
+        let currentTool = 'text'; // 'text', 'pen', 'highlighter', 'eraser'
         let currentColor = 0xFF1E293B; // ARGB
         let currentWidthPt = 1.5;
         let isDrawing = false;
         let currentStrokePoints = [];
+        let activeTextPt = null;
 
         // DOM elements
         const pairingView = document.getElementById('pairingView');
@@ -904,6 +969,12 @@ object LanWebClientHtml {
                 case 'STROKE_ADDED':
                     if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
                         appendStrokeToCurrentPage(msg.stroke);
+                    }
+                    break;
+
+                case 'TEXT_ADDED':
+                    if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
+                        appendElementToCurrentPage(msg.text);
                     }
                     break;
 
@@ -1106,6 +1177,9 @@ object LanWebClientHtml {
         }
 
         function closeDocumentAndReturn() {
+            if (activeTextPt) {
+                commitTextEditor();
+            }
             editorView.classList.add('hidden');
             libraryView.classList.remove('hidden');
             currentDoc = null;
@@ -1137,13 +1211,15 @@ object LanWebClientHtml {
             // 1. Draw Page Background
             drawPageBackground(ctx, page, ptWidth, ptHeight);
 
-            // 2. Draw Existing Layers and Strokes
+            // 2. Draw Existing Layers, Strokes and Text
             if (page.layers) {
                 page.layers.forEach(layer => {
                     if (layer.elements) {
                         layer.elements.forEach(elem => {
                             if (elem.type === 'stroke') {
                                 drawStroke(ctx, elem);
+                            } else if (elem.type === 'text') {
+                                drawText(ctx, elem);
                             }
                         });
                     }
@@ -1231,15 +1307,159 @@ object LanWebClientHtml {
             ctx.stroke();
         }
 
-        function appendStrokeToCurrentPage(stroke) {
+        function drawText(ctx, textElem) {
+            if (!textElem || !textElem.content) return;
+            const color = textElem.color !== undefined ? textElem.color : 0xFF000000;
+            const alpha = (((color >> 24) & 0xFF) / 255.0) || 1.0;
+            const r = (color >> 16) & 0xFF;
+            const g = (color >> 8) & 0xFF;
+            const b = color & 0xFF;
+            ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+
+            const size = textElem.size || 14.0;
+            ctx.font = size + 'px "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textBaseline = 'top';
+
+            const lines = String(textElem.content).split('\n');
+            const lineHeight = size * 1.25;
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], textElem.x, textElem.y + (i * lineHeight));
+            }
+        }
+
+        function appendElementToCurrentPage(elem) {
             const page = currentDoc.pages[currentPageIndex];
             if (!page) return;
             if (!page.layers || page.layers.length === 0) {
                 page.layers = [{ elements: [] }];
             }
-            page.layers[page.layers.length - 1].elements.push(stroke);
+            page.layers[page.layers.length - 1].elements.push(elem);
+            renderCurrentPage();
+        }
 
-            // Re-render
+        function appendStrokeToCurrentPage(stroke) {
+            appendElementToCurrentPage(stroke);
+        }
+
+        function findTextElementAt(xPt, yPt) {
+            if (!currentDoc || !currentDoc.pages) return null;
+            const page = currentDoc.pages[currentPageIndex];
+            if (!page || !page.layers) return null;
+            for (let i = page.layers.length - 1; i >= 0; i--) {
+                const layer = page.layers[i];
+                if (!layer.elements) continue;
+                for (let j = layer.elements.length - 1; j >= 0; j--) {
+                    const el = layer.elements[j];
+                    if (el.type === 'text') {
+                        const lines = String(el.content).split('\n');
+                        let maxLineLen = 0;
+                        for (let k = 0; k < lines.length; k++) {
+                            if (lines[k].length > maxLineLen) maxLineLen = lines[k].length;
+                        }
+                        const size = el.size || 14.0;
+                        const w = Math.max(50, maxLineLen * size * 0.65);
+                        const h = Math.max(size * 1.5, lines.length * size * 1.3);
+                        if (xPt >= el.x && xPt <= el.x + w && yPt >= el.y - 4 && yPt <= el.y + h) {
+                            return el;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function openTextEditorAt(ptX, ptY, existingElem) {
+            activeTextPt = {
+                x: existingElem ? existingElem.x : ptX,
+                y: existingElem ? existingElem.y : ptY,
+                existing: existingElem || null
+            };
+            const scale = 1.4;
+            const overlay = document.getElementById('textEditorOverlay');
+            const input = document.getElementById('textEditorInput');
+
+            overlay.style.left = (activeTextPt.x * scale) + 'px';
+            overlay.style.top = (activeTextPt.y * scale) + 'px';
+
+            const fontSizePx = Math.round(14 * scale);
+            input.style.fontSize = fontSizePx + 'px';
+            const color = currentColor;
+            const r = (color >> 16) & 0xFF;
+            const g = (color >> 8) & 0xFF;
+            const b = color & 0xFF;
+            input.style.color = 'rgb(' + r + ',' + g + ',' + b + ')';
+
+            input.value = existingElem ? existingElem.content : '';
+            overlay.classList.remove('hidden');
+
+            input.style.height = 'auto';
+            input.style.height = Math.max(32, input.scrollHeight) + 'px';
+
+            setTimeout(() => {
+                input.focus();
+                if (input.value) {
+                    input.setSelectionRange(input.value.length, input.value.length);
+                }
+            }, 50);
+        }
+
+        function commitTextEditor() {
+            if (!activeTextPt) return;
+            const input = document.getElementById('textEditorInput');
+            const content = input.value.trim();
+            const overlay = document.getElementById('textEditorOverlay');
+            overlay.classList.add('hidden');
+
+            const info = activeTextPt;
+            activeTextPt = null;
+
+            if (!content) {
+                renderCurrentPage();
+                return;
+            }
+
+            if (info.existing) {
+                info.existing.content = content;
+                info.existing.color = currentColor;
+                if (ws && ws.readyState === WebSocket.OPEN && currentDoc) {
+                    showSavedStatus('Sincronizando texto...');
+                    ws.send(JSON.stringify({
+                        type: 'ADD_TEXT',
+                        notebookId: currentDoc.notebookId,
+                        pageIndex: currentPageIndex,
+                        text: info.existing
+                    }));
+                }
+            } else {
+                const textElem = {
+                    type: 'text',
+                    font: 'Liberation Sans',
+                    size: 14.0,
+                    x: info.x,
+                    y: info.y,
+                    color: currentColor,
+                    content: content
+                };
+                appendElementToCurrentPage(textElem);
+
+                if (ws && ws.readyState === WebSocket.OPEN && currentDoc) {
+                    showSavedStatus('Sincronizando texto...');
+                    ws.send(JSON.stringify({
+                        type: 'ADD_TEXT',
+                        notebookId: currentDoc.notebookId,
+                        pageIndex: currentPageIndex,
+                        text: textElem
+                    }));
+                }
+            }
+
+            renderCurrentPage();
+        }
+
+        function cancelTextEditor() {
+            activeTextPt = null;
+            const overlay = document.getElementById('textEditorOverlay');
+            overlay.classList.add('hidden');
             renderCurrentPage();
         }
 
@@ -1253,9 +1473,23 @@ object LanWebClientHtml {
         }
 
         canvas.addEventListener('pointerdown', (e) => {
+            const pt = getCanvasPoint(e);
+
+            if (currentTool === 'text') {
+                if (activeTextPt) {
+                    commitTextEditor();
+                }
+                const hit = findTextElementAt(pt.x, pt.y);
+                openTextEditorAt(pt.x, pt.y, hit);
+                return;
+            }
+
+            if (activeTextPt) {
+                commitTextEditor();
+            }
+
             isDrawing = true;
             canvas.setPointerCapture(e.pointerId);
-            const pt = getCanvasPoint(e);
             currentStrokePoints = [{ x: pt.x, y: pt.y, w: currentWidthPt }];
 
             const scale = 1.4;
@@ -1317,17 +1551,26 @@ object LanWebClientHtml {
         });
 
         function setTool(tool) {
+            if (activeTextPt) {
+                commitTextEditor();
+            }
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            if (tool === 'pen') {
+            if (tool === 'text') {
+                document.getElementById('toolText').classList.add('active');
+                canvas.style.cursor = 'text';
+            } else if (tool === 'pen') {
                 document.getElementById('toolPen').classList.add('active');
                 currentWidthPt = 1.5;
+                canvas.style.cursor = 'crosshair';
             } else if (tool === 'highlighter') {
                 document.getElementById('toolHighlighter').classList.add('active');
                 currentWidthPt = 8.0;
+                canvas.style.cursor = 'crosshair';
             } else if (tool === 'eraser') {
                 document.getElementById('toolEraser').classList.add('active');
                 currentWidthPt = 12.0;
+                canvas.style.cursor = 'crosshair';
             }
             document.getElementById('widthSlider').value = currentWidthPt;
             document.getElementById('widthValue').textContent = currentWidthPt;
@@ -1390,6 +1633,23 @@ object LanWebClientHtml {
 
         // Auto-connect if initialToken is provided
         window.addEventListener('DOMContentLoaded', () => {
+            const textInput = document.getElementById('textEditorInput');
+            if (textInput) {
+                textInput.addEventListener('input', () => {
+                    textInput.style.height = 'auto';
+                    textInput.style.height = Math.max(32, textInput.scrollHeight) + 'px';
+                });
+                textInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelTextEditor();
+                    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        commitTextEditor();
+                    }
+                });
+            }
+
             if (currentToken && currentToken.length > 0) {
                 connectWebSocket(currentToken);
             } else {

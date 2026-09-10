@@ -392,6 +392,23 @@ class LanServer(
                     broadcastRawExcept(senderSocket, strokeBroadcast)
                 }
 
+                LanProtocol.TYPE_ADD_TEXT -> {
+                    val notebookId = json.getString("notebookId")
+                    val pageIndex = json.getInt("pageIndex")
+                    val textObj = json.getJSONObject("text")
+                    val text = LanProtocol.textFromJson(textObj)
+                    bridge.addText(notebookId, pageIndex, text)
+
+                    // Forward text to any other connected clients
+                    val textBroadcast = JSONObject().apply {
+                        put("type", LanProtocol.TYPE_TEXT_ADDED)
+                        put("notebookId", notebookId)
+                        put("pageIndex", pageIndex)
+                        put("text", textObj)
+                    }.toString()
+                    broadcastRawExcept(senderSocket, textBroadcast)
+                }
+
                 LanProtocol.TYPE_ADD_PAGE -> {
                     val notebookId = json.getString("notebookId")
                     val width = json.optDouble("width", 595.276)

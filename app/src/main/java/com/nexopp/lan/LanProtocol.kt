@@ -24,6 +24,8 @@ object LanProtocol {
     const val TYPE_DOCUMENT_DATA = "DOCUMENT_DATA"
     const val TYPE_ADD_STROKE = "ADD_STROKE"
     const val TYPE_STROKE_ADDED = "STROKE_ADDED"
+    const val TYPE_ADD_TEXT = "ADD_TEXT"
+    const val TYPE_TEXT_ADDED = "TEXT_ADDED"
     const val TYPE_ADD_PAGE = "ADD_PAGE"
     const val TYPE_PAGE_ADDED = "PAGE_ADDED"
     const val TYPE_TABLET_DOCUMENT_CHANGED = "TABLET_DOCUMENT_CHANGED"
@@ -206,6 +208,29 @@ object LanProtocol {
             points = points,
             uniformWidth = uniformWidth,
             lineStyle = lineStyle
+        )
+    }
+
+    fun textToJson(text: TextElement): JSONObject {
+        val obj = JSONObject()
+        obj.put("type", "text")
+        obj.put("x", text.x)
+        obj.put("y", text.y)
+        obj.put("font", text.font)
+        obj.put("size", text.size)
+        obj.put("color", text.color)
+        obj.put("content", text.content)
+        return obj
+    }
+
+    fun textFromJson(json: JSONObject): TextElement {
+        return TextElement(
+            font = json.optString("font", "Liberation Sans"),
+            size = json.optDouble("size", 14.0),
+            x = json.optDouble("x", 100.0),
+            y = json.optDouble("y", 100.0),
+            color = json.optInt("color", 0xFF000000.toInt()),
+            content = json.optString("content", "")
         )
     }
 

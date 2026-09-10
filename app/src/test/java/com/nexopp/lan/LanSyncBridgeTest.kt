@@ -140,4 +140,40 @@ class LanSyncBridgeTest {
         assertNotNull(broadcastPayload)
         assertTrue(broadcastPayload!!.contains(nb.id))
     }
+
+    @Test
+    fun openDocumentAndAddText_syncsAndPersists() = runBlocking {
+        // Create notebook
+        bridge.createNotebook("Notas de Álgebra", "sub1", 0xFF1E3A8A, "ruled")
+        val nb = store.loadNotebooks().first()
+
+        bridge.openDocument(nb.id, nb.fileName)
+
+        val text = TextElement(
+            font = "Liberation Sans",
+            size = 14.0,
+            x = 100.0,
+            y = 150.0,
+            color = 0xFF1E293B.toInt(),
+            content = "Texto escrito con teclado PC"
+        )
+
+        val success = bridge.addText(nb.id, pageIndex = 0, text = text)
+        assertTrue("Adding text must succeed", success)
+
+        // Verify that the text was saved to disk by reloading the .xopp
+        val reloadedDoc = repo.loadDocument(nb.fileName).getOrNull()
+        assertNotNull(reloadedDoc)
+        assertEquals(1, reloadedDoc!!.pages.size)
+        val layer = reloadedDoc.pages[0].layers.firstOrNull()
+        assertNotNull(layer)
+        assertEquals(1, layer!!.elements.size)
+        val persistedText = layer.elements[0] as TextElement
+        assertEquals("Liberation Sans", persistedText.font)
+        assertEquals(14.0, persistedText.size, 0.001)
+        assertEquals(100.0, persistedText.x, 0.001)
+        assertEquals(150.0, persistedText.y, 0.001)
+        assertEquals(0xFF1E293B.toInt(), persistedText.color)
+        assertEquals("Texto escrito con teclado PC", persistedText.content)
+    }
 }

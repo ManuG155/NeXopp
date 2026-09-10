@@ -87,6 +87,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    internal val lanServer: com.nexopp.lan.LanServer by lazy {
+        com.nexopp.lan.LanServer(syncBridge = lanSyncBridge)
+    }
+
+    internal val nsdHelper: com.nexopp.lan.NsdHelper by lazy {
+        com.nexopp.lan.NsdHelper(this)
+    }
+
     internal val panes: List<EditorPane> by lazy {
         TABS_DIRS.map { EditorPane(TabStore(File(filesDir, it))) }
     }
@@ -558,6 +566,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        nsdHelper.unregisterService()
+        lanServer.stop()
         audio.release()
         super.onDestroy()
     }

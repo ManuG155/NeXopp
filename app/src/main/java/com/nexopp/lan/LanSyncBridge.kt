@@ -228,6 +228,66 @@ class LanSyncBridge(
         true
     }
 
+    suspend fun addText(notebookId: String, pageIndex: Int, text: TextElement): Boolean = withContext(Dispatchers.IO) {
+        var active = openWebDocuments[notebookId]
+        if (active == null) {
+            openDocument(notebookId, null)
+            active = openWebDocuments[notebookId] ?: return@withContext false
+        }
+
+        val doc = active.document
+        val pages = doc.pages.toMutableList()
+        if (pageIndex !in pages.indices) {
+            pages.add(
+                Page(
+                    width = DrawingSurfaceDefaults.A4_WIDTH_PT.toDouble(),
+                    height = DrawingSurfaceDefaults.A4_HEIGHT_PT.toDouble(),
+                    background = Background.Solid(0xFFFFFFFF.toInt(), active.notebook.initialTemplate),
+                    layers = listOf(Layer(listOf(text)))
+                )
+            )
+        } else {
+            val targetPage = pages[pageIndex]
+            val layers = targetPage.layers.toMutableList()
+            if (layers.isEmpty()) {
+                layers.add(Layer(listOf(text)))
+            } else {
+                val topLayer = layers.last()
+                val elements = topLayer.elements.toMutableList()
+                elements.add(text)
+                layers[layers.size - 1] = topLayer.copy(elements = elements)
+            }
+            pages[pageIndex] = targetPage.copy(layers = layers)
+        }
+
+        val updatedDoc = doc.copy(pages = pages)
+        active.document = updatedDoc
+        active.version.incrementAndGet()
+
+        // 1. If currently open on tablet surface, reflect changes on tablet screen immediately
+        val activeTabletInfo = activeSurfaceProvider?.invoke()
+        if (activeTabletInfo != null &&
+            (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
+        ) {
+            mainHandler.post {
+                onApplyDocumentToSurface?.invoke(updatedDoc)
+            }
+        }
+
+        // 2. Persist to .xopp file via repository
+        documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
+
+        // 3. Update notebook metadata (page count and last modified)
+        libraryStore.updateNotebook(
+            active.notebook.copy(
+                pageCount = updatedDoc.pages.size,
+                lastModified = System.currentTimeMillis()
+            )
+        )
+
+        true
+    }
+
     suspend fun addPage(notebookId: String, width: Double, height: Double, template: String): JSONObject? = withContext(Dispatchers.IO) {
         val active = openWebDocuments[notebookId] ?: return@withContext null
         val doc = active.document

@@ -117,4 +117,61 @@ class LanProtocolTest {
         assertEquals("stroke", elements.getJSONObject(0).getString("type"))
         assertEquals("pen", elements.getJSONObject(0).getString("tool"))
     }
+
+    @Test
+    fun textRoundtrip_preservesAllProperties() {
+        val text = TextElement(
+            font = "Liberation Sans",
+            size = 16.0,
+            x = 120.0,
+            y = 250.0,
+            color = 0xFF2563EB.toInt(),
+            content = "Nota de texto desde PC\nSegunda línea"
+        )
+
+        val json = LanProtocol.textToJson(text)
+        val roundtrip = LanProtocol.textFromJson(json)
+
+        assertEquals("Liberation Sans", roundtrip.font)
+        assertEquals(16.0, roundtrip.size, 0.001)
+        assertEquals(120.0, roundtrip.x, 0.001)
+        assertEquals(250.0, roundtrip.y, 0.001)
+        assertEquals(0xFF2563EB.toInt(), roundtrip.color)
+        assertEquals("Nota de texto desde PC\nSegunda línea", roundtrip.content)
+    }
+
+    @Test
+    fun documentToJson_serializesTextElements() {
+        val text = TextElement(
+            font = "Liberation Sans",
+            size = 14.0,
+            x = 50.0,
+            y = 100.0,
+            color = 0xFF000000.toInt(),
+            content = "Texto en documento"
+        )
+        val page = Page(
+            width = 595.276,
+            height = 841.890,
+            background = Background.Solid(0xFFFFFFFF.toInt(), "ruled"),
+            layers = listOf(Layer(elements = listOf(text)))
+        )
+        val doc = Document(pages = listOf(page))
+
+        val json = LanProtocol.documentToJson(
+            notebookId = "nb-456",
+            fileName = "text_doc.xopp",
+            title = "Documento con Texto",
+            document = doc,
+            version = 1L
+        )
+
+        val pages = json.getJSONArray("pages")
+        val elements = pages.getJSONObject(0).getJSONArray("layers").getJSONObject(0).getJSONArray("elements")
+        assertEquals(1, elements.length())
+        val textObj = elements.getJSONObject(0)
+        assertEquals("text", textObj.getString("type"))
+        assertEquals("Texto en documento", textObj.getString("content"))
+        assertEquals(14.0, textObj.getDouble("size"), 0.001)
+    }
 }

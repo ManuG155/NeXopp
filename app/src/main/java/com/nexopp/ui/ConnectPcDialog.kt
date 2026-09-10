@@ -41,28 +41,28 @@ fun ConnectPcDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val syncBridge = remember(context) { (context as? MainActivity)?.lanSyncBridge }
-    val lanServer = remember { LanServer(syncBridge = syncBridge) }
-    val nsdHelper = remember { NsdHelper(context) }
+    val mainActivity = context as? MainActivity
+    val syncBridge = remember(mainActivity) { mainActivity?.lanSyncBridge }
+    val lanServer = remember(mainActivity) { mainActivity?.lanServer ?: LanServer(syncBridge = syncBridge) }
+    val nsdHelper = remember(mainActivity) { mainActivity?.nsdHelper ?: NsdHelper(context) }
 
     val serverStatus by lanServer.status.collectAsState()
     val receivedMessages = remember { mutableStateListOf<LanReceivedMessage>() }
     var customMessageText by remember { mutableStateOf("") }
 
-    // Start server when dialog is shown, stop and clean up on dismiss
-    DisposableEffect(Unit) {
-        val wifiIp = LanIpHelper.getLocalWifiIpAddress(context) ?: "127.0.0.1"
-        val started = lanServer.start(wifiIp, initialPort = 8080)
-        if (started) {
-            val status = lanServer.status.value
-            if (status is LanServerStatus.Listening) {
-                nsdHelper.registerService(status.port)
+    // Start server when dialog is opened if it's not already running.
+    // If it is already Listening or Connected, preserve the active session and WebSocket.
+    LaunchedEffect(lanServer) {
+        val currentStatus = lanServer.status.value
+        if (currentStatus is LanServerStatus.Stopped || currentStatus is LanServerStatus.Error) {
+            val wifiIp = LanIpHelper.getLocalWifiIpAddress(context) ?: "127.0.0.1"
+            val started = lanServer.start(wifiIp, initialPort = 8080)
+            if (started) {
+                val status = lanServer.status.value
+                if (status is LanServerStatus.Listening) {
+                    nsdHelper.registerService(status.port)
+                }
             }
-        }
-
-        onDispose {
-            nsdHelper.unregisterService()
-            lanServer.stop()
         }
     }
 
@@ -75,7 +75,6 @@ fun ConnectPcDialog(
 
     Dialog(
         onDismissRequest = {
-            lanServer.stop()
             onDismiss()
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -132,7 +131,6 @@ fun ConnectPcDialog(
                     }
 
                     IconButton(onClick = {
-                        lanServer.stop()
                         onDismiss()
                     }) {
                         Icon(Icons.Filled.Close, contentDescription = "Cerrar")
@@ -519,6 +517,7 @@ fun ConnectPcDialog(
                                 ) {
                                     OutlinedButton(
                                         onClick = {
+                                            nsdHelper.unregisterService()
                                             lanServer.stop()
                                             onDismiss()
                                         },
@@ -528,7 +527,7 @@ fun ConnectPcDialog(
                                     ) {
                                         Icon(Icons.Filled.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Desconectar y Cerrar")
+                                        Text("Desconectar")
                                     }
                                 }
                             }
