@@ -37,6 +37,27 @@ fun DrawingSurfaceView.deleteSelection() {
     render()
 }
 
+/** Delete a single element as one undoable edit. */
+fun DrawingSurfaceView.deleteElement(element: Element, pageIndex: Int = visiblePageIndex()) {
+    val before = doc
+    val page = doc.pages.getOrNull(pageIndex) ?: return
+    var foundRef: ElementRef? = null
+    for (li in page.layers.indices) {
+        val ei = page.layers[li].elements.indexOfFirst { it === element }
+        if (ei >= 0) {
+            foundRef = ElementRef(li, ei)
+            break
+        }
+    }
+    if (foundRef != null) {
+        doc = doc.copy(pages = SelectionOps.delete(doc.pages, pageIndex, setOf(foundRef)))
+        history.record(before)
+        notifyHistory()
+        relayout()
+        render()
+    }
+}
+
 /** Returns whether there is an active selection. */
 fun DrawingSurfaceView.hasSelection(): Boolean = selection != null
 

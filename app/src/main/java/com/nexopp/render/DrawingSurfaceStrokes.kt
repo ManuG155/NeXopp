@@ -19,9 +19,6 @@ import com.nexopp.format.model.Tool
 import kotlin.math.hypot
 
 internal fun DrawingSurfaceView.startStroke(event: MotionEvent, pointerIndex: Int) {
-    if (mathMode) {
-        cancelMathSchedule()
-    }
     scrolling = false
     shaping = shapeKind != null
     gestureStartDoc = doc
@@ -245,7 +242,9 @@ internal fun DrawingSurfaceView.placeMove(event: MotionEvent) {
 /** Fire [onPlace] for the page/point the tap landed on, hitting an existing text box if any. */
 internal fun DrawingSurfaceView.commitPlace() {
     val kind = placeKind ?: return
-    val box = layout.pageAt(placeDownX + scrollX, placeDownY + scrollY) ?: return
+    val box = layout.pageAt(placeDownX + scrollX, placeDownY + scrollY)
+        ?: layout.nearestPage(placeDownX + scrollX, placeDownY + scrollY)
+        ?: return
     val xPt = box.toPtX(placeDownX, scrollX)
     val yPt = box.toPtY(placeDownY, scrollY)
     val existing = if (kind == PlaceKind.TEXT) textEdits.pickForEditing(box.index, xPt, yPt) else null
@@ -323,11 +322,6 @@ internal fun DrawingSurfaceView.commitCurrent() {
             lineStyle = currentLineStyle, fill = currentFill,
         )
         appendStroke(currentPage, stroke)
-        if (mathMode && tool == Tool.PEN && !wasShaping && !snapped) {
-            mathSessionStrokes.add(stroke)
-            mathSessionPageIndex = currentPage
-            scheduleMathConversion()
-        }
     }
     render()
 }

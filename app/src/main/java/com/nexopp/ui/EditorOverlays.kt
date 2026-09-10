@@ -32,6 +32,7 @@ import com.nexopp.render.copySelection
 import com.nexopp.render.copyTextSelection
 import com.nexopp.render.cancelSpline
 import com.nexopp.render.cutSelection
+import com.nexopp.render.deleteElement
 import com.nexopp.render.deleteSelection
 import com.nexopp.render.duplicateSelection
 import com.nexopp.render.finishSpline
@@ -42,7 +43,6 @@ import com.nexopp.render.recognizeSelectedStrokes
 import com.nexopp.render.replaceSelectionWithText
 import com.nexopp.render.restyleSelection
 import com.nexopp.render.undoLastSplineNode
-import com.nexopp.stem.MathHandwritingEngine
 
 @Composable
 fun BoxScope.EditorOverlays(
@@ -92,6 +92,53 @@ fun BoxScope.EditorOverlays(
             confirmLabel = "Insertar",
             onConfirm = { latex -> surface?.insertTex(placement, latex, ui.color); ui.texPlacement = null },
             onDismiss = { ui.texPlacement = null },
+        )
+    }
+    ui.activeLinkCard?.let { (url, title, mediaType) ->
+        LinkCardOptionsDialog(
+            url = url,
+            title = title,
+            mediaType = mediaType,
+            onDismiss = { ui.activeLinkCard = null; ui.activeLinkCardElement = null },
+            onDelete = {
+                ui.activeLinkCardElement?.let { (pIdx, elem) ->
+                    surface?.deleteElement(elem, pIdx)
+                }
+                ui.activeLinkCard = null
+                ui.activeLinkCardElement = null
+            }
+        )
+    }
+    if (ui.showPeriodicTableDialog) {
+        val targetPage = pane.currentPage
+        com.nexopp.stem.PeriodicTableDialog(
+            onDismiss = { ui.showPeriodicTableDialog = false },
+            onInsertElement = { element ->
+                surface?.insertElements(listOf(element), pageIndex = targetPage)
+                ui.showPeriodicTableDialog = false
+            }
+        )
+    }
+    if (ui.showTableEditDialog) {
+        com.nexopp.stem.TableDialog(
+            originX = 80.0,
+            originY = 120.0,
+            onDismiss = { ui.showTableEditDialog = false },
+            onInsertTable = { elements ->
+                surface?.insertElements(elements)
+                ui.showTableEditDialog = false
+            }
+        )
+    }
+    if (ui.showFunctionPlotterDialog) {
+        com.nexopp.stem.FunctionPlotterDialog(
+            originX = 250.0,
+            originY = 250.0,
+            onDismiss = { ui.showFunctionPlotterDialog = false },
+            onInsertPlot = { elements ->
+                surface?.insertElements(elements)
+                ui.showFunctionPlotterDialog = false
+            }
         )
     }
     if (ui.showImportPdf) {
@@ -159,16 +206,6 @@ private fun BoxScope.SelectionOverlays(
                     ocrText = res?.text ?: ""
                     ocrConfidence = (res?.candidates?.firstOrNull()?.confidence ?: 0.85f).toDouble()
                     ocrIsMath = false
-                    showOcrDialog = true
-                }
-            },
-            onMathOcr = {
-                val strokes = surface?.getSelectedStrokes() ?: emptyList()
-                if (strokes.isNotEmpty()) {
-                    val mathRes = MathHandwritingEngine.recognize(strokes)
-                    ocrText = mathRes.latex
-                    ocrConfidence = mathRes.confidence
-                    ocrIsMath = true
                     showOcrDialog = true
                 }
             },

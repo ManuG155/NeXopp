@@ -28,12 +28,19 @@ import androidx.compose.ui.window.DialogProperties
 import com.nexopp.format.model.Element
 
 val STEM_PLOT_COLORS = listOf(
-    0xFF1976D2.toInt(), // Blue
-    0xFFD32F2F.toInt(), // Red
-    0xFF388E3C.toInt(), // Green
-    0xFF7B1FA2.toInt(), // Purple
-    0xFFF57C00.toInt(), // Orange
-    0xFF00838F.toInt(), // Teal/Cyan
+    0xFF1976D2.toInt(), // Sapphire Blue
+    0xFFD32F2F.toInt(), // Crimson Red
+    0xFF388E3C.toInt(), // Emerald Green
+    0xFF7B1FA2.toInt(), // Deep Purple
+    0xFFF57C00.toInt(), // Amber Orange
+    0xFF00838F.toInt(), // Teal
+    0xFFE91E63.toInt(), // Magenta / Pink
+    0xFF3F51B5.toInt(), // Indigo
+    0xFF009688.toInt(), // Mint Turquoise
+    0xFFFF9800.toInt(), // Bright Orange
+    0xFF673AB7.toInt(), // Violet
+    0xFF795548.toInt(), // Brown
+    0xFF607D8B.toInt(), // Slate Blue
     0xFF000000.toInt(), // Black
 )
 
@@ -104,6 +111,7 @@ fun FunctionPlotterDialog(
     var gridStyle by remember { mutableStateOf(PlotGridStyle.SUBTLE) }
     var highlightRoots by remember { mutableStateOf(false) }
     var highlightIntersections by remember { mutableStateOf(false) }
+    var customColorDialogTargetIndex by remember { mutableStateOf<Int?>(null) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -315,13 +323,17 @@ fun FunctionPlotterDialog(
 
                                                 Spacer(Modifier.width(8.dp))
 
-                                                // Color Picker Swatches
-                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    STEM_PLOT_COLORS.take(4).forEach { colorVal ->
+                                                // Color Picker Swatches (Todos los colores + Personalizado)
+                                                Row(
+                                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    STEM_PLOT_COLORS.forEach { colorVal ->
                                                         val isSelected = fn.color == colorVal
                                                         Box(
                                                             modifier = Modifier
-                                                                .size(24.dp)
+                                                                .size(22.dp)
                                                                 .clip(CircleShape)
                                                                 .background(Color(colorVal))
                                                                 .clickable {
@@ -333,6 +345,17 @@ fun FunctionPlotterDialog(
                                                                     if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
                                                                     else Modifier
                                                                 )
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = { customColorDialogTargetIndex = index },
+                                                        modifier = Modifier.size(26.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Filled.Palette,
+                                                            contentDescription = "Color personalizado",
+                                                            modifier = Modifier.size(18.dp),
+                                                            tint = if (fn.color !in STEM_PLOT_COLORS) Color(fn.color) else MaterialTheme.colorScheme.primary
                                                         )
                                                     }
                                                 }
@@ -823,5 +846,64 @@ fun FunctionPlotterDialog(
                 }
             }
         }
+    }
+
+    if (customColorDialogTargetIndex != null) {
+        val targetIdx = customColorDialogTargetIndex!!
+        var hexInput by remember(targetIdx) {
+            mutableStateOf(String.format(java.util.Locale.US, "%06X", (functions.getOrNull(targetIdx)?.color ?: 0) and 0xFFFFFF))
+        }
+        AlertDialog(
+            onDismissRequest = { customColorDialogTargetIndex = null },
+            title = { Text("Color Personalizado de Función") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Introduce el código de color hexadecimal (RRGGBB):", style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value = hexInput,
+                        onValueChange = { input ->
+                            hexInput = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6)
+                        },
+                        prefix = { Text("#", fontWeight = FontWeight.Bold) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    val parsedColor = runCatching {
+                        if (hexInput.length == 6) (0xFF000000.toInt() or hexInput.toInt(16)) else null
+                    }.getOrNull() ?: (functions.getOrNull(targetIdx)?.color ?: 0xFF1976D2.toInt())
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Vista previa:", style = MaterialTheme.typography.labelMedium)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(parsedColor))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val parsed = runCatching {
+                        if (hexInput.length == 6) (0xFF000000.toInt() or hexInput.toInt(16)) else null
+                    }.getOrNull()
+                    if (parsed != null) {
+                        functions = functions.mapIndexed { i, item ->
+                            if (i == targetIdx) item.copy(color = parsed) else item
+                        }
+                    }
+                    customColorDialogTargetIndex = null
+                }) {
+                    Text("Aplicar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { customColorDialogTargetIndex = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }

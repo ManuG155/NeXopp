@@ -38,6 +38,11 @@ class EditorUiState(tool: EditorTool, color: Int, width: Float) {
 
     var textPlacement by mutableStateOf<Placement?>(null)
     var texPlacement by mutableStateOf<Placement?>(null)
+    var activeLinkCard by mutableStateOf<Triple<String, String, String>?>(null)
+    var activeLinkCardElement by mutableStateOf<Pair<Int, com.nexopp.format.model.ImageElement>?>(null)
+    var showPeriodicTableDialog by mutableStateOf(false)
+    var showTableEditDialog by mutableStateOf(false)
+    var showFunctionPlotterDialog by mutableStateOf(false)
 
     val textDefaults = TextDefaults()
 

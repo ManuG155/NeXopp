@@ -261,76 +261,6 @@ class DrawingSurfaceView @JvmOverloads constructor(
         commit = { commitElementEdit(it) },
     )
 
-    /** Interactive Math Mode: stylus handwriting is recognized and rendered as typography formulas. */
-    var mathMode: Boolean = false
-    internal val mathSessionStrokes = mutableListOf<com.nexopp.format.model.Stroke>()
-    internal var mathSessionPageIndex = 0
-    private var mathConvertRunnable: Runnable? = null
-
-    fun cancelMathSchedule() {
-        mathConvertRunnable?.let { removeCallbacks(it) }
-        mathConvertRunnable = null
-    }
-
-    fun scheduleMathConversion() {
-        if (!mathMode || mathSessionStrokes.isEmpty()) return
-        cancelMathSchedule()
-        val r = Runnable { convertMathSession() }
-        mathConvertRunnable = r
-        postDelayed(r, 1100L) // 1.1s debounce after stylus lift
-    }
-
-    fun convertMathSession() {
-        mathConvertRunnable?.let { removeCallbacks(it) }
-        mathConvertRunnable = null
-        if (mathSessionStrokes.isEmpty()) return
-        val strokesToConvert = mathSessionStrokes.toList()
-        mathSessionStrokes.clear()
-
-        val result = com.nexopp.stem.MathHandwritingEngine.recognize(strokesToConvert)
-        if (result.latex.isBlank() || result.latex == "?") return
-
-        val pageIdx = mathSessionPageIndex
-        val page = doc.pages.getOrNull(pageIdx) ?: return
-        val activeLayer = resolvedActiveLayer(page)
-        val layer = page.layers.getOrNull(activeLayer) ?: return
-
-        // Compute bounding box with comfortable padding
-        val pad = 6.0
-        val left = maxOf(0.0, result.bounds.left - pad)
-        val top = maxOf(0.0, result.bounds.top - pad)
-        val right = maxOf(left + 24.0, result.bounds.right + pad)
-        val bottom = maxOf(top + 18.0, result.bounds.bottom + pad)
-
-        val texElement = com.nexopp.format.model.TexImageElement(
-            left = left,
-            top = top,
-            right = right,
-            bottom = bottom,
-            latex = result.latex,
-            color = colorArgb,
-            latexInAttribute = true
-        )
-
-        // Snapshot history before replacement
-        history.record(doc)
-
-        // Remove the original strokes and insert the TexImageElement
-        val updatedElements = layer.elements.toMutableList()
-        updatedElements.removeAll { it in strokesToConvert }
-        updatedElements.add(texElement)
-
-        val newLayers = page.layers.toMutableList()
-        newLayers[activeLayer] = com.nexopp.format.model.Layer(updatedElements, layer.name)
-
-        val newPages = doc.pages.toMutableList()
-        newPages[pageIdx] = page.copy(layers = newLayers)
-
-        doc = doc.copy(pages = newPages)
-        notifyHistory()
-        relayout()
-        render()
-    }
     /** Which page index was last reported to [onCurrentPageChanged], to suppress duplicate calls. */
     private var lastReportedPage = -1
     /** Last (scrollY, totalHeightPx, viewportPx) reported to [onScrollChanged], to suppress duplicate calls. */
@@ -388,6 +318,8 @@ class DrawingSurfaceView @JvmOverloads constructor(
     var onScrollChanged: ((Float, Float, Float) -> Unit)? = null
     /** Notified when a placement tap lands, so the editor can prompt for content / pick an image. */
     var onPlace: ((PlaceKind, Placement) -> Unit)? = null
+    /** Notified when an element is tapped (short tap) so the editor can open its corresponding editor or dialog. */
+    var onElementTapped: ((element: Element, pageIndex: Int, xPt: Double, yPt: Double) -> Unit)? = null
     /** Notified when the Hand tool receives a centre double-tap, so the editor can toggle full-page (chrome-hidden) view. */
     var onToggleFullPage: (() -> Unit)? = null
     /**
@@ -1281,6 +1213,16 @@ class DrawingSurfaceView @JvmOverloads constructor(
     internal var paletteLongPressArmed = false
     internal var paletteLongPressX = 0f
     internal var paletteLongPressY = 0f
+
+    // --- element long-press selection state ----------------------------------------------------
+    internal val elementLongPressArm = Runnable { triggerElementLongPress() }
+    internal val elementLongPressTimer = Handler(Looper.getMainLooper())
+    internal var elementLongPressArmed = false
+    internal var elementLongPressFired = false
+    internal var elementLongPressX = 0f
+    internal var elementLongPressY = 0f
+    internal var elementLongPressDownTime = 0L
+    internal var elementLongPressPage = -1
 
     /** The two-finger tap candidate; its rules — and their tests — live in [PaletteTapDetector]. */
     internal val paletteTap = PaletteTapDetector(touchSlopPx, DrawingSurfaceDefaults.TWO_FINGER_TAP_MS)

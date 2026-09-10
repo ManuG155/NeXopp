@@ -248,93 +248,99 @@ fun CategorizedTopBar(
                             .fillMaxWidth()
                             .height(52.dp)
                     ) {
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 10.dp)
                                 .horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            contentAlignment = Alignment.Center
                         ) {
-                            when (activeSection) {
-                                TopBarSection.ESCRITURA -> {
-                                    EscrituraSectionContent(
-                                        ui = ui,
-                                        surface = surface,
-                                        styleCallbacks = styleCallbacks,
-                                        settings = settings,
-                                        onSettingsChange = onSettingsChange
-                                    )
-                                }
-                                TopBarSection.DIBUJO -> {
-                                    DibujoSectionContent(
-                                        ui = ui,
-                                        surface = surface,
-                                        styleCallbacks = styleCallbacks,
-                                        settings = settings,
-                                        onSettingsChange = onSettingsChange
-                                    )
-                                }
-                                TopBarSection.MATEMATICAS -> {
-                                    MatematicasSectionContent(
-                                        ui = ui,
-                                        pane = pane,
-                                        surface = surface,
-                                        onOpenTechnicalSymbols = onOpenTechnicalSymbols,
-                                        onOpenPeriodicTable = onOpenPeriodicTable,
-                                        onOpenScientificCalculator = onOpenScientificCalculator
-                                    )
-                                }
-                                TopBarSection.GRAFICAS -> {
-                                    GraficasSectionContent(
-                                        onOpenPlotter = onOpenFunctionPlotter,
-                                        surface = surface,
-                                        pane = pane
-                                    )
-                                }
-                                TopBarSection.TEXTO -> {
-                                    TextoSectionContent(
-                                        ui = ui,
-                                        surface = surface,
-                                        styleCallbacks = styleCallbacks
-                                    )
-                                }
-                                TopBarSection.INSERTAR -> {
-                                    InsertarSectionContent(
-                                        ui = ui,
-                                        pane = pane,
-                                        surface = surface,
-                                        onOpenTableDialog = onOpenTableDialog,
-                                        onOpenTechnicalSymbols = onOpenTechnicalSymbols,
-                                        onOpenInsertLinkDialog = onOpenInsertLinkDialog
-                                    )
-                                }
-                                TopBarSection.PAGINAS -> {
-                                    PaginasSectionContent(
-                                        pane = pane,
-                                        surface = surface,
-                                        onAddPageQuick = onAddPageQuick,
-                                        onOpenPageManager = onOpenPageManager,
-                                        onOpenStructure = onOpenStructure,
-                                        onOpenAttachments = onOpenAttachments
-                                    )
-                                }
-                                TopBarSection.AUDIO -> {
-                                    AudioSectionContent(
-                                        audio = audio
-                                    )
-                                }
-                                TopBarSection.EXPORTAR -> {
-                                    ExportarSectionContent(
-                                        onOpenExportDialog = onOpenExportDialog
-                                    )
-                                }
-                                TopBarSection.AJUSTES -> {
-                                    AjustesSectionContent(
-                                        onOpenSettings = onOpenSettings,
-                                        settings = settings,
-                                        onSettingsChange = onSettingsChange
-                                    )
+                            Row(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .wrapContentWidth(Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                            ) {
+                                when (activeSection) {
+                                    TopBarSection.ESCRITURA -> {
+                                        EscrituraSectionContent(
+                                            ui = ui,
+                                            surface = surface,
+                                            styleCallbacks = styleCallbacks,
+                                            settings = settings,
+                                            onSettingsChange = onSettingsChange
+                                        )
+                                    }
+                                    TopBarSection.DIBUJO -> {
+                                        DibujoSectionContent(
+                                            ui = ui,
+                                            surface = surface,
+                                            styleCallbacks = styleCallbacks,
+                                            settings = settings,
+                                            onSettingsChange = onSettingsChange
+                                        )
+                                    }
+                                    TopBarSection.MATEMATICAS -> {
+                                        MatematicasSectionContent(
+                                            ui = ui,
+                                            pane = pane,
+                                            surface = surface,
+                                            onOpenTechnicalSymbols = onOpenTechnicalSymbols,
+                                            onOpenPeriodicTable = onOpenPeriodicTable,
+                                            onOpenScientificCalculator = onOpenScientificCalculator
+                                        )
+                                    }
+                                    TopBarSection.GRAFICAS -> {
+                                        GraficasSectionContent(
+                                            onOpenPlotter = onOpenFunctionPlotter,
+                                            surface = surface,
+                                            pane = pane
+                                        )
+                                    }
+                                    TopBarSection.TEXTO -> {
+                                        TextoSectionContent(
+                                            ui = ui,
+                                            surface = surface,
+                                            styleCallbacks = styleCallbacks
+                                        )
+                                    }
+                                    TopBarSection.INSERTAR -> {
+                                        InsertarSectionContent(
+                                            ui = ui,
+                                            pane = pane,
+                                            surface = surface,
+                                            onOpenTableDialog = onOpenTableDialog,
+                                            onOpenTechnicalSymbols = onOpenTechnicalSymbols,
+                                            onOpenInsertLinkDialog = onOpenInsertLinkDialog
+                                        )
+                                    }
+                                    TopBarSection.PAGINAS -> {
+                                        PaginasSectionContent(
+                                            pane = pane,
+                                            surface = surface,
+                                            onAddPageQuick = onAddPageQuick,
+                                            onOpenPageManager = onOpenPageManager,
+                                            onOpenStructure = onOpenStructure,
+                                            onOpenAttachments = onOpenAttachments
+                                        )
+                                    }
+                                    TopBarSection.AUDIO -> {
+                                        AudioSectionContent(
+                                            audio = audio
+                                        )
+                                    }
+                                    TopBarSection.EXPORTAR -> {
+                                        ExportarSectionContent(
+                                            onOpenExportDialog = onOpenExportDialog
+                                        )
+                                    }
+                                    TopBarSection.AJUSTES -> {
+                                        AjustesSectionContent(
+                                            onOpenSettings = onOpenSettings,
+                                            settings = settings,
+                                            onSettingsChange = onSettingsChange
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -487,24 +493,6 @@ private fun MatematicasSectionContent(
     onOpenPeriodicTable: () -> Unit,
     onOpenScientificCalculator: () -> Unit
 ) {
-    // Modo Matemáticas Manuscrito Directo (Escritura 2D en lienzo con Stylus)
-    Button(
-        onClick = {
-            ui.tool = EditorTool.MATH_INK
-            surface?.applyTool(EditorTool.MATH_INK)
-        },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (ui.tool == EditorTool.MATH_INK) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (ui.tool == EditorTool.MATH_INK) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-        modifier = Modifier.height(38.dp)
-    ) {
-        Icon(Icons.Filled.Calculate, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("Modo Matemáticas Manuscrito", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-    }
-
     // LaTeX Tradicional
     OutlinedButton(
         onClick = {

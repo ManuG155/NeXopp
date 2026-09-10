@@ -98,7 +98,10 @@ data class AudioUiState(
     val recording: Boolean = false,
     val playing: Boolean = false,
     val folderChosen: Boolean = false,
+    val folderUri: android.net.Uri? = null,
     val onToggleRecord: () -> Unit = {},
+    val onStartRecordingNamed: (name: String, folderUri: android.net.Uri?) -> Unit = { _, _ -> },
+    val onStopRecordingAndSave: (name: String, folderUri: android.net.Uri?) -> Unit = { _, _ -> },
     val onStopPlayback: () -> Unit = {},
     val onChooseFolder: () -> Unit = {}
 )

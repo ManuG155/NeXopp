@@ -29,7 +29,7 @@ import com.nexopp.format.model.Tool
 
 enum class EditorTool {
     PEN, HIGHLIGHTER, ERASER, ERASER_WHOLE, HAND, SELECT, LASSO_SELECT, TEXT_SELECT, BG_SELECT,
-    TEXT, IMAGE, TEXIMAGE, MATH_INK,
+    TEXT, IMAGE, TEXIMAGE,
     LINE, ARROW, DOUBLE_ARROW, COORDINATE_AXIS, RECTANGLE, ELLIPSE, SPLINE, VERTICAL_SPACE,
     PLAY_OBJECT,
 }
@@ -61,7 +61,6 @@ private val TOOLS: List<ToolInfo> = listOf(
     ToolInfo(EditorTool.TEXT, "Texto", Icons.Filled.TextFields),
     ToolInfo(EditorTool.IMAGE, "Imagen", Icons.Filled.Image),
     ToolInfo(EditorTool.TEXIMAGE, "LaTeX", Icons.Filled.Functions),
-    ToolInfo(EditorTool.MATH_INK, "Matemáticas", Icons.Filled.Calculate),
     ToolInfo(EditorTool.VERTICAL_SPACE, "Espacio vertical", Icons.Filled.SwapVert),
     ToolInfo(EditorTool.PLAY_OBJECT, "Reproducir objeto", Icons.Filled.PlayCircleOutline),
 )

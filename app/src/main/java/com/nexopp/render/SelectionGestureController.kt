@@ -180,11 +180,18 @@ internal class SelectionGestureController(
         }
     }
 
-    private fun beginMove(event: MotionEvent, box: PageBox) {
+    internal fun beginMove(event: MotionEvent, box: PageBox) {
         moving = true
         snapshot()
         moveStartPtX = box.toPtX(event.x, viewport.scrollX)
         moveStartPtY = box.toPtY(event.y, viewport.scrollY)
+    }
+
+    internal fun beginMoveFromPoint(box: PageBox, ptX: Double, ptY: Double) {
+        moving = true
+        snapshot()
+        moveStartPtX = ptX
+        moveStartPtY = ptY
     }
 
     private fun beginResize(event: MotionEvent, box: PageBox, anchorX: Double, anchorY: Double) {
@@ -297,17 +304,16 @@ internal class SelectionGestureController(
     fun commitBand() {
         val box = layout().boxes.getOrNull(bandPage) ?: return
         val page = document().pages.getOrNull(bandPage) ?: return
-        val layer = activeLayerOf(page)
         val isTap = hypot(bandX1 - bandX0, bandY1 - bandY0) <= DrawingSurfaceDefaults.TAP_SLOP_PX
         val refs: Set<ElementRef> = when {
             isTap -> SelectionTester.pickTopmost(page, box.toPtX(bandX0, viewport.scrollX), box.toPtY(bandY0, viewport.scrollY))?.let { setOf(it) } ?: emptySet()
-            lassoMode() -> SelectionTester.inPolygon(page, lassoPoly, layer)
+            lassoMode() -> SelectionTester.inPolygon(page, lassoPoly, onlyLayer = null)
             else -> {
                 val rect = Bounds(
                     min(box.toPtX(bandX0, viewport.scrollX), box.toPtX(bandX1, viewport.scrollX)), min(box.toPtY(bandY0, viewport.scrollY), box.toPtY(bandY1, viewport.scrollY)),
                     max(box.toPtX(bandX0, viewport.scrollX), box.toPtX(bandX1, viewport.scrollX)), max(box.toPtY(bandY0, viewport.scrollY), box.toPtY(bandY1, viewport.scrollY)),
                 )
-                SelectionTester.inRect(page, rect, layer)
+                SelectionTester.inRect(page, rect, onlyLayer = null)
             }
         }
         selection = if (refs.isEmpty()) null else ActiveSelection(bandPage, refs)

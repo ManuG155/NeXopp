@@ -30,10 +30,11 @@ fun AudioRecordingDialog(
     notebookTitle: String,
     isRecording: Boolean,
     folderChosen: Boolean = false,
+    folderUri: Uri? = null,
     onChooseFolder: (() -> Unit)? = null,
     onDismiss: () -> Unit,
-    onStartRecording: (customName: String, recordAndTranscribe: Boolean) -> Unit,
-    onStopRecording: () -> Unit
+    onStartRecording: (customName: String, recordAndTranscribe: Boolean, customUri: Uri?) -> Unit,
+    onStopRecording: (customName: String, customUri: Uri?) -> Unit
 ) {
     val defaultName = remember {
         val sdf = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
@@ -41,7 +42,18 @@ fun AudioRecordingDialog(
     }
     var recordingName by remember { mutableStateOf(defaultName) }
     var transcribeOffline by remember { mutableStateOf(false) }
-    var selectedCustomUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedCustomUri by remember { mutableStateOf<Uri?>(folderUri) }
+
+    var elapsedSeconds by remember { mutableStateOf(0) }
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            elapsedSeconds = 0
+            while (true) {
+                kotlinx.coroutines.delay(1000)
+                elapsedSeconds++
+            }
+        }
+    }
 
     val safFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -168,11 +180,11 @@ fun AudioRecordingDialog(
                                         Text(
                                             when {
                                                 selectedCustomUri != null -> "Carpeta: ${selectedCustomUri?.lastPathSegment ?: "Seleccionada"}"
-                                                folderChosen -> "Carpeta del cuaderno configurada"
-                                                else -> "Carpeta interna del cuaderno (por defecto)"
+                                                folderChosen -> "Carpeta SAF configurada"
+                                                else -> "⚠️ Selecciona una carpeta obligatoria (Paso 2)"
                                             },
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (selectedCustomUri != null || folderChosen) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                                         )
                                     }
                                 }
@@ -225,29 +237,46 @@ fun AudioRecordingDialog(
                         }
                     }
 
-                    // Action Buttons
+                    // Action Buttons (Step 3)
+                    val hasFolder = selectedCustomUri != null || folderChosen
+                    val canRecord = recordingName.isNotBlank() && hasFolder
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = onDismiss) {
-                            Text("Cancelar")
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val cleanName = recordingName.trim().ifBlank { defaultName }
-                                onStartRecording(cleanName, transcribeOffline)
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFD32F2F),
-                                contentColor = Color.White
+                        if (!hasFolder) {
+                            Text(
+                                "⚠️ Selecciona carpeta (Paso 2)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
                             )
-                        ) {
-                            Icon(Icons.Filled.FiberManualRecord, contentDescription = null, modifier = Modifier.size(18.dp))
+                        } else {
+                            Spacer(Modifier.weight(1f))
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = onDismiss) {
+                                Text("Cancelar")
+                            }
                             Spacer(Modifier.width(8.dp))
-                            Text("Comenzar Grabación", fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = {
+                                    val cleanName = recordingName.trim().ifBlank { defaultName }
+                                    onStartRecording(cleanName, transcribeOffline, selectedCustomUri)
+                                },
+                                enabled = canRecord,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD32F2F),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Icon(Icons.Filled.FiberManualRecord, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Comenzar Grabación", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 } else {
@@ -276,7 +305,7 @@ fun AudioRecordingDialog(
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Text(
-                                    "Grabación en curso...",
+                                    "Grabando: ${String.format(java.util.Locale.getDefault(), "%02d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)}",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFC62828)
@@ -285,13 +314,15 @@ fun AudioRecordingDialog(
                         }
 
                         Text(
-                            "Escribe tus apuntes normalmente con el stylus. Cada trazo quedará sincronizado con este punto del audio.",
+                            "Escribe tus apuntes con el stylus. Al terminar se guardará el archivo de audio directamente en la carpeta seleccionada.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Button(
-                            onClick = onStopRecording,
+                            onClick = {
+                                onStopRecording(recordingName, selectedCustomUri)
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -299,9 +330,9 @@ fun AudioRecordingDialog(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Filled.Stop, contentDescription = null)
+                            Icon(Icons.Filled.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Detener y Guardar en Cuaderno", fontWeight = FontWeight.Bold)
+                            Text("Detener y Guardar en Carpeta SAF", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -52,7 +52,6 @@ fun SelectionActionBar(
     onReWidth: (Float) -> Unit,
     widthSlots: List<Float>,
     onOcr: () -> Unit = {},
-    onMathOcr: () -> Unit = {},
     onDeselect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -72,7 +71,6 @@ fun SelectionActionBar(
             IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar") }
             IconButton(onClick = onDuplicate) { Icon(Icons.Filled.LibraryAdd, contentDescription = "Duplicar") }
             IconButton(onClick = onOcr) { Icon(Icons.Filled.TextFormat, contentDescription = "Reconocer texto (OCR)", tint = MaterialTheme.colorScheme.primary) }
-            IconButton(onClick = onMathOcr) { Icon(Icons.Filled.Functions, contentDescription = "Reconocer fórmula matemática", tint = MaterialTheme.colorScheme.secondary) }
             RecolorMenu(onRecolor, palette)
             ReWidthMenu(widthSlots, onReWidth)
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Eliminar") }

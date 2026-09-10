@@ -227,10 +227,12 @@ fun UnifiedTopBar(
     }
 
     if (showPeriodicTable) {
+        val targetPage = pane.currentPage
         PeriodicTableDialog(
             onDismiss = { showPeriodicTable = false },
-            onInsertText = { text ->
-                surface?.insertTextElement(text)
+            onInsertElement = { element ->
+                surface?.insertElements(listOf(element), pageIndex = targetPage)
+                showPeriodicTable = false
             }
         )
     }
@@ -264,15 +266,29 @@ fun UnifiedTopBar(
     }
 
     if (showInsertLinkDialog) {
+        val targetPage = pane.currentPage
         InsertLinkDialog(
             onDismiss = { showInsertLinkDialog = false },
             onInsertLink = { url, title, asCard ->
                 val displayTitle = if (title.isNotBlank()) title else url
-                surface?.insertTextElement(
-                    text = "🔗 $displayTitle\n$url",
-                    x = 80.0,
-                    y = 120.0
-                )
+                if (asCard) {
+                    val card = LinkCardVisualBuilder.buildLinkCard(
+                        x = 80.0,
+                        y = 120.0,
+                        url = url,
+                        title = displayTitle,
+                        siteName = null,
+                        mediaType = if (url.contains("youtube.com") || url.contains("youtu.be")) LinkMediaType.VIDEO else LinkMediaType.GENERIC
+                    )
+                    surface?.insertElements(listOf(card), pageIndex = targetPage)
+                } else {
+                    surface?.insertTextElement(
+                        text = "🔗 $displayTitle\n$url",
+                        x = 80.0,
+                        y = 120.0,
+                        pageIndex = targetPage
+                    )
+                }
                 showInsertLinkDialog = false
             }
         )
@@ -283,13 +299,14 @@ fun UnifiedTopBar(
             notebookTitle = currentNotebookName,
             isRecording = audio.recording,
             folderChosen = audio.folderChosen,
+            folderUri = audio.folderUri,
             onChooseFolder = audio.onChooseFolder,
             onDismiss = { showAudioDialog = false },
-            onStartRecording = { _, _ ->
-                audio.onToggleRecord()
+            onStartRecording = { customName, _, customUri ->
+                audio.onStartRecordingNamed(customName, customUri)
             },
-            onStopRecording = {
-                audio.onToggleRecord()
+            onStopRecording = { customName, customUri ->
+                audio.onStopRecordingAndSave(customName, customUri)
                 showAudioDialog = false
             }
         )
@@ -544,6 +561,45 @@ private fun DrawingSurfaceView.bindEditorActions(
             PlaceKind.TEXT -> ui.textPlacement = placement
             PlaceKind.TEX -> ui.texPlacement = placement
             PlaceKind.IMAGE -> onPickImage(placement)
+        }
+    }
+    onElementTapped = { element, pageIndex, _, _ ->
+        onActivePane(index)
+        when (element) {
+            is com.nexopp.format.model.TextElement -> {
+                ui.textPlacement = Placement(pageIndex, element.x, element.y, element)
+            }
+            is com.nexopp.format.model.TexImageElement -> {
+                ui.texPlacement = Placement(pageIndex, element.left, element.top)
+            }
+            is com.nexopp.format.model.ImageElement -> {
+                val stemType = element.extraAttrs["stem"]
+                when {
+                    stemType == "link_card" -> {
+                        val url = element.extraAttrs["url"] ?: ""
+                        val title = element.extraAttrs["title"] ?: ""
+                        val mediaType = element.extraAttrs["mediaType"] ?: "GENERIC"
+                        ui.activeLinkCard = Triple(url, title, mediaType)
+                        ui.activeLinkCardElement = Pair(pageIndex, element)
+                    }
+                    stemType == "periodic_element_card" || stemType == "periodic_table_full" -> {
+                        ui.showPeriodicTableDialog = true
+                    }
+                    stemType == "function_plot" -> {
+                        ui.showFunctionPlotterDialog = true
+                    }
+                    stemType?.startsWith("table") == true -> {
+                        ui.showTableEditDialog = true
+                    }
+                }
+            }
+            is com.nexopp.format.model.Stroke -> {
+                val stemType = element.extraAttrs["stem"]
+                if (stemType?.startsWith("table") == true) {
+                    ui.showTableEditDialog = true
+                }
+            }
+            else -> Unit
         }
     }
 }

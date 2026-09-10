@@ -8,7 +8,7 @@ data class ToolGroup(
 )
 
 val TOOL_GROUPS: List<ToolGroup> = listOf(
-    ToolGroup("draw", "Dibujar", listOf(EditorTool.PEN, EditorTool.HIGHLIGHTER, EditorTool.MATH_INK)),
+    ToolGroup("draw", "Dibujar", listOf(EditorTool.PEN, EditorTool.HIGHLIGHTER)),
     ToolGroup("eraser", "Borrador", listOf(EditorTool.ERASER, EditorTool.ERASER_WHOLE)),
     ToolGroup(
         "line", "Líneas y formas",

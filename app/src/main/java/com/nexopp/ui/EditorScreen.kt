@@ -20,10 +20,6 @@ import com.nexopp.render.Placement
 import com.nexopp.render.ShapeKind
 
 fun DrawingSurfaceView.applyTool(tool: EditorTool) {
-    if (mathMode && tool != EditorTool.MATH_INK) {
-        convertMathSession()
-    }
-    mathMode = tool == EditorTool.MATH_INK
     handMode = tool == EditorTool.HAND
     selectMode = tool == EditorTool.SELECT || tool == EditorTool.LASSO_SELECT
     backgroundSelectMode = tool == EditorTool.BG_SELECT
@@ -52,7 +48,7 @@ fun DrawingSurfaceView.applyTool(tool: EditorTool) {
             if (tool == EditorTool.ERASER_WHOLE) EraserMode.WHOLE_STROKE else EraserMode.STANDARD
     }
     when (tool) {
-        EditorTool.PEN, EditorTool.MATH_INK -> this.tool = Tool.PEN
+        EditorTool.PEN -> this.tool = Tool.PEN
         EditorTool.HIGHLIGHTER -> this.tool = Tool.HIGHLIGHTER
         EditorTool.ERASER, EditorTool.ERASER_WHOLE -> this.tool = Tool.ERASER
         EditorTool.LINE, EditorTool.ARROW, EditorTool.DOUBLE_ARROW, EditorTool.COORDINATE_AXIS,

@@ -67,7 +67,8 @@ object PeriodicTableRegistry {
 @Composable
 fun PeriodicTableDialog(
     onDismiss: () -> Unit,
-    onInsertText: (String) -> Unit
+    onInsertElement: (com.nexopp.format.model.Element) -> Unit,
+    onInsertText: (String) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ElementCategory?>(null) }
@@ -172,19 +173,31 @@ fun PeriodicTableDialog(
                             }
                         )
                         Spacer(Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                val fullTable = PeriodicTableVisualBuilder.buildFullPeriodicTable()
+                                onInsertElement(fullTable)
+                                onDismiss()
+                            }
+                        ) {
+                            Icon(Icons.Filled.TableChart, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Insertar Tabla Completa")
+                        }
+                        Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
                                 selectedElement?.let { el ->
-                                    val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Grupo: ${el.group}, Periodo: ${el.period}, Config: ${el.electronConfig}"
-                                    onInsertText(summary)
+                                    val card = PeriodicTableVisualBuilder.buildElementCard(el)
+                                    onInsertElement(card)
                                     onDismiss()
                                 }
                             },
                             enabled = selectedElement != null
                         ) {
-                            Icon(Icons.Filled.PostAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Filled.Science, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Insertar en Nota")
+                            Text("Insertar Ficha Elemento")
                         }
                         Spacer(Modifier.width(12.dp))
                     }
@@ -551,24 +564,27 @@ fun PeriodicTableDialog(
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(
                                         onClick = {
-                                            onInsertText(el.symbol)
+                                            val fullTable = PeriodicTableVisualBuilder.buildFullPeriodicTable()
+                                            onInsertElement(fullTable)
                                             onDismiss()
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Insertar solo Símbolo (${el.symbol})")
+                                        Icon(Icons.Filled.TableChart, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Insertar Tabla Completa")
                                     }
                                     Button(
                                         onClick = {
-                                            val summary = "${el.name} (${el.symbol}) - Z: ${el.atomicNumber}, Masa: ${el.atomicMass} u, Config: ${el.electronConfig}"
-                                            onInsertText(summary)
+                                            val card = PeriodicTableVisualBuilder.buildElementCard(el)
+                                            onInsertElement(card)
                                             onDismiss()
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Icon(Icons.Filled.PostAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Filled.Science, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Insertar Ficha Completa")
+                                        Text("Insertar Ficha Visual (Elemento)")
                                     }
                                 }
                             } else {

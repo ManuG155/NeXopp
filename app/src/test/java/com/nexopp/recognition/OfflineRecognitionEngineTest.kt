@@ -96,17 +96,14 @@ class OfflineRecognitionEngineTest {
     }
 
     @Test
-    fun testMathFractionRecognition() {
-        // Numerator '1' above (x: 25, y: 10..22)
+    fun testMathHandwritingIsDisabled() {
         val num = createVerticalStroke(25.0, 10.0, 22.0)
-        // Fraction bar (x: 10..40, y: 25)
         val bar = createHorizontalStroke(10.0, 40.0, 25.0)
-        // Denominator '1' below (x: 25, y: 28..40)
         val den = createVerticalStroke(25.0, 28.0, 40.0)
 
         val res = engine.recognizeMath(listOf(num, bar, den))
-        assertNotNull(res.latex)
-        assertTrue(res.latex!!.contains("\\frac{"))
+        assertEquals("", res.latex)
+        assertTrue(res.candidates.isEmpty())
     }
 
     @Test

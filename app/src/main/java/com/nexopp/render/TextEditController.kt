@@ -52,7 +52,11 @@ internal class TextEditController(
             if (target != null) replace(target, null)
             return
         }
-        val text = TextElement(font, sizePt, p.xPt, p.yPt, colorArgb, content)
+        val text = if (target != null) {
+            TextElement(font, sizePt, target.x, target.y, colorArgb, content)
+        } else {
+            TextElement(font, sizePt, p.xPt, p.yPt, colorArgb, content)
+        }
         if (target != null) replace(target, text) else add(p.pageIndex, text)
     }
 

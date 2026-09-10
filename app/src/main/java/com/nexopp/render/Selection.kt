@@ -34,7 +34,17 @@ object SelectionTester {
             page.layers[li].elements.forEachIndexed { ei, el ->
                 if (ElementBounds.isHitTestable(el)) {
                     val b = ElementBounds.of(el)
-                    if (b.containedBy(padded)) {
+                    val fullyContained = b.containedBy(padded)
+                    val centerContained = rect.contains(b.centerX, b.centerY)
+                    val ix1 = maxOf(b.left, rect.left)
+                    val iy1 = maxOf(b.top, rect.top)
+                    val ix2 = minOf(b.right, rect.right)
+                    val iy2 = minOf(b.bottom, rect.bottom)
+                    val interArea = if (ix2 > ix1 && iy2 > iy1) (ix2 - ix1) * (iy2 - iy1) else 0.0
+                    val elemArea = b.width * b.height
+                    val significantOverlap = elemArea > 0 && (interArea / elemArea >= 0.30)
+
+                    if (fullyContained || (rect.width > 20 && rect.height > 20 && (centerContained || significantOverlap))) {
                         hits += ElementRef(li, ei)
                     }
                 }
@@ -69,14 +79,23 @@ object SelectionTester {
             val pts = el.points
             if (pts.isEmpty()) false
             else {
+                val b = ElementBounds.of(el)
                 val insideCount = pts.count { contains(poly, it.x, it.y) }
-                insideCount >= (pts.size * 0.65).coerceAtLeast(1.0)
+                val centerInside = strictlyInside(poly, b.centerX, b.centerY)
+                if (pts.size <= 2) {
+                    insideCount == pts.size
+                } else {
+                    insideCount >= (pts.size * 0.50).coerceAtLeast(2.0) || centerInside
+                }
             }
         }
         else -> {
             val b = ElementBounds.of(el)
-            contains(poly, b.left, b.top) && contains(poly, b.right, b.top) &&
-            contains(poly, b.right, b.bottom) && contains(poly, b.left, b.bottom)
+            val cornersInside = (if (contains(poly, b.left, b.top)) 1 else 0) +
+                (if (contains(poly, b.right, b.top)) 1 else 0) +
+                (if (contains(poly, b.right, b.bottom)) 1 else 0) +
+                (if (contains(poly, b.left, b.bottom)) 1 else 0)
+            strictlyInside(poly, b.centerX, b.centerY) || cornersInside >= 2
         }
     }
 

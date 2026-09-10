@@ -22,10 +22,10 @@ internal fun DrawingSurfaceView.handleTouch(event: MotionEvent): Boolean? {
     when (event.actionMasked) {
         MotionEvent.ACTION_DOWN -> {
             momentum.stop(); beginPointer(event, 0); beginHandTap(event); armPageDrag(event)
-            armPaletteLongPress(event)
+            armPaletteLongPress(event); armElementLongPress(event)
         }
         MotionEvent.ACTION_POINTER_DOWN -> {
-            handTapCandidate = false; cancelPageDrag(); cancelPaletteLongPress()
+            handTapCandidate = false; cancelPageDrag(); cancelPaletteLongPress(); cancelElementLongPress()
             trackPaletteTapDown(event); onPointerDown(event)
         }
         MotionEvent.ACTION_MOVE -> {
@@ -33,6 +33,7 @@ internal fun DrawingSurfaceView.handleTouch(event: MotionEvent): Boolean? {
             trackPageDragArm(event)
             trackPaletteLongPressMove(event)
             trackPaletteTapMove(event)
+            trackElementLongPressMove(event)
             // A lifted page owns the gesture outright — no panning, drawing or erasing underneath it.
             if (overview.dragging) { pageDragMove(event); return true }
             // The guide is dragged by its own finger and runs *alongside* the other gestures —
@@ -64,14 +65,18 @@ internal fun DrawingSurfaceView.handleTouch(event: MotionEvent): Boolean? {
         MotionEvent.ACTION_UP -> when {
             overview.dragging -> { overview.disarm(); removeCallbacks(pageDragArm); finishPageDrag() }
             splineDragging -> splineUp(event)
-            backgroundSelecting -> { cancelPageDrag(); cancelPaletteLongPress(); paletteTap.cancel(); commitBackgroundSelect() }
+            backgroundSelecting -> { cancelPageDrag(); cancelPaletteLongPress(); cancelElementLongPress(); paletteTap.cancel(); commitBackgroundSelect() }
             else -> {
                 cancelPageDrag(); cancelPaletteLongPress(); paletteTap.cancel()
-                captureReleaseVelocity(event); handleHandTapUp(event); endGesture()
+                val tappedElement = checkShortTapOnElement(event)
+                cancelElementLongPress()
+                captureReleaseVelocity(event); handleHandTapUp(event)
+                if (tappedElement) current = null
+                endGesture()
             }
         }
         MotionEvent.ACTION_CANCEL -> {
-            handTapCandidate = false; cancelPageDrag(); cancelPaletteLongPress()
+            handTapCandidate = false; cancelPageDrag(); cancelPaletteLongPress(); cancelElementLongPress()
             paletteTap.cancel(); cancelGesture()
         }
         else -> return null
@@ -455,4 +460,93 @@ internal fun DrawingSurfaceView.onHandDoubleTap(x: Float) {
         x > width - edge -> goToPage(currentPageIndex() + 1)
         else -> onToggleFullPage?.invoke()
     }
+}
+
+/** Arm long-press on an element to select it directly (~1 second). */
+internal fun DrawingSurfaceView.armElementLongPress(event: MotionEvent) {
+    cancelElementLongPress()
+    elementLongPressFired = false
+    if (event.pointerCount != 1) return
+    val kind = pointerKindOf(event, 0)
+    val curTool = activeTool()
+    // EXCEPTION: if active tool is PEN, HIGHLIGHTER, or ERASER and pointer is STYLUS/ERASER_TIP -> do not arm!
+    if ((kind == PointerKind.STYLUS || kind == PointerKind.ERASER_TIP) &&
+        (curTool == ActiveTool.PEN || curTool == ActiveTool.HIGHLIGHTER || curTool == ActiveTool.ERASER)) {
+        return
+    }
+
+    val box = layout.pageAt(event.x + scrollX, event.y + scrollY)
+        ?: layout.nearestPage(event.x + scrollX, event.y + scrollY)
+        ?: return
+    val page = doc.pages.getOrNull(box.index) ?: return
+    val xPt = box.toPtX(event.x, scrollX)
+    val yPt = box.toPtY(event.y, scrollY)
+    val targetRef = SelectionTester.pickTopmost(page, xPt, yPt) ?: return
+
+    elementLongPressArmed = true
+    elementLongPressX = event.x
+    elementLongPressY = event.y
+    elementLongPressDownTime = event.eventTime
+    elementLongPressPage = box.index
+    elementLongPressTimer.postDelayed(elementLongPressArm, 900L)
+}
+
+internal fun DrawingSurfaceView.trackElementLongPressMove(event: MotionEvent) {
+    if (!elementLongPressArmed) return
+    if (hypot(event.x - elementLongPressX, event.y - elementLongPressY) > touchSlopPx * 1.5f) {
+        cancelElementLongPress()
+    }
+}
+
+internal fun DrawingSurfaceView.cancelElementLongPress() {
+    if (!elementLongPressArmed) return
+    elementLongPressArmed = false
+    elementLongPressTimer.removeCallbacks(elementLongPressArm)
+}
+
+internal fun DrawingSurfaceView.triggerElementLongPress() {
+    if (!elementLongPressArmed) return
+    elementLongPressArmed = false
+    elementLongPressFired = true
+
+    val box = layout.pageAt(elementLongPressX + scrollX, elementLongPressY + scrollY)
+        ?: layout.nearestPage(elementLongPressX + scrollX, elementLongPressY + scrollY)
+        ?: return
+    val page = doc.pages.getOrNull(box.index) ?: return
+    val xPt = box.toPtX(elementLongPressX, scrollX)
+    val yPt = box.toPtY(elementLongPressY, scrollY)
+    val targetRef = SelectionTester.pickTopmost(page, xPt, yPt) ?: return
+
+    current = null
+    placing = false
+    scrolling = false
+
+    performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+
+    selection = ActiveSelection(box.index, setOf(targetRef))
+    onSelectionChanged?.invoke(true)
+    render()
+
+    gestures.beginMoveFromPoint(box, xPt, yPt)
+}
+
+internal fun DrawingSurfaceView.checkShortTapOnElement(event: MotionEvent): Boolean {
+    if (elementLongPressFired) return false
+    val duration = event.eventTime - elementLongPressDownTime
+    val dist = hypot(event.x - elementLongPressX, event.y - elementLongPressY)
+    if (elementLongPressDownTime == 0L || duration > 450L || dist > touchSlopPx * 1.5f) return false
+
+    val box = layout.pageAt(event.x + scrollX, event.y + scrollY)
+        ?: layout.nearestPage(event.x + scrollX, event.y + scrollY)
+        ?: return false
+    val page = doc.pages.getOrNull(box.index) ?: return false
+    val xPt = box.toPtX(event.x, scrollX)
+    val yPt = box.toPtY(event.y, scrollY)
+    val ref = SelectionTester.pickTopmost(page, xPt, yPt) ?: return false
+    val el = page.layers.getOrNull(ref.layerIndex)?.elements?.getOrNull(ref.elementIndex) ?: return false
+
+    if (placeKind != null) return false
+
+    onElementTapped?.invoke(el, box.index, xPt, yPt)
+    return true
 }

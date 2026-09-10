@@ -64,27 +64,12 @@ class OfflineHeuristicRecognitionEngine : RecognitionEngine {
     }
 
     override fun recognizeMath(strokes: List<Stroke>): RecognitionResult {
-        if (strokes.isEmpty()) {
-            return RecognitionResult(text = "", latex = "", candidates = emptyList(), strokeCount = 0)
-        }
-
-        val totalBounds = computeTotalBounds(strokes)
-        val mathResult = com.nexopp.stem.MathHandwritingEngine.recognize(strokes)
-        val latex = mathResult.latex
-        val plainText = mathResult.unicodeText.ifEmpty { latex }
-        val avgConfidence = mathResult.confidence.toFloat()
-
-        val candidateList = listOf(
-            RecognitionCandidate(text = plainText, latex = latex, confidence = avgConfidence, isMath = true),
-            RecognitionCandidate(text = plainText, latex = "$$latex$$", confidence = avgConfidence * 0.95f, isMath = true)
-        )
-
         return RecognitionResult(
-            text = plainText,
-            latex = latex,
-            candidates = candidateList,
+            text = "",
+            latex = "",
+            candidates = emptyList(),
             strokeCount = strokes.size,
-            bounds = totalBounds
+            bounds = computeTotalBounds(strokes)
         )
     }
 
