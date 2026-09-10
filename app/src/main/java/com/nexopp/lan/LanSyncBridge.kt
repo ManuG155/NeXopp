@@ -44,12 +44,39 @@ class LanSyncBridge(
     var activeSurfaceProvider: (() -> Pair<String?, Document?>)? = null,
     var onApplyDocumentToSurface: ((Document) -> Unit)? = null
 ) {
+    var activeDocumentFinder: ((Notebook) -> Document?)? = null
+    var onApplyNotebookDocumentToSurface: ((Notebook, Document) -> Unit)? = null
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val openWebDocuments = ConcurrentHashMap<String, ActiveWebDocument>()
 
     // Listener invoked when the bridge wants to broadcast a message to connected PC clients
     var onBroadcastMessage: ((String, String) -> Unit)? = null
+
+    fun matchesNotebook(identifier: String?, notebook: Notebook): Boolean {
+        if (identifier.isNullOrBlank()) return false
+        if (identifier == notebook.id || identifier == notebook.fileName || identifier == notebook.name) return true
+        if (identifier.endsWith("/${notebook.fileName}") || identifier.endsWith("\\${notebook.fileName}")) return true
+        if (identifier.contains(notebook.fileName) || identifier.contains(notebook.id)) return true
+        val stripped = identifier.substringAfterLast('/').substringAfterLast('\\')
+        return stripped == notebook.fileName || stripped == notebook.id || stripped == notebook.name
+    }
+
+    private fun applyToTabletSurface(notebook: Notebook, updatedDoc: Document) {
+        if (onApplyNotebookDocumentToSurface != null) {
+            mainHandler.post {
+                onApplyNotebookDocumentToSurface?.invoke(notebook, updatedDoc)
+            }
+        } else if (onApplyDocumentToSurface != null) {
+            val activeTabletInfo = activeSurfaceProvider?.invoke()
+            if (activeTabletInfo != null && matchesNotebook(activeTabletInfo.first, notebook)) {
+                mainHandler.post {
+                    onApplyDocumentToSurface?.invoke(updatedDoc)
+                }
+            }
+        }
+    }
 
     init {
         scope.launch {
@@ -147,13 +174,17 @@ class LanSyncBridge(
             it.id == notebookId || (requestedFileName != null && it.fileName == requestedFileName)
         } ?: return@withContext null
 
-        // 1. Check if the tablet has this document currently open in its active pane
-        val activeTabletDoc = activeSurfaceProvider?.invoke()
-        val isCurrentlyOpenOnTablet = activeTabletDoc != null &&
-                (activeTabletDoc.first == notebook.fileName || activeTabletDoc.first == notebook.id)
+        // 1. Check if the tablet has this document currently open in any active pane
+        val activeTabletDoc = activeDocumentFinder?.invoke(notebook)
+            ?: run {
+                val surfaceInfo = activeSurfaceProvider?.invoke()
+                if (surfaceInfo != null && matchesNotebook(surfaceInfo.first, notebook)) {
+                    surfaceInfo.second
+                } else null
+            }
 
-        val doc: Document = if (isCurrentlyOpenOnTablet && activeTabletDoc?.second != null) {
-            activeTabletDoc.second!!
+        val doc: Document = if (activeTabletDoc != null) {
+            activeTabletDoc
         } else {
             // Load from disk via LocalDocumentRepository
             val loadResult = documentRepository.loadDocument(notebook.fileName)
@@ -186,12 +217,12 @@ class LanSyncBridge(
         )
     }
 
-    suspend fun addStroke(notebookId: String, pageIndex: Int, stroke: Stroke): Boolean = withContext(Dispatchers.IO) {
+    suspend fun addStroke(notebookId: String, pageIndex: Int, stroke: Stroke): Long? = withContext(Dispatchers.IO) {
         var active = openWebDocuments[notebookId]
         if (active == null) {
             // Try opening it
             openDocument(notebookId, null)
-            active = openWebDocuments[notebookId] ?: return@withContext false
+            active = openWebDocuments[notebookId] ?: return@withContext null
         }
 
         val doc = active.document
@@ -222,17 +253,10 @@ class LanSyncBridge(
 
         val updatedDoc = doc.copy(pages = pages)
         active.document = updatedDoc
-        active.version.incrementAndGet()
+        val newVersion = active.version.incrementAndGet()
 
         // 1. If currently open on tablet surface, reflect changes on tablet screen immediately
-        val activeTabletInfo = activeSurfaceProvider?.invoke()
-        if (activeTabletInfo != null &&
-            (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
-        ) {
-            mainHandler.post {
-                onApplyDocumentToSurface?.invoke(updatedDoc)
-            }
-        }
+        applyToTabletSurface(active.notebook, updatedDoc)
 
         // 2. Persist to .xopp file via repository
         documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
@@ -245,7 +269,7 @@ class LanSyncBridge(
             )
         )
 
-        true
+        newVersion
     }
 
     suspend fun eraseStrokes(
@@ -288,14 +312,7 @@ class LanSyncBridge(
             newVersion = active.version.incrementAndGet()
 
             // 1. If currently open on tablet surface, reflect changes on tablet screen immediately
-            val activeTabletInfo = activeSurfaceProvider?.invoke()
-            if (activeTabletInfo != null &&
-                (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
-            ) {
-                mainHandler.post {
-                    onApplyDocumentToSurface?.invoke(updatedDoc)
-                }
-            }
+            applyToTabletSurface(active.notebook, updatedDoc)
 
             // 2. Persist to .xopp file via repository
             documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
@@ -315,11 +332,11 @@ class LanSyncBridge(
         )
     }
 
-    suspend fun addText(notebookId: String, pageIndex: Int, text: TextElement): Boolean = withContext(Dispatchers.IO) {
+    suspend fun addText(notebookId: String, pageIndex: Int, text: TextElement): Long? = withContext(Dispatchers.IO) {
         var active = openWebDocuments[notebookId]
         if (active == null) {
             openDocument(notebookId, null)
-            active = openWebDocuments[notebookId] ?: return@withContext false
+            active = openWebDocuments[notebookId] ?: return@withContext null
         }
 
         val doc = active.document
@@ -349,17 +366,10 @@ class LanSyncBridge(
 
         val updatedDoc = doc.copy(pages = pages)
         active.document = updatedDoc
-        active.version.incrementAndGet()
+        val newVersion = active.version.incrementAndGet()
 
         // 1. If currently open on tablet surface, reflect changes on tablet screen immediately
-        val activeTabletInfo = activeSurfaceProvider?.invoke()
-        if (activeTabletInfo != null &&
-            (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
-        ) {
-            mainHandler.post {
-                onApplyDocumentToSurface?.invoke(updatedDoc)
-            }
-        }
+        applyToTabletSurface(active.notebook, updatedDoc)
 
         // 2. Persist to .xopp file via repository
         documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
@@ -372,7 +382,7 @@ class LanSyncBridge(
             )
         )
 
-        true
+        newVersion
     }
 
     suspend fun addPage(notebookId: String, width: Double, height: Double, template: String): JSONObject? = withContext(Dispatchers.IO) {
@@ -392,14 +402,7 @@ class LanSyncBridge(
         active.document = updatedDoc
         active.version.incrementAndGet()
 
-        val activeTabletInfo = activeSurfaceProvider?.invoke()
-        if (activeTabletInfo != null &&
-            (activeTabletInfo.first == active.notebook.fileName || activeTabletInfo.first == active.notebook.id)
-        ) {
-            mainHandler.post {
-                onApplyDocumentToSurface?.invoke(updatedDoc)
-            }
-        }
+        applyToTabletSurface(active.notebook, updatedDoc)
 
         documentRepository.saveDocument(active.notebook.fileName, updatedDoc)
         libraryStore.updateNotebook(
@@ -429,7 +432,7 @@ class LanSyncBridge(
      */
     fun onTabletDocumentEdited(fileNameOrId: String, updatedDoc: Document) {
         val entry = openWebDocuments.entries.find {
-            it.key == fileNameOrId || it.value.notebook.fileName == fileNameOrId
+            matchesNotebook(fileNameOrId, it.value.notebook)
         } ?: return
 
         val active = entry.value
@@ -445,5 +448,15 @@ class LanSyncBridge(
         )
 
         onBroadcastMessage?.invoke(LanProtocol.TYPE_TABLET_DOCUMENT_CHANGED, json.toString())
+    }
+
+    fun getActiveDocument(notebookId: String): ActiveWebDocument? {
+        var active = openWebDocuments[notebookId]
+        if (active == null) {
+            active = openWebDocuments.values.find {
+                it.notebook.id == notebookId || it.notebook.fileName == notebookId
+            }
+        }
+        return active
     }
 }

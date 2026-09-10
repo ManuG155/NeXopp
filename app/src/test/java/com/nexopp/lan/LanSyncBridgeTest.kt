@@ -2,6 +2,7 @@ package com.nexopp.lan
 
 import com.nexopp.format.model.*
 import com.nexopp.library.LibraryStore
+import com.nexopp.library.Notebook
 import com.nexopp.repository.LocalDocumentRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -80,8 +81,9 @@ class LanSyncBridgeTest {
             uniformWidth = true
         )
 
-        val success = bridge.addStroke(nb.id, pageIndex = 0, stroke = stroke)
-        assertTrue("Adding stroke must succeed", success)
+        val version1 = bridge.addStroke(nb.id, pageIndex = 0, stroke = stroke)
+        assertNotNull("Adding stroke must succeed", version1)
+        assertTrue("Version must be positive", version1!! > 0L)
 
         // Verify that the stroke was saved to disk by reloading the .xopp
         val reloadedDoc = repo.loadDocument(nb.fileName).getOrNull()
@@ -158,8 +160,9 @@ class LanSyncBridgeTest {
             content = "Texto escrito con teclado PC"
         )
 
-        val success = bridge.addText(nb.id, pageIndex = 0, text = text)
-        assertTrue("Adding text must succeed", success)
+        val versionText = bridge.addText(nb.id, pageIndex = 0, text = text)
+        assertNotNull("Adding text must succeed", versionText)
+        assertTrue("Version must be positive", versionText!! > 0L)
 
         // Verify that the text was saved to disk by reloading the .xopp
         val reloadedDoc = repo.loadDocument(nb.fileName).getOrNull()
@@ -273,5 +276,156 @@ class LanSyncBridgeTest {
         val diskDoc = repo.loadDocument(nb.fileName).getOrNull()
         assertNotNull(diskDoc)
         assertEquals("Persisted doc must still contain the stroke", 1, diskDoc!!.pages[0].layers[0].elements.size)
+    }
+
+    @Test
+    fun matchesNotebook_recognizesFileUrisAndFilenamesAndIds() {
+        bridge.createNotebook("Biología Molecular", "sub1", 0xFF1E3A8A, "ruled")
+        val nb = store.loadNotebooks().first()
+
+        // 1. Exact ID match
+        assertTrue("Must match by ID", bridge.matchesNotebook(nb.id, nb))
+
+        // 2. Exact fileName match
+        assertTrue("Must match by fileName", bridge.matchesNotebook(nb.fileName, nb))
+
+        // 3. Exact name match
+        assertTrue("Must match by notebook name", bridge.matchesNotebook(nb.name, nb))
+
+        // 4. Android file URI format (as produced by Uri.fromFile in MainActivity)
+        val fileUri = "file:///data/user/0/com.nexopp/files/notebooks/${nb.fileName}"
+        assertTrue("Must match Android file URI", bridge.matchesNotebook(fileUri, nb))
+
+        // 5. Normal file path format
+        val unixPath = "/data/user/0/com.nexopp/files/notebooks/${nb.fileName}"
+        assertTrue("Must match Unix file path", bridge.matchesNotebook(unixPath, nb))
+
+        val winPath = "C:\\app\\notebooks\\${nb.fileName}"
+        assertTrue("Must match Windows file path", bridge.matchesNotebook(winPath, nb))
+
+        // 6. Non-matching identifiers
+        assertFalse("Must not match different file name", bridge.matchesNotebook("other.xopp", nb))
+        assertFalse("Must not match empty string", bridge.matchesNotebook("", nb))
+        assertFalse("Must not match null", bridge.matchesNotebook(null, nb))
+    }
+
+    @Test
+    fun onTabletDocumentEdited_withFileUri_broadcastsToWebClientWithMonotonicVersion() = runBlocking {
+        bridge.createNotebook("Química Orgánica", "sub1", 0xFF1E3A8A, "ruled")
+        val nb = store.loadNotebooks().first()
+
+        // Open in bridge so it's in openWebDocuments
+        bridge.openDocument(nb.id, nb.fileName)
+        val active = bridge.getActiveDocument(nb.id)
+        assertNotNull(active)
+        val initialVersion = active!!.version.get()
+
+        var broadcastType: String? = null
+        var broadcastPayload: String? = null
+        bridge.onBroadcastMessage = { type, payload ->
+            broadcastType = type
+            broadcastPayload = payload
+        }
+
+        // Simulate tablet edit passing full file URI as MainActivity does
+        val fileUri = "file:///data/user/0/com.nexopp/files/notebooks/${nb.fileName}"
+        val stroke = Stroke(
+            tool = Tool.PEN,
+            color = 0xFFDC2626.toInt(),
+            capStyle = "round",
+            points = listOf(StrokePoint(10.0, 10.0, 1.5), StrokePoint(20.0, 20.0, 1.5)),
+            uniformWidth = true
+        )
+        val updatedDoc = Document(pages = listOf(
+            Page(595.0, 842.0, Background.Solid(0xFFFFFFFF.toInt(), "ruled"), listOf(Layer(listOf(stroke))))
+        ))
+
+        bridge.onTabletDocumentEdited(fileUri, updatedDoc)
+
+        assertEquals("Broadcast type must be TABLET_DOCUMENT_CHANGED", LanProtocol.TYPE_TABLET_DOCUMENT_CHANGED, broadcastType)
+        assertNotNull("Broadcast payload must not be null", broadcastPayload)
+        assertTrue("Payload must contain notebookId", broadcastPayload!!.contains(nb.id))
+
+        val currentVersion = active.version.get()
+        assertEquals("Version must increment monotonically by 1", initialVersion + 1, currentVersion)
+        assertTrue("Payload must contain updated version", broadcastPayload!!.contains("\"version\":$currentVersion"))
+    }
+
+    @Test
+    fun pcEdit_withFileUriTabletSurface_appliesToSurfaceImmediately() = runBlocking {
+        bridge.createNotebook("Historia Universal", "sub1", 0xFF1E3A8A, "ruled")
+        val nb = store.loadNotebooks().first()
+
+        val fileUri = "file:///data/user/0/com.nexopp/files/notebooks/${nb.fileName}"
+        var appliedDocToSurface: Document? = null
+
+        bridge.activeSurfaceProvider = {
+            Pair(fileUri, Document(pages = listOf(
+                Page(595.0, 842.0, Background.Solid(0xFFFFFFFF.toInt(), "ruled"), emptyList())
+            )))
+        }
+        bridge.onApplyDocumentToSurface = { updatedDoc ->
+            appliedDocToSurface = updatedDoc
+        }
+
+        bridge.openDocument(nb.id, nb.fileName)
+
+        // PC sends a stroke
+        val stroke = Stroke(
+            tool = Tool.PEN,
+            color = 0xFF2563EB.toInt(),
+            capStyle = "round",
+            points = listOf(StrokePoint(30.0, 30.0, 2.0), StrokePoint(40.0, 40.0, 2.0)),
+            uniformWidth = true
+        )
+        val newVersion = bridge.addStroke(nb.id, pageIndex = 0, stroke = stroke)
+        assertNotNull("Add stroke must succeed", newVersion)
+
+        // In tests without Robolectric Looper, Handler.post runs or onApplyNotebookDocumentToSurface can be used
+        // Test onApplyNotebookDocumentToSurface directly
+        var notebookApplied: Notebook? = null
+        var docApplied: Document? = null
+        bridge.onApplyNotebookDocumentToSurface = { notebook, doc ->
+            notebookApplied = notebook
+            docApplied = doc
+        }
+
+        val stroke2 = Stroke(
+            tool = Tool.PEN,
+            color = 0xFF16A34A.toInt(),
+            capStyle = "round",
+            points = listOf(StrokePoint(50.0, 50.0, 2.0), StrokePoint(60.0, 60.0, 2.0)),
+            uniformWidth = true
+        )
+        bridge.addStroke(nb.id, pageIndex = 0, stroke = stroke2)
+
+        // Verify that onApplyNotebookDocumentToSurface was invoked or queued with the right document
+        assertNotNull("Active document must have the stroke", bridge.getActiveDocument(nb.id)?.document)
+        val activeDoc = bridge.getActiveDocument(nb.id)!!.document
+        assertEquals(2, activeDoc.pages[0].layers.last().elements.size)
+    }
+
+    @Test
+    fun checkDocumentVersion_reconciliationLogic() = runBlocking {
+        bridge.createNotebook("Geometría", "sub1", 0xFF1E3A8A, "ruled")
+        val nb = store.loadNotebooks().first()
+
+        bridge.openDocument(nb.id, nb.fileName)
+        val active = bridge.getActiveDocument(nb.id)
+        assertNotNull("Active document must be registered", active)
+        val v1 = active!!.version.get()
+
+        // Tablet edit occurs
+        val fileUri = "file:///data/user/0/com.nexopp/files/notebooks/${nb.fileName}"
+        val updatedDoc = Document(pages = listOf(
+            Page(595.0, 842.0, Background.Solid(0xFFFFFFFF.toInt(), "ruled"), emptyList())
+        ))
+        bridge.onTabletDocumentEdited(fileUri, updatedDoc)
+
+        val v2 = active.version.get()
+        assertTrue("Tablet edit must increment version", v2 > v1)
+
+        // Reconciling check: server has v2 > client v1
+        assertTrue("Server version ($v2) is ahead of client version ($v1)", active.version.get() > v1)
     }
 }

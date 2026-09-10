@@ -383,12 +383,48 @@ class LanServer(
                     }
                 }
 
+                LanProtocol.TYPE_CHECK_DOCUMENT_VERSION -> {
+                    val notebookId = json.optString("notebookId", "")
+                    val clientVersion = json.optLong("version", 0L)
+                    val active = bridge.getActiveDocument(notebookId)
+                    if (active != null) {
+                        val serverVersion = active.version.get()
+                        if (serverVersion > clientVersion) {
+                            val docJson = LanProtocol.documentToJson(
+                                notebookId = active.notebook.id,
+                                fileName = active.notebook.fileName,
+                                title = active.notebook.name,
+                                document = active.document,
+                                version = serverVersion
+                            )
+                            LanWebSocketFrame.writeServerTextFrame(outputStream, docJson.toString())
+                        } else {
+                            val upToDateJson = JSONObject().apply {
+                                put("type", LanProtocol.TYPE_DOCUMENT_UP_TO_DATE)
+                                put("notebookId", notebookId)
+                                put("version", serverVersion)
+                            }.toString()
+                            LanWebSocketFrame.writeServerTextFrame(outputStream, upToDateJson)
+                        }
+                    }
+                }
+
                 LanProtocol.TYPE_ADD_STROKE -> {
                     val notebookId = json.getString("notebookId")
                     val pageIndex = json.getInt("pageIndex")
                     val strokeObj = json.getJSONObject("stroke")
                     val stroke = LanProtocol.strokeFromJson(strokeObj)
-                    bridge.addStroke(notebookId, pageIndex, stroke)
+                    val newVersion = bridge.addStroke(notebookId, pageIndex, stroke)
+
+                    if (newVersion != null) {
+                        val ackJson = JSONObject().apply {
+                            put("type", LanProtocol.TYPE_STROKE_ACK)
+                            put("notebookId", notebookId)
+                            put("pageIndex", pageIndex)
+                            put("version", newVersion)
+                        }.toString()
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, ackJson)
+                    }
 
                     // Forward stroke to any other connected clients
                     val strokeBroadcast = JSONObject().apply {
@@ -396,6 +432,7 @@ class LanServer(
                         put("notebookId", notebookId)
                         put("pageIndex", pageIndex)
                         put("stroke", strokeObj)
+                        if (newVersion != null) put("version", newVersion)
                     }.toString()
                     broadcastRawExcept(senderSocket, strokeBroadcast)
                 }
@@ -435,7 +472,17 @@ class LanServer(
                     val pageIndex = json.getInt("pageIndex")
                     val textObj = json.getJSONObject("text")
                     val text = LanProtocol.textFromJson(textObj)
-                    bridge.addText(notebookId, pageIndex, text)
+                    val newVersion = bridge.addText(notebookId, pageIndex, text)
+
+                    if (newVersion != null) {
+                        val ackJson = JSONObject().apply {
+                            put("type", LanProtocol.TYPE_TEXT_ACK)
+                            put("notebookId", notebookId)
+                            put("pageIndex", pageIndex)
+                            put("version", newVersion)
+                        }.toString()
+                        LanWebSocketFrame.writeServerTextFrame(outputStream, ackJson)
+                    }
 
                     // Forward text to any other connected clients
                     val textBroadcast = JSONObject().apply {
@@ -443,6 +490,7 @@ class LanServer(
                         put("notebookId", notebookId)
                         put("pageIndex", pageIndex)
                         put("text", textObj)
+                        if (newVersion != null) put("version", newVersion)
                     }.toString()
                     broadcastRawExcept(senderSocket, textBroadcast)
                 }

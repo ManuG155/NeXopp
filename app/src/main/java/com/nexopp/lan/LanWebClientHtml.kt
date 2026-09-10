@@ -920,6 +920,7 @@ object LanWebClientHtml {
             };
 
             ws.onclose = function() {
+                stopDocSyncPolling();
                 setStatus(false, 'Desconectado de Tablet');
                 saveStatus.textContent = '⚠️ Desconectado';
                 saveStatus.style.color = 'var(--danger)';
@@ -970,13 +971,40 @@ object LanWebClientHtml {
                     break;
 
                 case 'DOCUMENT_DATA':
-                    loadDocumentIntoEditor(msg);
+                    if (currentDoc && currentDoc.notebookId === msg.notebookId) {
+                        // Reconciling update from server polling
+                        if (msg.version > (currentDoc.version || 0)) {
+                            currentDoc.pages = msg.pages;
+                            currentDoc.version = msg.version;
+                            renderCurrentPage();
+                            showSavedStatus('Sincronizado ✓');
+                        }
+                    } else {
+                        loadDocumentIntoEditor(msg);
+                    }
                     break;
 
                 case 'STROKE_ADDED':
                     if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
                         appendStrokeToCurrentPage(msg.stroke);
+                        if (msg.version && msg.version > (currentDoc.version || 0)) {
+                            currentDoc.version = msg.version;
+                        }
                     }
+                    break;
+
+                case 'STROKE_ACK':
+                case 'TEXT_ACK':
+                    if (currentDoc && msg.notebookId === currentDoc.notebookId) {
+                        if (msg.version && msg.version > (currentDoc.version || 0)) {
+                            currentDoc.version = msg.version;
+                        }
+                        showSavedStatus('Sincronizado ✓');
+                    }
+                    break;
+
+                case 'DOCUMENT_UP_TO_DATE':
+                    // Server confirmed document version is current
                     break;
 
                 case 'STROKES_ERASED':
@@ -993,15 +1021,20 @@ object LanWebClientHtml {
                 case 'TEXT_ADDED':
                     if (currentDoc && msg.notebookId === currentDoc.notebookId && msg.pageIndex === currentPageIndex) {
                         appendElementToCurrentPage(msg.text);
+                        if (msg.version && msg.version > (currentDoc.version || 0)) {
+                            currentDoc.version = msg.version;
+                        }
                     }
                     break;
 
                 case 'TABLET_DOCUMENT_CHANGED':
                     if (currentDoc && msg.notebookId === currentDoc.notebookId) {
-                        currentDoc.pages = msg.pages;
-                        currentDoc.version = msg.version;
-                        renderCurrentPage();
-                        showSavedStatus('Sincronizado desde Tablet ✓');
+                        if (!currentDoc.version || msg.version > currentDoc.version) {
+                            currentDoc.pages = msg.pages;
+                            currentDoc.version = msg.version;
+                            renderCurrentPage();
+                            showSavedStatus('Sincronizado desde Tablet ✓');
+                        }
                     }
                     break;
 
@@ -1181,6 +1214,31 @@ object LanWebClientHtml {
         }
 
         // --- Editor Canvas & Drawing Engine ---
+        let docSyncInterval = null;
+
+        function startDocSyncPolling() {
+            stopDocSyncPolling();
+            docSyncInterval = setInterval(checkDocumentVersion, 2500);
+        }
+
+        function stopDocSyncPolling() {
+            if (docSyncInterval) {
+                clearInterval(docSyncInterval);
+                docSyncInterval = null;
+            }
+        }
+
+        function checkDocumentVersion() {
+            if (!currentDoc || !ws || ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            ws.send(JSON.stringify({
+                type: 'CHECK_DOCUMENT_VERSION',
+                notebookId: currentDoc.notebookId,
+                version: currentDoc.version || 1
+            }));
+        }
+
         function loadDocumentIntoEditor(docData) {
             currentDoc = docData;
             currentPageIndex = 0;
@@ -1192,9 +1250,11 @@ object LanWebClientHtml {
             editorView.classList.remove('hidden');
 
             renderCurrentPage();
+            startDocSyncPolling();
         }
 
         function closeDocumentAndReturn() {
+            stopDocSyncPolling();
             if (activeTextPt) {
                 commitTextEditor();
             }

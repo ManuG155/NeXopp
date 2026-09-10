@@ -216,4 +216,13 @@ class LanProtocolTest {
         assertEquals("graph", pageJson.getJSONObject("background").getString("style"))
         assertEquals(1, pageJson.getJSONArray("layers").length())
     }
+
+    @Test
+    fun protocolConstants_haveExpectedValues() {
+        assertEquals("CHECK_DOCUMENT_VERSION", LanProtocol.TYPE_CHECK_DOCUMENT_VERSION)
+        assertEquals("DOCUMENT_UP_TO_DATE", LanProtocol.TYPE_DOCUMENT_UP_TO_DATE)
+        assertEquals("STROKE_ACK", LanProtocol.TYPE_STROKE_ACK)
+        assertEquals("TEXT_ACK", LanProtocol.TYPE_TEXT_ACK)
+        assertEquals("TABLET_DOCUMENT_CHANGED", LanProtocol.TYPE_TABLET_DOCUMENT_CHANGED)
+    }
 }

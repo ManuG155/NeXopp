@@ -84,7 +84,24 @@ class MainActivity : ComponentActivity() {
             onApplyDocumentToSurface = { updatedDoc ->
                 pane.surface?.applyMirroredDocument(updatedDoc)
             }
-        )
+        ).apply {
+            activeDocumentFinder = { notebook ->
+                panes.firstNotNullOfOrNull { p ->
+                    val tab = p.tabs.active
+                    if (tab != null && matchesNotebook(tab.uri ?: tab.title, notebook)) {
+                        p.surface?.toDocument()
+                    } else null
+                }
+            }
+            onApplyNotebookDocumentToSurface = { notebook, updatedDoc ->
+                panes.forEach { p ->
+                    val tab = p.tabs.active
+                    if (tab != null && matchesNotebook(tab.uri ?: tab.title, notebook)) {
+                        p.surface?.applyMirroredDocument(updatedDoc)
+                    }
+                }
+            }
+        }
     }
 
     internal val lanServer: com.nexopp.lan.LanServer by lazy {
