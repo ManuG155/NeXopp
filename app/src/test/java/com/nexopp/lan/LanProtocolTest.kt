@@ -225,4 +225,74 @@ class LanProtocolTest {
         assertEquals("TEXT_ACK", LanProtocol.TYPE_TEXT_ACK)
         assertEquals("TABLET_DOCUMENT_CHANGED", LanProtocol.TYPE_TABLET_DOCUMENT_CHANGED)
     }
+
+    @Test
+    fun strokeFromJson_withCustomHexColor_preservesExactArgb() {
+        // Test with custom amber color #EAB308 (ARGB 0xFFEAB308)
+        val customColor = 0xFFEAB308.toInt()
+        val stroke = Stroke(
+            tool = Tool.PEN,
+            color = customColor,
+            capStyle = "round",
+            points = listOf(StrokePoint(10.0, 20.0, 2.5)),
+            uniformWidth = true
+        )
+
+        val json = LanProtocol.strokeToJson(stroke)
+        assertEquals(customColor, json.getInt("color"))
+
+        val deserialized = LanProtocol.strokeFromJson(json)
+        assertEquals(customColor, deserialized.color)
+        assertEquals(Tool.PEN, deserialized.tool)
+    }
+
+    @Test
+    fun textRoundtrip_withBoldItalicAndUnderline_preservesFormatting() {
+        val text = TextElement(
+            font = "Liberation Sans Bold Italic",
+            size = 18.0,
+            x = 50.0,
+            y = 120.0,
+            color = 0xFF2563EB.toInt(),
+            content = "Texto importante formateado",
+            extraAttrs = mapOf("underline" to "true")
+        )
+
+        val json = LanProtocol.textToJson(text)
+        assertTrue("JSON should have bold = true", json.getBoolean("bold"))
+        assertTrue("JSON should have italic = true", json.getBoolean("italic"))
+        assertTrue("JSON should have underline = true", json.getBoolean("underline"))
+        assertEquals("Liberation Sans Bold Italic", json.getString("font"))
+
+        val deserialized = LanProtocol.textFromJson(json)
+        assertEquals("Liberation Sans Bold Italic", deserialized.font)
+        assertEquals(18.0, deserialized.size, 0.001)
+        assertEquals(50.0, deserialized.x, 0.001)
+        assertEquals(120.0, deserialized.y, 0.001)
+        assertEquals(0xFF2563EB.toInt(), deserialized.color)
+        assertEquals("Texto importante formateado", deserialized.content)
+        assertEquals("true", deserialized.extraAttrs["underline"])
+    }
+
+    @Test
+    fun textFromJson_withExplicitFormatFlags_composesPangoFontDescription() {
+        val json = JSONObject().apply {
+            put("type", "text")
+            put("font", "Sans")
+            put("bold", true)
+            put("italic", true)
+            put("underline", true)
+            put("size", 16.0)
+            put("x", 20.0)
+            put("y", 40.0)
+            put("color", 0xFFDC2626.toInt())
+            put("content", "Rojo negrita cursiva subrayado")
+        }
+
+        val text = LanProtocol.textFromJson(json)
+        assertEquals("Sans Bold Italic", text.font)
+        assertEquals("true", text.extraAttrs["underline"])
+        assertEquals(0xFFDC2626.toInt(), text.color)
+        assertEquals("Rojo negrita cursiva subrayado", text.content)
+    }
 }

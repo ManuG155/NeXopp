@@ -1,5 +1,6 @@
 package com.nexopp.lan
 
+import com.nexopp.format.FontDescription
 import com.nexopp.format.model.*
 import com.nexopp.library.Notebook
 import com.nexopp.library.Subject
@@ -250,17 +251,58 @@ object LanProtocol {
         obj.put("size", text.size)
         obj.put("color", text.color)
         obj.put("content", text.content)
+
+        val fd = FontDescription.parse(text.font)
+        obj.put("bold", fd.bold)
+        obj.put("italic", fd.italic)
+        obj.put("underline", text.extraAttrs["underline"] == "true")
+
+        if (text.extraAttrs.isNotEmpty()) {
+            val extraObj = JSONObject()
+            text.extraAttrs.forEach { (k, v) -> extraObj.put(k, v) }
+            obj.put("extraAttrs", extraObj)
+        }
         return obj
     }
 
     fun textFromJson(json: JSONObject): TextElement {
+        val rawFont = json.optString("font", "Liberation Sans")
+        val bold = json.optBoolean("bold", false)
+        val italic = json.optBoolean("italic", false)
+        val underline = json.optBoolean("underline", false)
+
+        val fd = FontDescription.parse(rawFont)
+        val finalFont = if (bold || italic || fd.bold || fd.italic) {
+            FontDescription(
+                family = fd.family.ifBlank { "Liberation Sans" },
+                bold = bold || fd.bold,
+                italic = italic || fd.italic
+            ).compose()
+        } else {
+            rawFont.ifBlank { "Liberation Sans" }
+        }
+
+        val extraMap = mutableMapOf<String, String>()
+        val extraObj = json.optJSONObject("extraAttrs")
+        if (extraObj != null) {
+            val keys = extraObj.keys()
+            while (keys.hasNext()) {
+                val k = keys.next()
+                extraMap[k] = extraObj.optString(k, "")
+            }
+        }
+        if (underline) {
+            extraMap["underline"] = "true"
+        }
+
         return TextElement(
-            font = json.optString("font", "Liberation Sans"),
+            font = finalFont,
             size = json.optDouble("size", 14.0),
             x = json.optDouble("x", 100.0),
             y = json.optDouble("y", 100.0),
             color = json.optInt("color", 0xFF000000.toInt()),
-            content = json.optString("content", "")
+            content = json.optString("content", ""),
+            extraAttrs = extraMap
         )
     }
 
@@ -286,16 +328,7 @@ object LanProtocol {
                     if (elemType == "stroke") {
                         elements.add(strokeFromJson(elemObj))
                     } else if (elemType == "text") {
-                        elements.add(
-                            TextElement(
-                                font = elemObj.optString("font", "Sans"),
-                                size = elemObj.optDouble("size", 12.0),
-                                x = elemObj.optDouble("x", 0.0),
-                                y = elemObj.optDouble("y", 0.0),
-                                color = elemObj.optInt("color", 0xFF000000.toInt()),
-                                content = elemObj.optString("content", "")
-                            )
-                        )
+                        elements.add(textFromJson(elemObj))
                     }
                 }
                 layers.add(Layer(elements = elements))

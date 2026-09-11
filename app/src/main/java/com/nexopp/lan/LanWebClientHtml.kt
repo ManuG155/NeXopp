@@ -471,6 +471,67 @@ object LanWebClientHtml {
             box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
         }
 
+        .custom-color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+            background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+
+        .custom-color-swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .custom-color-swatch.selected {
+            border-color: #ffffff;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+        }
+
+        .custom-color-swatch input[type="color"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 4px;
+        }
+
+        .zoom-indicator {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 0 4px;
+            color: var(--text-secondary);
+            min-width: 44px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .zoom-indicator:hover {
+            color: var(--text);
+        }
+
         .width-control {
             display: flex;
             align-items: center;
@@ -515,18 +576,19 @@ object LanWebClientHtml {
             overflow: auto;
             background: #060910;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
+            padding: 24px;
             position: relative;
+            box-sizing: border-box;
         }
 
         .canvas-wrapper {
+            margin: auto;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
             border-radius: 4px;
             overflow: hidden;
             background: #ffffff;
             position: relative;
+            flex-shrink: 0;
         }
 
         canvas {
@@ -545,7 +607,41 @@ object LanWebClientHtml {
             padding: 6px 8px;
             display: flex;
             flex-direction: column;
-            min-width: 160px;
+            min-width: 170px;
+        }
+
+        .text-format-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-fmt {
+            width: 26px;
+            height: 24px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .btn-fmt:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-fmt.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0369a1;
         }
 
         #textEditorInput {
@@ -746,6 +842,9 @@ object LanWebClientHtml {
                         <div class="swatch" style="background-color: #16a34a;" onclick="setColor(0xFF16A34A, this)"></div>
                         <div class="swatch" style="background-color: #9333ea;" onclick="setColor(0xFF9333EA, this)"></div>
                         <div class="swatch" style="background-color: #ea580c;" onclick="setColor(0xFFEA580C, this)"></div>
+                        <label class="custom-color-swatch" id="customColorSwatch" title="Color personalizado (Selector)">
+                            <input type="color" id="customColorPicker" value="#1e293b" oninput="onCustomColorChange(this.value)" onchange="onCustomColorChange(this.value)">
+                        </label>
                     </div>
 
                     <div class="width-control">
@@ -756,6 +855,12 @@ object LanWebClientHtml {
                 </div>
 
                 <div class="editor-topbar-right">
+                    <div class="zoom-controls">
+                        <button class="btn-icon" title="Alejar" onclick="zoomOut()">−</button>
+                        <span id="zoomIndicator" class="zoom-indicator" title="Clic para ajustar a ventana" onclick="fitToPage()">100%</span>
+                        <button class="btn-icon" title="Acercar" onclick="zoomIn()">+</button>
+                        <button class="btn-icon" title="Ajustar a ventana" onclick="fitToPage()">⤢</button>
+                    </div>
                     <div class="page-nav">
                         <button class="btn-icon" onclick="prevPage()">‹</button>
                         <span id="pageIndicator" class="page-indicator">1 / 1</span>
@@ -770,6 +875,11 @@ object LanWebClientHtml {
                 <div class="canvas-wrapper" id="canvasWrapper">
                     <canvas id="pageCanvas"></canvas>
                     <div id="textEditorOverlay" class="text-editor-overlay hidden">
+                        <div class="text-format-bar">
+                            <button id="btnFormatBold" class="btn-fmt" type="button" title="Negrita (Ctrl+B)" onclick="toggleFormat('bold')"><b>B</b></button>
+                            <button id="btnFormatItalic" class="btn-fmt" type="button" title="Cursiva (Ctrl+I)" onclick="toggleFormat('italic')"><i>I</i></button>
+                            <button id="btnFormatUnderline" class="btn-fmt" type="button" title="Subrayado (Ctrl+U)" onclick="toggleFormat('underline')"><u>U</u></button>
+                        </div>
                         <textarea id="textEditorInput" placeholder="Escribe con el teclado..." rows="1" spellcheck="false"></textarea>
                         <div class="text-editor-actions">
                             <button class="btn-text-action confirm" title="Guardar (Ctrl+Enter o clic fuera)" onclick="commitTextEditor()">✓ Guardar</button>
@@ -862,6 +972,13 @@ object LanWebClientHtml {
         let isDrawing = false;
         let currentStrokePoints = [];
         let activeTextPt = null;
+        let isTextBold = false;
+        let isTextItalic = false;
+        let isTextUnderline = false;
+
+        // Viewport & Scale State
+        let currentScale = 1.0;
+        let isScaleFitAuto = true;
 
         // DOM elements
         const pairingView = document.getElementById('pairingView');
@@ -1242,6 +1359,7 @@ object LanWebClientHtml {
         function loadDocumentIntoEditor(docData) {
             currentDoc = docData;
             currentPageIndex = 0;
+            isScaleFitAuto = true;
 
             editorDocTitle.textContent = docData.title || 'Cuaderno';
             showSavedStatus('Sincronizado ✓');
@@ -1249,8 +1367,89 @@ object LanWebClientHtml {
             libraryView.classList.add('hidden');
             editorView.classList.remove('hidden');
 
+            requestAnimationFrame(() => {
+                fitToPage();
+                startDocSyncPolling();
+            });
+        }
+
+        function computeFitScale() {
+            if (!currentDoc || !currentDoc.pages || currentDoc.pages.length === 0) return 1.0;
+            const page = currentDoc.pages[currentPageIndex];
+            if (!page) return 1.0;
+
+            const ptWidth = page.width || 595.276;
+            const ptHeight = page.height || 841.890;
+
+            const availW = Math.max(100, canvasViewport.clientWidth - 48);
+            const availH = Math.max(100, canvasViewport.clientHeight - 48);
+
+            const scaleX = availW / ptWidth;
+            const scaleY = availH / ptHeight;
+            const fit = Math.min(scaleX, scaleY);
+            return Math.max(0.25, Math.min(fit, 3.0));
+        }
+
+        function fitToPage() {
+            isScaleFitAuto = true;
+            const scale = computeFitScale();
+            setZoom(scale);
+            canvasViewport.scrollTop = 0;
+            if (canvasViewport.scrollWidth > canvasViewport.clientWidth) {
+                canvasViewport.scrollLeft = (canvasViewport.scrollWidth - canvasViewport.clientWidth) / 2;
+            }
+        }
+
+        function setZoom(scale) {
+            currentScale = Math.max(0.25, Math.min(scale, 4.0));
+            const zoomIndicator = document.getElementById('zoomIndicator');
+            if (zoomIndicator) {
+                zoomIndicator.textContent = Math.round(currentScale * 100) + '%';
+            }
             renderCurrentPage();
-            startDocSyncPolling();
+            if (activeTextPt) {
+                positionTextEditor();
+            }
+        }
+
+        function zoomIn() {
+            isScaleFitAuto = false;
+            setZoom(currentScale * 1.15);
+        }
+
+        function zoomOut() {
+            isScaleFitAuto = false;
+            setZoom(currentScale / 1.15);
+        }
+
+        function hexToArgb(hex) {
+            const clean = hex.replace('#', '');
+            const r = parseInt(clean.substring(0, 2), 16) || 0;
+            const g = parseInt(clean.substring(2, 4), 16) || 0;
+            const b = parseInt(clean.substring(4, 6), 16) || 0;
+            return ((0xFF << 24) | (r << 16) | (g << 8) | b) >>> 0;
+        }
+
+        function argbToHex(argb) {
+            const r = ((argb >> 16) & 0xFF).toString(16).padStart(2, '0');
+            const g = ((argb >> 8) & 0xFF).toString(16).padStart(2, '0');
+            const b = (argb & 0xFF).toString(16).padStart(2, '0');
+            return '#' + r + g + b;
+        }
+
+        function onCustomColorChange(hexVal) {
+            const argb = hexToArgb(hexVal);
+            currentColor = argb;
+            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+            const customSwatch = document.getElementById('customColorSwatch');
+            if (customSwatch) {
+                customSwatch.classList.add('selected');
+                customSwatch.style.background = hexVal;
+            }
+            const textInput = document.getElementById('textEditorInput');
+            if (textInput && activeTextPt) {
+                textInput.style.color = hexVal;
+            }
         }
 
         function closeDocumentAndReturn() {
@@ -1273,18 +1472,16 @@ object LanWebClientHtml {
             const ptWidth = page.width || 595.276;
             const ptHeight = page.height || 841.890;
 
-            // Scale to physical pixels on canvas
-            const scale = 1.4; // 1.4x scale for crisp reading on PC
             const pixelRatio = window.devicePixelRatio || 1;
 
-            canvas.width = ptWidth * scale * pixelRatio;
-            canvas.height = ptHeight * scale * pixelRatio;
+            canvas.width = Math.round(ptWidth * currentScale * pixelRatio);
+            canvas.height = Math.round(ptHeight * currentScale * pixelRatio);
 
-            canvas.style.width = (ptWidth * scale) + 'px';
-            canvas.style.height = (ptHeight * scale) + 'px';
+            canvas.style.width = Math.round(ptWidth * currentScale) + 'px';
+            canvas.style.height = Math.round(ptHeight * currentScale) + 'px';
 
             ctx.save();
-            ctx.scale(scale * pixelRatio, scale * pixelRatio);
+            ctx.scale(currentScale * pixelRatio, currentScale * pixelRatio);
 
             // 1. Draw Page Background
             drawPageBackground(ctx, page, ptWidth, ptHeight);
@@ -1395,13 +1592,36 @@ object LanWebClientHtml {
             ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 
             const size = textElem.size || 14.0;
-            ctx.font = size + 'px "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const fontLower = (textElem.font || '').toLowerCase();
+            const bold = !!(textElem.bold || fontLower.includes('bold'));
+            const italic = !!(textElem.italic || fontLower.includes('italic') || fontLower.includes('oblique'));
+            const underline = !!(textElem.underline || (textElem.extraAttrs && textElem.extraAttrs.underline === 'true'));
+
+            let stylePrefix = '';
+            if (italic) stylePrefix += 'italic ';
+            if (bold) stylePrefix += 'bold ';
+
+            ctx.font = stylePrefix + size + 'px "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             ctx.textBaseline = 'top';
 
             const lines = String(textElem.content).split('\n');
             const lineHeight = size * 1.25;
             for (let i = 0; i < lines.length; i++) {
-                ctx.fillText(lines[i], textElem.x, textElem.y + (i * lineHeight));
+                const lineY = textElem.y + (i * lineHeight);
+                ctx.fillText(lines[i], textElem.x, lineY);
+
+                if (underline && lines[i].length > 0) {
+                    const textMetrics = ctx.measureText(lines[i]);
+                    const underY = lineY + size + 1.5;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.strokeStyle = ctx.fillStyle;
+                    ctx.lineWidth = Math.max(1.0, size * 0.08);
+                    ctx.moveTo(textElem.x, underY);
+                    ctx.lineTo(textElem.x + textMetrics.width, underY);
+                    ctx.stroke();
+                    ctx.restore();
+                }
             }
         }
 
@@ -1446,21 +1666,70 @@ object LanWebClientHtml {
             return null;
         }
 
+        function toggleFormat(formatType) {
+            if (formatType === 'bold') {
+                isTextBold = !isTextBold;
+            } else if (formatType === 'italic') {
+                isTextItalic = !isTextItalic;
+            } else if (formatType === 'underline') {
+                isTextUnderline = !isTextUnderline;
+            }
+            updateTextFormatUI();
+        }
+
+        function updateTextFormatUI() {
+            const btnB = document.getElementById('btnFormatBold');
+            const btnI = document.getElementById('btnFormatItalic');
+            const btnU = document.getElementById('btnFormatUnderline');
+            const input = document.getElementById('textEditorInput');
+
+            if (btnB) btnB.classList.toggle('active', isTextBold);
+            if (btnI) btnI.classList.toggle('active', isTextItalic);
+            if (btnU) btnU.classList.toggle('active', isTextUnderline);
+
+            if (input) {
+                input.style.fontWeight = isTextBold ? 'bold' : 'normal';
+                input.style.fontStyle = isTextItalic ? 'italic' : 'normal';
+                input.style.textDecoration = isTextUnderline ? 'underline' : 'none';
+            }
+        }
+
+        function positionTextEditor() {
+            if (!activeTextPt) return;
+            const overlay = document.getElementById('textEditorOverlay');
+            const input = document.getElementById('textEditorInput');
+            overlay.style.left = Math.round(activeTextPt.x * currentScale) + 'px';
+            overlay.style.top = Math.round(activeTextPt.y * currentScale) + 'px';
+            const fontSizePx = Math.round(14 * currentScale);
+            input.style.fontSize = fontSizePx + 'px';
+        }
+
         function openTextEditorAt(ptX, ptY, existingElem) {
             activeTextPt = {
                 x: existingElem ? existingElem.x : ptX,
                 y: existingElem ? existingElem.y : ptY,
                 existing: existingElem || null
             };
-            const scale = 1.4;
+
+            if (existingElem) {
+                const fontLower = (existingElem.font || '').toLowerCase();
+                isTextBold = !!(existingElem.bold || fontLower.includes('bold'));
+                isTextItalic = !!(existingElem.italic || fontLower.includes('italic') || fontLower.includes('oblique'));
+                isTextUnderline = !!(existingElem.underline || (existingElem.extraAttrs && existingElem.extraAttrs.underline === 'true'));
+                if (existingElem.color !== undefined) {
+                    currentColor = existingElem.color;
+                    const hex = argbToHex(currentColor);
+                    const customPicker = document.getElementById('customColorPicker');
+                    if (customPicker) customPicker.value = hex;
+                }
+            }
+
+            updateTextFormatUI();
+            positionTextEditor();
+
             const overlay = document.getElementById('textEditorOverlay');
             const input = document.getElementById('textEditorInput');
 
-            overlay.style.left = (activeTextPt.x * scale) + 'px';
-            overlay.style.top = (activeTextPt.y * scale) + 'px';
-
-            const fontSizePx = Math.round(14 * scale);
-            input.style.fontSize = fontSizePx + 'px';
             const color = currentColor;
             const r = (color >> 16) & 0xFF;
             const g = (color >> 8) & 0xFF;
@@ -1496,9 +1765,26 @@ object LanWebClientHtml {
                 return;
             }
 
+            let fontStr = 'Liberation Sans';
+            if (isTextBold && isTextItalic) {
+                fontStr = 'Liberation Sans Bold Italic';
+            } else if (isTextBold) {
+                fontStr = 'Liberation Sans Bold';
+            } else if (isTextItalic) {
+                fontStr = 'Liberation Sans Italic';
+            }
+
+            const extraAttrs = isTextUnderline ? { underline: 'true' } : {};
+
             if (info.existing) {
                 info.existing.content = content;
                 info.existing.color = currentColor;
+                info.existing.font = fontStr;
+                info.existing.bold = isTextBold;
+                info.existing.italic = isTextItalic;
+                info.existing.underline = isTextUnderline;
+                info.existing.extraAttrs = extraAttrs;
+
                 if (ws && ws.readyState === WebSocket.OPEN && currentDoc) {
                     showSavedStatus('Sincronizando texto...');
                     ws.send(JSON.stringify({
@@ -1511,12 +1797,16 @@ object LanWebClientHtml {
             } else {
                 const textElem = {
                     type: 'text',
-                    font: 'Liberation Sans',
+                    font: fontStr,
+                    bold: isTextBold,
+                    italic: isTextItalic,
+                    underline: isTextUnderline,
                     size: 14.0,
                     x: info.x,
                     y: info.y,
                     color: currentColor,
-                    content: content
+                    content: content,
+                    extraAttrs: extraAttrs
                 };
                 appendElementToCurrentPage(textElem);
 
@@ -1648,9 +1938,12 @@ object LanWebClientHtml {
         // Pointer / Mouse events on Canvas
         function getCanvasPoint(event) {
             const rect = canvas.getBoundingClientRect();
-            const scale = 1.4;
-            const x = (event.clientX - rect.left) / scale;
-            const y = (event.clientY - rect.top) / scale;
+            if (!currentDoc || !currentDoc.pages || currentDoc.pages.length === 0) return { x: 0, y: 0 };
+            const page = currentDoc.pages[currentPageIndex];
+            const ptWidth = page.width || 595.276;
+            const ptHeight = page.height || 841.890;
+            const x = (event.clientX - rect.left) * (ptWidth / rect.width);
+            const y = (event.clientY - rect.top) * (ptHeight / rect.height);
             return { x: x, y: y };
         }
 
@@ -1684,10 +1977,9 @@ object LanWebClientHtml {
             canvas.setPointerCapture(e.pointerId);
             currentStrokePoints = [{ x: pt.x, y: pt.y, w: currentWidthPt }];
 
-            const scale = 1.4;
             const pixelRatio = window.devicePixelRatio || 1;
             ctx.save();
-            ctx.scale(scale * pixelRatio, scale * pixelRatio);
+            ctx.scale(currentScale * pixelRatio, currentScale * pixelRatio);
 
             const isHighlighter = currentTool === 'highlighter';
             const alpha = isHighlighter ? 0.35 : 1.0;
@@ -1796,7 +2088,19 @@ object LanWebClientHtml {
         function setColor(argb, elem) {
             currentColor = argb;
             document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+            const customSwatch = document.getElementById('customColorSwatch');
+            if (customSwatch) {
+                customSwatch.classList.remove('selected');
+                customSwatch.style.background = 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)';
+            }
             if (elem) elem.classList.add('selected');
+            const textInput = document.getElementById('textEditorInput');
+            if (textInput && activeTextPt) {
+                const r = (currentColor >> 16) & 0xFF;
+                const g = (currentColor >> 8) & 0xFF;
+                const b = currentColor & 0xFF;
+                textInput.style.color = 'rgb(' + r + ',' + g + ',' + b + ')';
+            }
         }
 
         function updateWidth(val) {
@@ -1807,14 +2111,22 @@ object LanWebClientHtml {
         function prevPage() {
             if (currentPageIndex > 0) {
                 currentPageIndex--;
-                renderCurrentPage();
+                if (isScaleFitAuto) {
+                    fitToPage();
+                } else {
+                    renderCurrentPage();
+                }
             }
         }
 
         function nextPage() {
             if (currentDoc && currentPageIndex < currentDoc.pages.length - 1) {
                 currentPageIndex++;
-                renderCurrentPage();
+                if (isScaleFitAuto) {
+                    fitToPage();
+                } else {
+                    renderCurrentPage();
+                }
             }
         }
 
@@ -1863,9 +2175,91 @@ object LanWebClientHtml {
                     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
                         commitTextEditor();
+                    } else if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 'b' || e.key === 'B') {
+                            e.preventDefault();
+                            toggleFormat('bold');
+                        } else if (e.key === 'i' || e.key === 'I') {
+                            e.preventDefault();
+                            toggleFormat('italic');
+                        } else if (e.key === 'u' || e.key === 'U') {
+                            e.preventDefault();
+                            toggleFormat('underline');
+                        }
                     }
                 });
             }
+
+            // Window resize handler: auto-recalculate page fit if auto-fit is active
+            window.addEventListener('resize', () => {
+                if (currentDoc && !editorView.classList.contains('hidden')) {
+                    if (isScaleFitAuto) {
+                        fitToPage();
+                    } else {
+                        renderCurrentPage();
+                    }
+                }
+            });
+
+            // Prevent browser whole-page zoom collision when using Ctrl + wheel over canvas viewport
+            canvasViewport.addEventListener('wheel', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    isScaleFitAuto = false;
+                    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+                    setZoom(currentScale * factor);
+                }
+            }, { passive: false });
+
+            // Pan navigation via Middle-click drag or Space + Left-click drag
+            let isPanning = false;
+            let panStartX = 0;
+            let panStartY = 0;
+            let panScrollLeft = 0;
+            let panScrollTop = 0;
+            let isSpacePressed = false;
+
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && document.activeElement !== textInput) {
+                    isSpacePressed = true;
+                    if (!isPanning) canvasViewport.style.cursor = 'grab';
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space') {
+                    isSpacePressed = false;
+                    if (!isPanning) canvasViewport.style.cursor = '';
+                }
+            });
+
+            canvasViewport.addEventListener('pointerdown', (e) => {
+                if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
+                    isPanning = true;
+                    panStartX = e.clientX;
+                    panStartY = e.clientY;
+                    panScrollLeft = canvasViewport.scrollLeft;
+                    panScrollTop = canvasViewport.scrollTop;
+                    canvasViewport.style.cursor = 'grabbing';
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (isPanning) {
+                    const dx = e.clientX - panStartX;
+                    const dy = e.clientY - panStartY;
+                    canvasViewport.scrollLeft = panScrollLeft - dx;
+                    canvasViewport.scrollTop = panScrollTop - dy;
+                }
+            });
+
+            window.addEventListener('pointerup', (e) => {
+                if (isPanning) {
+                    isPanning = false;
+                    canvasViewport.style.cursor = isSpacePressed ? 'grab' : '';
+                }
+            });
 
             if (currentToken && currentToken.length > 0) {
                 connectWebSocket(currentToken);

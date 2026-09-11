@@ -99,6 +99,7 @@ class ElementRenderer(
         textPaint.color = t.color
         textPaint.textSize = (t.size * scale).toFloat()
         textPaint.typeface = typefaceFor(t.font)
+        textPaint.isUnderlineText = t.extraAttrs["underline"] == "true"
         val fm = textPaint.fontMetrics
         val topPx = offsetY + (t.y * scale).toFloat()
         val xPx = offsetX + (t.x * scale).toFloat()
