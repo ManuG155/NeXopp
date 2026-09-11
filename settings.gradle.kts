@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NeXopp"
+rootProject.name = "FiXmy-Notes"
 include(":app")

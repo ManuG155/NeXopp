@@ -541,7 +541,7 @@ fun ConnectPcDialog(
 
 private fun copyToClipboard(context: Context, text: String, toastMessage: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    val clip = ClipData.newPlainText("NeXopp", text)
+    val clip = ClipData.newPlainText("FiXmy Notes", text)
     clipboard?.setPrimaryClip(clip)
     Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
 }

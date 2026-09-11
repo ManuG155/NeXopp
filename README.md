@@ -1,7 +1,9 @@
-# NeXopp — a stylus-first Xournal++ editor for Android
+# FiXmy Notes — a stylus-first Xournal++ editor for Android
 
-**NeXopp** opens, edits, and saves [Xournal++](https://github.com/xournalpp/xournalpp) `.xopp`
-files on Android. Draw and handwrite with a pen/stylus on a tablet or phone, then save back to
+**FiXmy Notes** es una versión modificada y evolucionada de [NeXopp](https://github.com/bamonroe/NeXopp), distribuida bajo la **GNU General Public License version 2 (GPLv2)**.
+
+**FiXmy Notes** opens, edits, and saves [Xournal++](https://github.com/xournalpp/xournalpp) `.xopp`
+files on Android. Draw and handwrite with a pen/stylus on a tablet or phone, synchronize with PC via real-time bidirectional LAN connection, organize notes in folders and tags, and export/import full libraries to and from human-readable ZIP files, then save back to
 the **same `.xopp` format** so the file round-trips cleanly to and from desktop Xournal++ on
 Linux. The guiding principle is **format fidelity and round-trip safety**: a file edited on
 Android reopens correctly on the desktop, and vice versa.
@@ -738,11 +740,9 @@ sources live under `app/src/main/java/com/xopp/android/` (`format/`, `io/`, `ren
 `tabs/`, `panes/`, `ui/`, plus `MainActivity.kt`), with JVM unit tests under `app/src/test/` and
 the containerized build in `Dockerfile`, `compose.yaml` and `scripts/build.sh`.
 
-## Licence
+## Licence & Attribution
 
-NeXopp is free software under the **GNU General Public License, version 2 or later** — the same
-licence as [Xournal++](https://github.com/xournalpp/xournalpp). The full text is in
-[`LICENSE`](LICENSE). It comes with no warranty.
+**FiXmy Notes** es una versión modificada y evolucionada de **NeXopp**, distribuida bajo la **GNU General Public License version 2 (GPLv2)** — the same licence as [Xournal++](https://github.com/xournalpp/xournalpp). The full text is in [`LICENSE`](LICENSE). It comes with no warranty.
 
-If NeXopp is useful to you, you can support its development at
-[patreon.com/bamonroe](https://www.patreon.com/bamonroe).
+- **Repositorio oficial de FiXmy Notes:** [github.com/ManuG155/FiXmy-Notes](https://github.com/ManuG155/FiXmy-Notes)
+- **Repositorio original de NeXopp (upstream):** [github.com/bamonroe/NeXopp](https://github.com/bamonroe/NeXopp)

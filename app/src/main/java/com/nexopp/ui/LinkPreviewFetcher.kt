@@ -58,7 +58,7 @@ object LinkPreviewFetcher {
             val meta = LinkMetadata(
                 url = targetUrl,
                 title = "Video de YouTube",
-                description = "Reproducción multimedia en NeXopp",
+                description = "Reproducción multimedia en FiXmy Notes",
                 siteName = "YouTube",
                 imageUrl = thumbUrl,
                 mediaType = LinkMediaType.VIDEO
@@ -73,7 +73,7 @@ object LinkPreviewFetcher {
                 connectTimeout = 3500
                 readTimeout = 3500
                 instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Tablet) NeXopp/1.0")
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Tablet) FiXmyNotes/1.0")
                 setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
             }
 

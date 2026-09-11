@@ -7,7 +7,7 @@ package com.nexopp.format.model
  */
 data class Document(
     /** The `creator` attribute from the root `<xournal>` element. */
-    val creator: String = "NeXopp",
+    val creator: String = "FiXmy Notes",
     /** The `fileversion` attribute from the root `<xournal>` element (desktop Xournal++ uses "4"). */
     val fileVersion: String = "4",
     /** The pages in document order — z-order for layers within each page. */

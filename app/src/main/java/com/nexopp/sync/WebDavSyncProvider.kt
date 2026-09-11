@@ -18,7 +18,7 @@ class WebDavSyncProvider(
     private val serverUrl: String,
     private val username: String,
     private val passwordOrToken: String,
-    private val remoteFolder: String = "NeXopp"
+    private val remoteFolder: String = "FiXmyNotes"
 ) : SyncProvider {
 
     override val id: String = "webdav_nextcloud"

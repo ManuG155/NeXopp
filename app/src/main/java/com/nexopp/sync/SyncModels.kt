@@ -52,7 +52,7 @@ data class SyncConfig(
     val serverUrl: String = "",
     val username: String = "",
     val passwordOrToken: String = "",
-    val remoteDirectory: String = "NeXopp",
+    val remoteDirectory: String = "FiXmyNotes",
     val localFolderPath: String = "",
     val autoSyncEnabled: Boolean = false,
     val preserveBothOnConflict: Boolean = true,

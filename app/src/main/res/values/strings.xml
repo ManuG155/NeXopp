@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">NeXopp</string>
+    <string name="app_name">FiXmy Notes</string>
     <string name="open_document">Abrir .xopp</string>
     <string name="save_document">Guardar</string>
     <string name="tool_pen">Pluma</string>

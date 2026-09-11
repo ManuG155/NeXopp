@@ -31,7 +31,7 @@ class BackupManager(
         val filename = if (!backupName.isNullOrBlank()) {
             "backup_${backupName.replace("[^a-zA-Z0-9_-]".toRegex(), "_")}_$dateStr.nxbackup"
         } else {
-            "nexopp_backup_$dateStr.nxbackup"
+            "fixmy_notes_backup_$dateStr.nxbackup"
         }
 
         val targetFile = File(backupsDir, filename)

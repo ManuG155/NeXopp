@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.dp
 import com.nexopp.BuildConfig
 
 object AboutLinks {
-    const val SOURCE = "https://github.com/bamonroe/NeXopp"
+    const val REPO = "https://github.com/ManuG155/FiXmy-Notes"
+    const val ORIGINAL_SOURCE = "https://github.com/bamonroe/NeXopp"
     const val LICENSE = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"
-    const val SUPPORT = "https://www.patreon.com/bamonroe"
     const val XOURNALPP = "https://github.com/xournalpp/xournalpp"
 }
 
@@ -34,9 +34,9 @@ fun AboutSection() {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
-    Text("NeXopp", style = MaterialTheme.typography.titleLarge)
+    Text("FiXmy Notes", style = MaterialTheme.typography.titleLarge)
     Text(
-        "Lector y editor Android optimizado para stylus para documentos de Xournal++.",
+        "Lector y editor Android optimizado para stylus para documentos de Xournal++, con sincronización LAN en tiempo real.",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(bottom = 12.dp),
     )
@@ -45,36 +45,26 @@ fun AboutSection() {
     InfoRow("Commit de Git", BuildConfig.GIT_COMMIT)
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-    Text("Licencia", style = MaterialTheme.typography.bodyLarge)
+    Text("Licencia y Atribución", style = MaterialTheme.typography.bodyLarge)
     Text(
-        "NeXopp es software libre bajo la Licencia Pública General de GNU, versión 2 o posterior — la misma " +
-            "licencia que el propio Xournal++. Puedes usarlo, estudiarlo, compartirlo y modificarlo; si " +
-            "distribuyes una versión modificada, debe seguir siendo libre bajo los mismos términos y acompañarse de su " +
+        "FiXmy Notes es una versión modificada y evolucionada de NeXopp, distribuida bajo la Licencia Pública General de GNU, versión 2 (GPLv2). " +
+            "Puedes usarlo, estudiarlo, compartirlo y modificarlo; si distribuyes una versión modificada, debe seguir siendo libre bajo los mismos términos y acompañarse de su " +
             "código fuente. Se proporciona sin ninguna garantía. El texto completo está en el archivo LICENSE del código fuente.",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),
     )
-    LinkRow("Leer la GPL v2", AboutLinks.LICENSE, open)
+    LinkRow("Leer la Licencia GPL v2", AboutLinks.LICENSE, open)
     LinkRow("Xournal++, la aplicación de escritorio", AboutLinks.XOURNALPP, open)
     HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
     Text("Código fuente", style = MaterialTheme.typography.bodyLarge)
     Text(
-        "NeXopp se desarrolla en abierto. Los reportes de errores y parches son bienvenidos.",
+        "FiXmy Notes se desarrolla en abierto. Los reportes de errores y contribuciones son bienvenidos.",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),
     )
-    LinkRow("github.com/bamonroe/NeXopp", AboutLinks.SOURCE, open)
-    HorizontalDivider(Modifier.padding(vertical = 12.dp))
-
-    Text("Invítame a un café", style = MaterialTheme.typography.bodyLarge)
-    Text(
-        "NeXopp se programa en horas libres y es gratuito. Si te resulta útil, " +
-            "considera hacer una donación — ayuda a mantener el proyecto vivo.",
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(bottom = 4.dp),
-    )
-    LinkRow("patreon.com/bamonroe", AboutLinks.SUPPORT, open)
+    LinkRow("github.com/ManuG155/FiXmy-Notes", AboutLinks.REPO, open)
+    LinkRow("Repositorio original NeXopp (upstream)", AboutLinks.ORIGINAL_SOURCE, open)
 }
 
 @Composable

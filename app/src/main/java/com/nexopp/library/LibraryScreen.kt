@@ -108,6 +108,7 @@ fun LibraryScreen(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showCloudSyncDialog by remember { mutableStateOf(false) }
     var showConnectPcDialog by remember { mutableStateOf(false) }
+    var showExportImportDialog by remember { mutableStateOf(false) }
 
     val backupManager = remember { BackupManager(context.filesDir) }
     val syncEngine = remember { SyncEngine(store.notebooksDir) }
@@ -172,7 +173,7 @@ fun LibraryScreen(
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "NeXopp",
+                                "FiXmy Notes",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -264,6 +265,10 @@ fun LibraryScreen(
 
                         IconButton(onClick = { showBackupDialog = true }) {
                             Icon(Icons.Filled.Backup, contentDescription = "Copias de seguridad")
+                        }
+
+                        IconButton(onClick = { showExportImportDialog = true }) {
+                            Icon(Icons.Filled.FolderZip, contentDescription = "Exportar e Importar Biblioteca")
                         }
 
                         IconButton(onClick = onSettings) {
@@ -842,6 +847,15 @@ fun LibraryScreen(
     if (showConnectPcDialog) {
         com.nexopp.ui.ConnectPcDialog(
             onDismiss = { showConnectPcDialog = false }
+        )
+    }
+
+    // 13. Export & Import Library ZIP Dialog
+    if (showExportImportDialog) {
+        LibraryExportImportDialog(
+            store = store,
+            onDismiss = { showExportImportDialog = false },
+            onLibraryUpdated = { refresh() }
         )
     }
 }

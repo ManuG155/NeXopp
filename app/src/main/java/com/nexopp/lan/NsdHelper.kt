@@ -18,7 +18,7 @@ class NsdHelper(context: Context) {
     private var isRegistered = false
 
     @Synchronized
-    fun registerService(port: Int, serviceName: String = "NeXopp-Tablet") {
+    fun registerService(port: Int, serviceName: String = "FiXmyNotes-Tablet") {
         unregisterService()
 
         val manager = nsdManager ?: return

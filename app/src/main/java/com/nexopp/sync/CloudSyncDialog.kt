@@ -59,7 +59,7 @@ fun CloudSyncDialog(
     fun currentProvider(): SyncProvider {
         return when (providerType) {
             SyncProviderType.LOCAL_FOLDER -> {
-                LocalFolderSyncProvider(File(localFolderPath.ifBlank { "/storage/emulated/0/Documents/NeXoppSync" }))
+                LocalFolderSyncProvider(File(localFolderPath.ifBlank { "/storage/emulated/0/Documents/FiXmyNotesSync" }))
             }
             SyncProviderType.WEBDAV_NEXTCLOUD -> {
                 WebDavSyncProvider(
@@ -209,7 +209,7 @@ fun CloudSyncDialog(
                                 value = remoteFolder,
                                 onValueChange = { remoteFolder = it },
                                 label = { Text("Carpeta remota de notas") },
-                                placeholder = { Text("NeXopp") },
+                                placeholder = { Text("FiXmyNotes") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp)
@@ -222,7 +222,7 @@ fun CloudSyncDialog(
                             value = localFolderPath,
                             onValueChange = { localFolderPath = it },
                             label = { Text("Ruta absoluta de la carpeta de sincronización") },
-                            placeholder = { Text("/storage/emulated/0/Documents/NeXoppSync") },
+                            placeholder = { Text("/storage/emulated/0/Documents/FiXmyNotesSync") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)

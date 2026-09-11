@@ -11,7 +11,7 @@ object LanWebClientHtml {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeXopp — Biblioteca y Editor Web Local</title>
+    <title>FiXmy Notes — Biblioteca y Editor Web Local</title>
     <style>
         :root {
             --bg-base: #090d16;
@@ -758,9 +758,9 @@ object LanWebClientHtml {
 <body>
     <header>
         <div class="header-left">
-            <div class="brand-badge">N</div>
+            <div class="brand-badge">F</div>
             <div>
-                <div class="brand-title">NeXopp</div>
+                <div class="brand-title">FiXmy Notes</div>
             </div>
         </div>
         <div class="header-right">
@@ -774,9 +774,9 @@ object LanWebClientHtml {
     <!-- VIEW 1: PAIRING VIEW (If opened without token) -->
     <div id="pairingView" class="view-container hidden" style="align-items: center; justify-content: center; padding: 20px;">
         <div class="modal-card" style="max-width: 400px; text-align: center;">
-            <div class="modal-title">Conectar con NeXopp Tablet</div>
+            <div class="modal-title">Conectar con FiXmy Notes Tablet</div>
             <p style="font-size: 13px; color: var(--text-secondary);">
-                Introduce el código de 8 caracteres que aparece en la pantalla de NeXopp en tu tablet.
+                Introduce el código de 8 caracteres que aparece en la pantalla de FiXmy Notes en tu tablet.
             </p>
             <div class="form-group" style="margin-top: 8px;">
                 <input type="text" id="pairingCodeInput" placeholder="XXXX-XXX" style="font-family: monospace; font-size: 20px; font-weight: 700; letter-spacing: 2px; text-align: center; text-transform: uppercase;" maxlength="9">
@@ -1160,7 +1160,7 @@ object LanWebClientHtml {
                     break;
 
                 case 'ERROR':
-                    alert('Aviso de NeXopp: ' + msg.message);
+                    alert('Aviso de FiXmy Notes: ' + msg.message);
                     break;
             }
         }

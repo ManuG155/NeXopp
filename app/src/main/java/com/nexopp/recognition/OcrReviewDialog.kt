@@ -159,7 +159,7 @@ fun OcrReviewDialog(
                     OutlinedButton(
                         onClick = {
                             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            cm.setPrimaryClip(ClipData.newPlainText("OCR NeXopp", editedText))
+                            cm.setPrimaryClip(ClipData.newPlainText("OCR FiXmy Notes", editedText))
                             Toast.makeText(context, "Copiado al portapapeles", Toast.LENGTH_SHORT).show()
                         }
                     ) {

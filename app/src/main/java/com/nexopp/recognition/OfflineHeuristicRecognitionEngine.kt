@@ -14,7 +14,7 @@ import kotlin.math.*
 class OfflineHeuristicRecognitionEngine : RecognitionEngine {
 
     override val id: String = "nexopp_offline_heuristic"
-    override val displayName: String = "NeXopp Motor Local Fuera de Línea"
+    override val displayName: String = "FiXmy Notes Motor Local Fuera de Línea"
     override val isOffline: Boolean = true
 
     override fun recognize(strokes: List<Stroke>): RecognitionResult {

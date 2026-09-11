@@ -597,7 +597,7 @@ class LanServer(
             path == "/api/status" -> {
                 val json = JSONObject().apply {
                     put("status", "ok")
-                    put("service", "NeXopp-Tablet")
+                    put("service", "FiXmyNotes-Tablet")
                     put("version", "1.0")
                 }.toString()
                 sendHttpResponse(outputStream, 200, "OK", "application/json; charset=utf-8", json)
